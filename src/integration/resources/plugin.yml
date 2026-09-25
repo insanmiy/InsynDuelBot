@@ -1,5 +1,0 @@
-name: PracticeIntegrationTests
-version: '1.0'
-main: dev.insanmiy.practiceplugin.integration.ServerTest
-api-version: '${minecraftVersion}'
-depend: [InsynPracticeBotMC]
