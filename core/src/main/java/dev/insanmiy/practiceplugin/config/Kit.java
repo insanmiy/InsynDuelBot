@@ -142,7 +142,8 @@ public final class Kit {
       if (!type.isAir() && !supported(type))
         throw new IllegalArgumentException("Unknown kit item: " + type);
       if (melee(type)) enchant(item, c.getConfigurationSection("weapon-enchantments"));
-      if (type == Material.BOW) enchant(item, c.getConfigurationSection("bow-enchantments"));
+      if (type == Material.BOW || type == Material.CROSSBOW)
+        enchant(item, c.getConfigurationSection("bow-enchantments"));
       items.put(slot, item);
     }
     ItemStack offhand = parseItem(c.get("offhand", "AIR"));
@@ -199,6 +200,19 @@ public final class Kit {
             PotionType.valueOf(String.valueOf(map.get("potion")).toUpperCase(Locale.ROOT)));
         item.setItemMeta(meta);
       }
+      Object rawEnchants = map.get("enchants");
+      if (rawEnchants instanceof ConfigurationSection cs) rawEnchants = cs.getValues(false);
+      if (rawEnchants instanceof Map<?, ?> enchants) {
+        for (Map.Entry<?, ?> e : enchants.entrySet()) {
+          String key = String.valueOf(e.getKey()).toLowerCase(Locale.ROOT);
+          NamespacedKey id = NamespacedKey.fromString(key.contains(":") ? key : "minecraft:" + key);
+          var enchantment = id == null ? null : org.bukkit.Registry.ENCHANTMENT.get(id);
+          int level = Integer.parseInt(String.valueOf(e.getValue()));
+          if (enchantment != null && level >= 1 && enchantment.canEnchantItem(item)) {
+            item.addEnchantment(enchantment, Math.min(level, enchantment.getMaxLevel()));
+          }
+        }
+      }
       return item;
     }
     if (raw instanceof ItemStack item) {
@@ -220,17 +234,16 @@ public final class Kit {
   private static void enchant(ItemStack item, ConfigurationSection c) {
     if (c == null || item.getType().isAir()) return;
     for (String key : c.getKeys(false)) {
-      NamespacedKey id = NamespacedKey.fromString(key.contains(":") ? key : "minecraft:" + key);
+      String cleanKey = key.toLowerCase(Locale.ROOT);
+      NamespacedKey id = NamespacedKey.fromString(cleanKey.contains(":") ? cleanKey : "minecraft:" + cleanKey);
       var enchantment =
           id == null
               ? null
               : org.bukkit.Registry.ENCHANTMENT.get(id);
       int level = c.getInt(key);
-      if (enchantment == null
-          || level < 1
-          || level > enchantment.getMaxLevel()
-          || !enchantment.canEnchantItem(item))
+      if (enchantment == null || level < 1 || level > enchantment.getMaxLevel())
         throw new IllegalArgumentException("Invalid enchantment " + key + " for " + item.getType());
+      if (!enchantment.canEnchantItem(item)) continue;
       item.addEnchantment(enchantment, level);
     }
   }

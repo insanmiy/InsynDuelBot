@@ -6,7 +6,7 @@ plugins {
 
 allprojects {
     group = "dev.insanmiy"
-    version = "1.0.0-BETA.0.1"
+    version = "1.0.0-BETA.0.2"
 
     repositories {
         mavenCentral()

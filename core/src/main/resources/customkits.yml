@@ -1,14 +1,9 @@
-# =============================================================================
-#                          CUSTOM KITS STORAGE
-# =============================================================================
-# Player-created custom kits managed in-game via:
+
 #   /practice kit editor
 #   /practice kit <create|edit|save|copy|rename|delete> <name>
 #
-# Each saved kit entry contains:
-#   - owner: UUID of the player who created the kit
 #   - health: Starting max health
-#   - natural-regeneration: Whether vanilla food regeneration is enabled
+#   - regeneration: Whether vanilla food regeneration is enabled
 #   - armor: Boots, leggings, chestplate, helmet
 #   - armor-enchantments & weapon-enchantments: Applied enchantments
 #   - offhand: Item in the off-hand slot (e.g. SHIELD, TOTEM_OF_UNDYING, AIR)
