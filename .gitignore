@@ -1,0 +1,21 @@
+# Gradle output
+/.gradle/
+/.kotlin/
+/build/
+/bin/
+/out/
+/.idea/
+/.vscode/
+/.settings/
+/.classpath
+/.project
+*.iml
+*.ipr
+*.iws
+
+# 
+
+run*
+
+*test*
+gradle/

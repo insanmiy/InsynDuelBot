@@ -1,0 +1,332 @@
+# =============================================================================
+#                            PRESET KITS CONFIGURATION
+# =============================================================================
+# Realistic, authentic competitive PvP kits modeled after popular PvP servers
+# (Minemen Club, Stray.gg, PvPGym, and competitive practice networks).
+#
+# Reload changes in-game using: /practice reload
+#
+# Kit Structure:
+#   description:           Display description shown in the practice menu
+#   health:                Starting and maximum health points (20 = 10 hearts)
+#   natural-regeneration:  Whether standard food/saturation healing is enabled
+#   armor:                 [BOOTS, LEGGINGS, CHESTPLATE, HELMET]
+#   armor-enchantments:    Applied armor enchantments (e.g. {protection: 4, unbreaking: 3})
+#   weapon-enchantments:   Applied melee weapon enchantments (e.g. {sharpness: 5, unbreaking: 3})
+#   bow-enchantments:      Applied bow enchantments (e.g. {power: 5, punch: 2})
+#   offhand:               Off-hand item (e.g. SHIELD:1, TOTEM_OF_UNDYING:1, or AIR)
+#   items:                 Inventory slots 0-35 with format: '<MATERIAL>:<AMOUNT>'
+#                          or potion objects: {type: SPLASH_POTION, potion: <POTION_TYPE>}
+# =============================================================================
+kits:
+  # ---------------------------------------------------------------------------
+  # 1. Modern Diamond Sword (Classic 1.21 Competitive Sword & Shield)
+  # Modeled after Stray.gg / Minemen Club competitive Sword duels.
+  # Includes Diamond Axe for disabling opponent shields.
+  # ---------------------------------------------------------------------------
+  modern-diamond-sword:
+    description: "Diamond Sword - Full Diamond Prot IV, Sharp V Sword, Axe & Shield"
+    health: 20
+    natural-regeneration: true
+    armor: [DIAMOND_BOOTS, DIAMOND_LEGGINGS, DIAMOND_CHESTPLATE, DIAMOND_HELMET]
+    armor-enchantments: {protection: 4, unbreaking: 3}
+    weapon-enchantments: {sharpness: 5, unbreaking: 3}
+    bow-enchantments: {power: 5}
+    offhand: 'SHIELD:1'
+    items:
+      0: 'DIAMOND_SWORD:1'
+      1: 'DIAMOND_AXE:1'
+      2: 'GOLDEN_APPLE:16'
+      3: 'ENDER_PEARL:16'
+      4: 'WATER_BUCKET:1'
+      5: 'COBWEB:16'
+      6: 'BOW:1'
+      7: 'ARROW:32'
+      8: 'COOKED_BEEF:32'
+
+  # ---------------------------------------------------------------------------
+  # 2. Modern Netherite Sword (High-Tier Netherite Sword & Shield)
+  # Standard competitive Netherite tier with axe shield counters and pearls.
+  # ---------------------------------------------------------------------------
+  modern-netherite-sword:
+    description: "Netherite Sword - Full Netherite Prot IV, Sharp V Sword, Axe & Shield"
+    health: 20
+    natural-regeneration: true
+    armor: [NETHERITE_BOOTS, NETHERITE_LEGGINGS, NETHERITE_CHESTPLATE, NETHERITE_HELMET]
+    armor-enchantments: {protection: 4, unbreaking: 3}
+    weapon-enchantments: {sharpness: 5, unbreaking: 3}
+    bow-enchantments: {power: 5}
+    offhand: 'SHIELD:1'
+    items:
+      0: 'NETHERITE_SWORD:1'
+      1: 'NETHERITE_AXE:1'
+      2: 'GOLDEN_APPLE:16'
+      3: 'ENDER_PEARL:16'
+      4: 'WATER_BUCKET:1'
+      5: 'COBWEB:16'
+      6: 'BOW:1'
+      7: 'ARROW:32'
+      8: 'COOKED_BEEF:32'
+
+  # ---------------------------------------------------------------------------
+  # 3. Shield & Axe (Dedicated Axe PvP)
+  # Standard Axe PvP with Diamond Axe primary, Crossbow, and Sword combo backup.
+  # ---------------------------------------------------------------------------
+  shield-sword:
+    description: "Axe & Shield - Diamond Axe Sharp V, Crossbow, Secondary Sword & Shield"
+    health: 20
+    natural-regeneration: true
+    armor: [DIAMOND_BOOTS, DIAMOND_LEGGINGS, DIAMOND_CHESTPLATE, DIAMOND_HELMET]
+    armor-enchantments: {protection: 4, unbreaking: 3}
+    weapon-enchantments: {sharpness: 5, unbreaking: 3}
+    offhand: 'SHIELD:1'
+    items:
+      0: 'DIAMOND_AXE:1'
+      1: 'DIAMOND_SWORD:1'
+      2: 'CROSSBOW:1'
+      3: 'ARROW:32'
+      4: 'GOLDEN_APPLE:16'
+      5: 'ENDER_PEARL:16'
+      6: 'WATER_BUCKET:1'
+      7: 'COBWEB:16'
+      8: 'COOKED_BEEF:32'
+
+  # ---------------------------------------------------------------------------
+  # 4. SMP Totem (Modern Lifesteal & SMP PvP)
+  # Netherite armor, Totem of Undying in offhand, extra totems and splash pots.
+  # ---------------------------------------------------------------------------
+  smp-sword:
+    description: "SMP Totem - Full Netherite Prot IV, Totems of Undying, Sword & Axe"
+    health: 20
+    natural-regeneration: true
+    armor: [NETHERITE_BOOTS, NETHERITE_LEGGINGS, NETHERITE_CHESTPLATE, NETHERITE_HELMET]
+    armor-enchantments: {protection: 4, unbreaking: 3}
+    weapon-enchantments: {sharpness: 5, unbreaking: 3}
+    bow-enchantments: {power: 5}
+    offhand: 'TOTEM_OF_UNDYING:1'
+    items:
+      0: 'NETHERITE_SWORD:1'
+      1: 'NETHERITE_AXE:1'
+      2: 'CROSSBOW:1'
+      3: 'ARROW:32'
+      4: 'GOLDEN_APPLE:16'
+      5: 'ENDER_PEARL:16'
+      6: 'WATER_BUCKET:1'
+      7: 'COBWEB:16'
+      8: 'COOKED_BEEF:32'
+      9: 'TOTEM_OF_UNDYING:1'
+      10: 'TOTEM_OF_UNDYING:1'
+      11: 'TOTEM_OF_UNDYING:1'
+      12: 'TOTEM_OF_UNDYING:1'
+      13: 'TOTEM_OF_UNDYING:1'
+      14: 'TOTEM_OF_UNDYING:1'
+      15: {type: SPLASH_POTION, potion: STRONG_HEALING}
+      16: {type: SPLASH_POTION, potion: STRONG_HEALING}
+      17: {type: SPLASH_POTION, potion: STRONG_HEALING}
+      18: {type: SPLASH_POTION, potion: STRONG_HEALING}
+      19: {type: SPLASH_POTION, potion: STRONG_SWIFTNESS}
+      20: {type: SPLASH_POTION, potion: STRONG_SWIFTNESS}
+
+  # ---------------------------------------------------------------------------
+  # 5. Nodebuff (Classic Competitive PotPvP)
+  # True PotPvP layout: Full Splash Health II, Speed II, Pearls, and NO shield.
+  # ---------------------------------------------------------------------------
+  nodebuff-sword:
+    description: "Nodebuff - Full Diamond Prot IV, Splash Health II & Speed II"
+    health: 20
+    natural-regeneration: true
+    armor: [DIAMOND_BOOTS, DIAMOND_LEGGINGS, DIAMOND_CHESTPLATE, DIAMOND_HELMET]
+    armor-enchantments: {protection: 4, unbreaking: 3}
+    weapon-enchantments: {sharpness: 5, fire_aspect: 2, unbreaking: 3}
+    offhand: AIR
+    items:
+      0: 'DIAMOND_SWORD:1'
+      1: 'ENDER_PEARL:16'
+      2: {type: SPLASH_POTION, potion: STRONG_SWIFTNESS}
+      3: {type: SPLASH_POTION, potion: STRONG_SWIFTNESS}
+      4: {type: SPLASH_POTION, potion: STRONG_SWIFTNESS}
+      5: {type: SPLASH_POTION, potion: STRONG_SWIFTNESS}
+      6: 'COOKED_BEEF:32'
+      7: 'WATER_BUCKET:1'
+      8: {type: SPLASH_POTION, potion: STRONG_HEALING}
+      9: {type: SPLASH_POTION, potion: STRONG_HEALING}
+      10: {type: SPLASH_POTION, potion: STRONG_HEALING}
+      11: {type: SPLASH_POTION, potion: STRONG_HEALING}
+      12: {type: SPLASH_POTION, potion: STRONG_HEALING}
+      13: {type: SPLASH_POTION, potion: STRONG_HEALING}
+      14: {type: SPLASH_POTION, potion: STRONG_HEALING}
+      15: {type: SPLASH_POTION, potion: STRONG_HEALING}
+      16: {type: SPLASH_POTION, potion: STRONG_HEALING}
+      17: {type: SPLASH_POTION, potion: STRONG_HEALING}
+      18: {type: SPLASH_POTION, potion: STRONG_HEALING}
+      19: {type: SPLASH_POTION, potion: STRONG_HEALING}
+      20: {type: SPLASH_POTION, potion: STRONG_HEALING}
+      21: {type: SPLASH_POTION, potion: STRONG_HEALING}
+      22: {type: SPLASH_POTION, potion: STRONG_HEALING}
+      23: {type: SPLASH_POTION, potion: STRONG_HEALING}
+      24: {type: SPLASH_POTION, potion: STRONG_HEALING}
+      25: {type: SPLASH_POTION, potion: STRONG_HEALING}
+      26: {type: SPLASH_POTION, potion: STRONG_HEALING}
+      27: {type: SPLASH_POTION, potion: STRONG_HEALING}
+      28: {type: SPLASH_POTION, potion: STRONG_HEALING}
+      29: {type: SPLASH_POTION, potion: STRONG_HEALING}
+      30: {type: SPLASH_POTION, potion: STRONG_HEALING}
+      31: {type: SPLASH_POTION, potion: STRONG_HEALING}
+      32: {type: SPLASH_POTION, potion: STRONG_HEALING}
+      33: {type: SPLASH_POTION, potion: STRONG_HEALING}
+      34: {type: SPLASH_POTION, potion: STRONG_HEALING}
+      35: {type: SPLASH_POTION, potion: STRONG_HEALING}
+
+  # ---------------------------------------------------------------------------
+  # 6. Debuff (PotPvP Debuff)
+  # Standard Debuff with Splash Poison, Slowness, Weakness, Harming and Health.
+  # ---------------------------------------------------------------------------
+  debuff-sword:
+    description: "Debuff - Splash Health II, Poison, Slowness, Weakness & Harming"
+    health: 20
+    natural-regeneration: true
+    armor: [DIAMOND_BOOTS, DIAMOND_LEGGINGS, DIAMOND_CHESTPLATE, DIAMOND_HELMET]
+    armor-enchantments: {protection: 4, unbreaking: 3}
+    weapon-enchantments: {sharpness: 5, fire_aspect: 2, unbreaking: 3}
+    offhand: AIR
+    items:
+      0: 'DIAMOND_SWORD:1'
+      1: 'ENDER_PEARL:16'
+      2: {type: SPLASH_POTION, potion: STRONG_SWIFTNESS}
+      3: {type: SPLASH_POTION, potion: STRONG_STRENGTH}
+      4: {type: SPLASH_POTION, potion: STRONG_POISON}
+      5: {type: SPLASH_POTION, potion: STRONG_SLOWNESS}
+      6: {type: SPLASH_POTION, potion: WEAKNESS}
+      7: {type: SPLASH_POTION, potion: STRONG_HARMING}
+      8: 'COOKED_BEEF:32'
+      9: 'WATER_BUCKET:1'
+      10: {type: SPLASH_POTION, potion: STRONG_HEALING}
+      11: {type: SPLASH_POTION, potion: STRONG_HEALING}
+      12: {type: SPLASH_POTION, potion: STRONG_HEALING}
+      13: {type: SPLASH_POTION, potion: STRONG_HEALING}
+      14: {type: SPLASH_POTION, potion: STRONG_HEALING}
+      15: {type: SPLASH_POTION, potion: STRONG_HEALING}
+      16: {type: SPLASH_POTION, potion: STRONG_HEALING}
+      17: {type: SPLASH_POTION, potion: STRONG_HEALING}
+      18: {type: SPLASH_POTION, potion: STRONG_HEALING}
+      19: {type: SPLASH_POTION, potion: STRONG_HEALING}
+      20: {type: SPLASH_POTION, potion: STRONG_HEALING}
+      21: {type: SPLASH_POTION, potion: STRONG_HEALING}
+      22: {type: SPLASH_POTION, potion: STRONG_HEALING}
+      23: {type: SPLASH_POTION, potion: STRONG_HEALING}
+      24: {type: SPLASH_POTION, potion: STRONG_HEALING}
+      25: {type: SPLASH_POTION, potion: STRONG_HEALING}
+      26: {type: SPLASH_POTION, potion: STRONG_HEALING}
+      27: {type: SPLASH_POTION, potion: STRONG_HEALING}
+      28: {type: SPLASH_POTION, potion: STRONG_HEALING}
+      29: {type: SPLASH_POTION, potion: STRONG_SWIFTNESS}
+      30: {type: SPLASH_POTION, potion: STRONG_SWIFTNESS}
+      31: {type: SPLASH_POTION, potion: STRONG_STRENGTH}
+      32: {type: SPLASH_POTION, potion: STRONG_STRENGTH}
+      33: {type: SPLASH_POTION, potion: STRONG_POISON}
+      34: {type: SPLASH_POTION, potion: STRONG_SLOWNESS}
+      35: {type: SPLASH_POTION, potion: WEAKNESS}
+
+  # ---------------------------------------------------------------------------
+  # 7. OP Gapple (God Apple & Strength PvP)
+  # Standard Minemen Club Gapple mode with Strength II, Speed II, and Axe.
+  # ---------------------------------------------------------------------------
+  gapple-sword:
+    description: "OP Gapple - Full Prot IV, Sharp V Fire Aspect II, Golden Apples & Strength"
+    health: 20
+    natural-regeneration: true
+    armor: [DIAMOND_BOOTS, DIAMOND_LEGGINGS, DIAMOND_CHESTPLATE, DIAMOND_HELMET]
+    armor-enchantments: {protection: 4, unbreaking: 3}
+    weapon-enchantments: {sharpness: 5, fire_aspect: 2, unbreaking: 3}
+    offhand: 'SHIELD:1'
+    items:
+      0: 'DIAMOND_SWORD:1'
+      1: 'DIAMOND_AXE:1'
+      2: 'GOLDEN_APPLE:64'
+      3: 'ENDER_PEARL:16'
+      4: {type: SPLASH_POTION, potion: STRONG_STRENGTH}
+      5: {type: SPLASH_POTION, potion: STRONG_SWIFTNESS}
+      6: 'WATER_BUCKET:1'
+      7: 'COBWEB:16'
+      8: 'COOKED_BEEF:32'
+
+  # ---------------------------------------------------------------------------
+  # 8. UHC (Classic Competitive UHC)
+  # Classic UHC duel kit with rod, bow, lava, water, and natural regen disabled.
+  # ---------------------------------------------------------------------------
+  uhc-sword:
+    description: "UHC - Diamond Prot IV, Rod, Bow, Axe, Lava, Water, Golden Apples"
+    health: 20
+    natural-regeneration: false
+    armor: [DIAMOND_BOOTS, DIAMOND_LEGGINGS, DIAMOND_CHESTPLATE, DIAMOND_HELMET]
+    armor-enchantments: {protection: 4, unbreaking: 3}
+    weapon-enchantments: {sharpness: 5, unbreaking: 3}
+    bow-enchantments: {power: 5, punch: 2}
+    offhand: 'SHIELD:1'
+    items:
+      0: 'DIAMOND_SWORD:1'
+      1: 'FISHING_ROD:1'
+      2: 'BOW:1'
+      3: 'DIAMOND_AXE:1'
+      4: 'GOLDEN_APPLE:12'
+      5: 'WATER_BUCKET:1'
+      6: 'LAVA_BUCKET:1'
+      7: 'COBBLESTONE:64'
+      8: 'COOKED_BEEF:32'
+      9: 'ARROW:64'
+      10: 'WATER_BUCKET:1'
+      11: 'LAVA_BUCKET:1'
+      12: 'COBWEB:16'
+      13: 'ENDER_PEARL:16'
+
+  # ---------------------------------------------------------------------------
+  # 9. BuildUHC (Block Placement UHC)
+  # BuildUHC practice with dual cobblestone stacks, lava, water, bow and rod.
+  # ---------------------------------------------------------------------------
+  build-sword:
+    description: "BuildUHC - Diamond Prot IV, Building Blocks, Water, Lava, Bow & Rod"
+    health: 20
+    natural-regeneration: true
+    armor: [DIAMOND_BOOTS, DIAMOND_LEGGINGS, DIAMOND_CHESTPLATE, DIAMOND_HELMET]
+    armor-enchantments: {protection: 4, unbreaking: 3}
+    weapon-enchantments: {sharpness: 5, unbreaking: 3}
+    bow-enchantments: {power: 5}
+    offhand: 'SHIELD:1'
+    items:
+      0: 'DIAMOND_SWORD:1'
+      1: 'FISHING_ROD:1'
+      2: 'BOW:1'
+      3: 'DIAMOND_AXE:1'
+      4: 'GOLDEN_APPLE:16'
+      5: 'WATER_BUCKET:1'
+      6: 'LAVA_BUCKET:1'
+      7: 'COBBLESTONE:64'
+      8: 'COOKED_BEEF:32'
+      9: 'COBBLESTONE:64'
+      10: 'COBWEB:16'
+      11: 'ENDER_PEARL:16'
+      12: 'ARROW:64'
+
+  # ---------------------------------------------------------------------------
+  # 10. Combo (High Knockback Combo Duel)
+  # Diamond armor, Knockback II sword, Speed II, and Golden Apples.
+  # ---------------------------------------------------------------------------
+  combo-sword:
+    description: "Combo - Knockback II Sword, Splash Speed II & Golden Apples"
+    health: 20
+    natural-regeneration: true
+    armor: [DIAMOND_BOOTS, DIAMOND_LEGGINGS, DIAMOND_CHESTPLATE, DIAMOND_HELMET]
+    armor-enchantments: {protection: 4, unbreaking: 3}
+    weapon-enchantments: {sharpness: 5, knockback: 2, unbreaking: 3}
+    offhand: AIR
+    items:
+      0: 'DIAMOND_SWORD:1'
+      1: 'GOLDEN_APPLE:32'
+      2: 'ENDER_PEARL:16'
+      3: {type: SPLASH_POTION, potion: STRONG_SWIFTNESS}
+      4: {type: SPLASH_POTION, potion: STRONG_SWIFTNESS}
+      5: 'WATER_BUCKET:1'
+      6: 'COBWEB:16'
+      7: {type: SPLASH_POTION, potion: STRONG_HEALING}
+      8: 'COOKED_BEEF:32'
+      9: {type: SPLASH_POTION, potion: STRONG_HEALING}

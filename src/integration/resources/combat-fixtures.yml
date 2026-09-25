@@ -1,0 +1,261 @@
+# Test-only full inventories; deliberately NOT shipped as selectable default kits.
+smp-full:
+  description: "Full SMP: Mending, two XP stacks, water, blocks, totems and potions - all 36 inventory slots"
+  health: 20
+  armor: [NETHERITE_BOOTS, NETHERITE_LEGGINGS, NETHERITE_CHESTPLATE, NETHERITE_HELMET]
+  armor-enchantments: {protection: 4, unbreaking: 3, mending: 1}
+  weapon-enchantments: {sharpness: 5, unbreaking: 3, mending: 1}
+  offhand: TOTEM_OF_UNDYING
+  items:
+    0: 'NETHERITE_SWORD:1'
+    1: 'NETHERITE_AXE:1'
+    2: 'GOLDEN_APPLE:16'
+    3: 'ENDER_PEARL:16'
+    4: 'COBWEB:32'
+    5: 'EXPERIENCE_BOTTLE:64'
+    6: 'WATER_BUCKET:1'
+    7: {type: SPLASH_POTION, potion: STRONG_HEALING}
+    8: 'COOKED_BEEF:64'
+    9: 'TOTEM_OF_UNDYING:1'
+    10: 'TOTEM_OF_UNDYING:1'
+    11: {type: SPLASH_POTION, potion: STRONG_SWIFTNESS}
+    12: {type: SPLASH_POTION, potion: STRONG_STRENGTH}
+    13: {type: SPLASH_POTION, potion: LONG_FIRE_RESISTANCE}
+    14: 'EXPERIENCE_BOTTLE:64'
+    15: 'WATER_BUCKET:1'
+    16: 'COBBLESTONE:64'
+    17: 'COBWEB:32'
+    18: 'TOTEM_OF_UNDYING:1'
+    19: {type: SPLASH_POTION, potion: STRONG_SWIFTNESS}
+    20: {type: SPLASH_POTION, potion: STRONG_STRENGTH}
+    21: {type: SPLASH_POTION, potion: LONG_FIRE_RESISTANCE}
+    22: 'ENDER_PEARL:16'
+    23: 'GOLDEN_APPLE:16'
+    24: {type: SPLASH_POTION, potion: STRONG_HEALING}
+    25: {type: SPLASH_POTION, potion: STRONG_HEALING}
+    26: {type: SPLASH_POTION, potion: STRONG_HEALING}
+    27: {type: SPLASH_POTION, potion: STRONG_HEALING}
+    28: {type: SPLASH_POTION, potion: STRONG_HEALING}
+    29: {type: SPLASH_POTION, potion: STRONG_HEALING}
+    30: {type: SPLASH_POTION, potion: STRONG_HEALING}
+    31: {type: SPLASH_POTION, potion: STRONG_HEALING}
+    32: {type: SPLASH_POTION, potion: STRONG_HEALING}
+    33: {type: SPLASH_POTION, potion: STRONG_HEALING}
+    34: {type: SPLASH_POTION, potion: STRONG_HEALING}
+    35: {type: SPLASH_POTION, potion: STRONG_HEALING}
+
+sword:
+  description: "Full sword loadout: 36 slots of combat supplies, reserves and splash potions"
+  armor: [IRON_BOOTS, IRON_LEGGINGS, IRON_CHESTPLATE, IRON_HELMET]
+  offhand: AIR
+  items:
+    0: 'DIAMOND_SWORD:1'
+    1: {type: SPLASH_POTION, potion: STRONG_HEALING}
+    2: {type: SPLASH_POTION, potion: STRONG_HEALING}
+    3: 'ENDER_PEARL:16'
+    4: {type: SPLASH_POTION, potion: STRONG_HEALING}
+    5: 'WATER_BUCKET:1'
+    6: {type: SPLASH_POTION, potion: STRONG_SWIFTNESS}
+    7: {type: SPLASH_POTION, potion: STRONG_HEALING}
+    8: 'COOKED_BEEF:64'
+    9: {type: SPLASH_POTION, potion: LONG_FIRE_RESISTANCE}
+    10: 'COBBLESTONE:64'
+    11: {type: SPLASH_POTION, potion: STRONG_HEALING}
+    12: {type: SPLASH_POTION, potion: STRONG_HEALING}
+    13: {type: SPLASH_POTION, potion: STRONG_HEALING}
+    14: {type: SPLASH_POTION, potion: STRONG_HEALING}
+    15: {type: SPLASH_POTION, potion: STRONG_HEALING}
+    16: {type: SPLASH_POTION, potion: STRONG_HEALING}
+    17: {type: SPLASH_POTION, potion: STRONG_HEALING}
+    18: {type: SPLASH_POTION, potion: STRONG_HEALING}
+    19: {type: SPLASH_POTION, potion: STRONG_HEALING}
+    20: {type: SPLASH_POTION, potion: STRONG_HEALING}
+    21: {type: SPLASH_POTION, potion: STRONG_HEALING}
+    22: {type: SPLASH_POTION, potion: STRONG_HEALING}
+    23: {type: SPLASH_POTION, potion: STRONG_HEALING}
+    24: {type: SPLASH_POTION, potion: STRONG_HEALING}
+    25: {type: SPLASH_POTION, potion: STRONG_HEALING}
+    26: {type: SPLASH_POTION, potion: STRONG_HEALING}
+    27: {type: SPLASH_POTION, potion: STRONG_HEALING}
+    28: {type: SPLASH_POTION, potion: STRONG_HEALING}
+    29: {type: SPLASH_POTION, potion: STRONG_HEALING}
+    30: {type: SPLASH_POTION, potion: STRONG_HEALING}
+    31: {type: SPLASH_POTION, potion: STRONG_HEALING}
+    32: {type: SPLASH_POTION, potion: STRONG_HEALING}
+    33: {type: SPLASH_POTION, potion: STRONG_HEALING}
+    34: {type: SPLASH_POTION, potion: STRONG_HEALING}
+    35: {type: SPLASH_POTION, potion: STRONG_HEALING}
+
+axe:
+  description: "Full axe loadout: 36 slots of combat supplies, reserves and splash potions"
+  armor: [DIAMOND_BOOTS, DIAMOND_LEGGINGS, DIAMOND_CHESTPLATE, DIAMOND_HELMET]
+  offhand: SHIELD
+  items:
+    0: 'DIAMOND_AXE:1'
+    1: {type: SPLASH_POTION, potion: STRONG_HEALING}
+    2: 'GOLDEN_APPLE:1'
+    3: 'ENDER_PEARL:16'
+    4: {type: SPLASH_POTION, potion: STRONG_HEALING}
+    5: 'WATER_BUCKET:1'
+    6: {type: SPLASH_POTION, potion: STRONG_SWIFTNESS}
+    7: {type: SPLASH_POTION, potion: STRONG_HEALING}
+    8: 'COOKED_BEEF:64'
+    9: {type: SPLASH_POTION, potion: LONG_FIRE_RESISTANCE}
+    10: 'COBBLESTONE:64'
+    11: {type: SPLASH_POTION, potion: STRONG_HEALING}
+    12: {type: SPLASH_POTION, potion: STRONG_HEALING}
+    13: {type: SPLASH_POTION, potion: STRONG_HEALING}
+    14: {type: SPLASH_POTION, potion: STRONG_HEALING}
+    15: {type: SPLASH_POTION, potion: STRONG_HEALING}
+    16: {type: SPLASH_POTION, potion: STRONG_HEALING}
+    17: {type: SPLASH_POTION, potion: STRONG_HEALING}
+    18: {type: SPLASH_POTION, potion: STRONG_HEALING}
+    19: {type: SPLASH_POTION, potion: STRONG_HEALING}
+    20: {type: SPLASH_POTION, potion: STRONG_HEALING}
+    21: {type: SPLASH_POTION, potion: STRONG_HEALING}
+    22: {type: SPLASH_POTION, potion: STRONG_HEALING}
+    23: {type: SPLASH_POTION, potion: STRONG_HEALING}
+    24: {type: SPLASH_POTION, potion: STRONG_HEALING}
+    25: {type: SPLASH_POTION, potion: STRONG_HEALING}
+    26: {type: SPLASH_POTION, potion: STRONG_HEALING}
+    27: {type: SPLASH_POTION, potion: STRONG_HEALING}
+    28: {type: SPLASH_POTION, potion: STRONG_HEALING}
+    29: {type: SPLASH_POTION, potion: STRONG_HEALING}
+    30: {type: SPLASH_POTION, potion: STRONG_HEALING}
+    31: {type: SPLASH_POTION, potion: STRONG_HEALING}
+    32: {type: SPLASH_POTION, potion: STRONG_HEALING}
+    33: {type: SPLASH_POTION, potion: STRONG_HEALING}
+    34: {type: SPLASH_POTION, potion: STRONG_HEALING}
+    35: {type: SPLASH_POTION, potion: STRONG_HEALING}
+
+hybrid:
+  description: "Full hybrid loadout: 36 slots of combat supplies, reserves and splash potions"
+  armor: [DIAMOND_BOOTS, DIAMOND_LEGGINGS, DIAMOND_CHESTPLATE, DIAMOND_HELMET]
+  offhand: SHIELD
+  items:
+    0: 'DIAMOND_SWORD:1'
+    1: 'DIAMOND_AXE:1'
+    2: 'GOLDEN_APPLE:3'
+    3: 'ENDER_PEARL:16'
+    4: 'COBWEB:16'
+    5: 'WATER_BUCKET:1'
+    6: {type: SPLASH_POTION, potion: STRONG_SWIFTNESS}
+    7: {type: SPLASH_POTION, potion: STRONG_HEALING}
+    8: 'COOKED_BEEF:64'
+    9: {type: SPLASH_POTION, potion: LONG_FIRE_RESISTANCE}
+    10: 'COBBLESTONE:64'
+    11: {type: SPLASH_POTION, potion: STRONG_HEALING}
+    12: {type: SPLASH_POTION, potion: STRONG_HEALING}
+    13: {type: SPLASH_POTION, potion: STRONG_HEALING}
+    14: {type: SPLASH_POTION, potion: STRONG_HEALING}
+    15: {type: SPLASH_POTION, potion: STRONG_HEALING}
+    16: {type: SPLASH_POTION, potion: STRONG_HEALING}
+    17: {type: SPLASH_POTION, potion: STRONG_HEALING}
+    18: {type: SPLASH_POTION, potion: STRONG_HEALING}
+    19: {type: SPLASH_POTION, potion: STRONG_HEALING}
+    20: {type: SPLASH_POTION, potion: STRONG_HEALING}
+    21: {type: SPLASH_POTION, potion: STRONG_HEALING}
+    22: {type: SPLASH_POTION, potion: STRONG_HEALING}
+    23: {type: SPLASH_POTION, potion: STRONG_HEALING}
+    24: {type: SPLASH_POTION, potion: STRONG_HEALING}
+    25: {type: SPLASH_POTION, potion: STRONG_HEALING}
+    26: {type: SPLASH_POTION, potion: STRONG_HEALING}
+    27: {type: SPLASH_POTION, potion: STRONG_HEALING}
+    28: {type: SPLASH_POTION, potion: STRONG_HEALING}
+    29: {type: SPLASH_POTION, potion: STRONG_HEALING}
+    30: {type: SPLASH_POTION, potion: STRONG_HEALING}
+    31: {type: SPLASH_POTION, potion: STRONG_HEALING}
+    32: {type: SPLASH_POTION, potion: STRONG_HEALING}
+    33: {type: SPLASH_POTION, potion: STRONG_HEALING}
+    34: {type: SPLASH_POTION, potion: STRONG_HEALING}
+    35: {type: SPLASH_POTION, potion: STRONG_HEALING}
+
+nodebuff:
+  description: "Full nodebuff loadout: 36 slots of combat supplies, reserves and splash potions"
+  health: 20
+  armor: [DIAMOND_BOOTS, DIAMOND_LEGGINGS, DIAMOND_CHESTPLATE, DIAMOND_HELMET]
+  armor-enchantments: {protection: 4, unbreaking: 3}
+  weapon-enchantments: {sharpness: 2, unbreaking: 3}
+  offhand: AIR
+  items:
+    0: 'DIAMOND_SWORD:1'
+    1: 'DIAMOND_AXE:1'
+    2: {type: SPLASH_POTION, potion: STRONG_HEALING}
+    3: 'ENDER_PEARL:8'
+    4: {type: SPLASH_POTION, potion: STRONG_SWIFTNESS}
+    5: {type: SPLASH_POTION, potion: STRONG_HEALING}
+    6: {type: SPLASH_POTION, potion: STRONG_SWIFTNESS}
+    7: {type: SPLASH_POTION, potion: STRONG_HEALING}
+    8: 'COOKED_BEEF:64'
+    9: {type: SPLASH_POTION, potion: STRONG_SWIFTNESS}
+    10: {type: SPLASH_POTION, potion: STRONG_HEALING}
+    11: {type: SPLASH_POTION, potion: STRONG_HEALING}
+    12: {type: SPLASH_POTION, potion: STRONG_HEALING}
+    13: {type: SPLASH_POTION, potion: STRONG_HEALING}
+    14: {type: SPLASH_POTION, potion: STRONG_HEALING}
+    15: {type: SPLASH_POTION, potion: STRONG_HEALING}
+    16: {type: SPLASH_POTION, potion: STRONG_HEALING}
+    17: {type: SPLASH_POTION, potion: STRONG_HEALING}
+    18: {type: SPLASH_POTION, potion: STRONG_HEALING}
+    19: {type: SPLASH_POTION, potion: STRONG_HEALING}
+    20: {type: SPLASH_POTION, potion: STRONG_HEALING}
+    21: {type: SPLASH_POTION, potion: STRONG_HEALING}
+    22: {type: SPLASH_POTION, potion: STRONG_HEALING}
+    23: {type: SPLASH_POTION, potion: STRONG_HEALING}
+    24: {type: SPLASH_POTION, potion: STRONG_HEALING}
+    25: {type: SPLASH_POTION, potion: STRONG_HEALING}
+    26: {type: SPLASH_POTION, potion: STRONG_HEALING}
+    27: {type: SPLASH_POTION, potion: STRONG_HEALING}
+    28: {type: SPLASH_POTION, potion: STRONG_HEALING}
+    29: {type: SPLASH_POTION, potion: STRONG_HEALING}
+    30: {type: SPLASH_POTION, potion: STRONG_HEALING}
+    31: {type: SPLASH_POTION, potion: STRONG_HEALING}
+    32: {type: SPLASH_POTION, potion: STRONG_HEALING}
+    33: {type: SPLASH_POTION, potion: STRONG_HEALING}
+    34: {type: SPLASH_POTION, potion: STRONG_HEALING}
+    35: {type: SPLASH_POTION, potion: STRONG_HEALING}
+
+smp:
+  description: "Full smp loadout: 36 slots of combat supplies, reserves and splash potions"
+  health: 20
+  armor: [NETHERITE_BOOTS, NETHERITE_LEGGINGS, NETHERITE_CHESTPLATE, NETHERITE_HELMET]
+  armor-enchantments: {protection: 4, unbreaking: 3, mending: 1}
+  weapon-enchantments: {sharpness: 5, unbreaking: 3, mending: 1}
+  offhand: TOTEM_OF_UNDYING
+  items:
+    0: 'NETHERITE_SWORD:1'
+    1: 'NETHERITE_AXE:1'
+    2: 'GOLDEN_APPLE:8'
+    3: 'ENDER_PEARL:8'
+    4: 'COBWEB:16'
+    5: 'EXPERIENCE_BOTTLE:64'
+    6: 'WATER_BUCKET:1'
+    7: {type: SPLASH_POTION, potion: STRONG_HEALING}
+    8: 'COOKED_BEEF:64'
+    9: 'TOTEM_OF_UNDYING:1'
+    10: 'TOTEM_OF_UNDYING:1'
+    11: {type: SPLASH_POTION, potion: STRONG_SWIFTNESS}
+    12: {type: SPLASH_POTION, potion: STRONG_STRENGTH}
+    13: {type: SPLASH_POTION, potion: LONG_FIRE_RESISTANCE}
+    14: {type: SPLASH_POTION, potion: STRONG_HEALING}
+    15: {type: SPLASH_POTION, potion: STRONG_HEALING}
+    16: {type: SPLASH_POTION, potion: STRONG_HEALING}
+    17: {type: SPLASH_POTION, potion: STRONG_HEALING}
+    18: {type: SPLASH_POTION, potion: STRONG_HEALING}
+    19: {type: SPLASH_POTION, potion: STRONG_HEALING}
+    20: {type: SPLASH_POTION, potion: STRONG_HEALING}
+    21: {type: SPLASH_POTION, potion: STRONG_HEALING}
+    22: {type: SPLASH_POTION, potion: STRONG_HEALING}
+    23: {type: SPLASH_POTION, potion: STRONG_HEALING}
+    24: {type: SPLASH_POTION, potion: STRONG_HEALING}
+    25: 'EXPERIENCE_BOTTLE:64'
+    26: 'WATER_BUCKET:1'
+    27: 'COBBLESTONE:64'
+    28: 'TOTEM_OF_UNDYING:1'
+    29: {type: SPLASH_POTION, potion: STRONG_HEALING}
+    30: {type: SPLASH_POTION, potion: STRONG_HEALING}
+    31: {type: SPLASH_POTION, potion: STRONG_HEALING}
+    32: {type: SPLASH_POTION, potion: STRONG_HEALING}
+    33: {type: SPLASH_POTION, potion: STRONG_HEALING}
+    34: {type: SPLASH_POTION, potion: STRONG_HEALING}
+    35: {type: SPLASH_POTION, potion: STRONG_HEALING}
