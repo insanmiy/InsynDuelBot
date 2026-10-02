@@ -6,7 +6,6 @@ public record BotOptions(
     boolean criticals,
     boolean shields,
     boolean strafing,
-    Drill drill,
     double aimError,
     int decisionTicks,
     int perceptionTicks,
@@ -16,27 +15,19 @@ public record BotOptions(
     double strafeStrength,
     double healThreshold,
     boolean counters) {
-  public enum Drill {
-    FULL_COMBAT,
-    MELEE_ONLY,
-    NO_HEALING,
-    SHIELD_PRESSURE
-  }
 
   public BotOptions(
       boolean healing,
       boolean utilities,
       boolean criticals,
       boolean shields,
-      boolean strafing,
-      Drill drill) {
+      boolean strafing) {
     this(
         healing,
         utilities,
         criticals,
         shields,
         strafing,
-        drill,
         -1.0,
         -1,
         -1,
@@ -49,14 +40,14 @@ public record BotOptions(
   }
 
   public static BotOptions defaults() {
-    return new BotOptions(true, true, true, true, true, Drill.FULL_COMBAT);
+    return new BotOptions(true, true, true, true, true);
   }
 
   public boolean useHealing() {
-    return healing && drill != Drill.NO_HEALING;
+    return healing;
   }
 
   public boolean useUtilities() {
-    return utilities && drill != Drill.MELEE_ONLY && drill != Drill.SHIELD_PRESSURE;
+    return utilities;
   }
 }

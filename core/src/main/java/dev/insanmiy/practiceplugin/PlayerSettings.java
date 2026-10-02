@@ -67,12 +67,6 @@ final class PlayerSettings {
   }
 
   BotOptions options(UUID id) {
-    BotOptions.Drill drill;
-    try {
-      drill = BotOptions.Drill.valueOf(data.getString(id + ".drill", "FULL_COMBAT"));
-    } catch (IllegalArgumentException e) {
-      drill = BotOptions.Drill.FULL_COMBAT;
-    }
     int aimLevel = botSetting(id, "bot-aim");
     double aimError =
         switch (aimLevel) {
@@ -166,7 +160,6 @@ final class PlayerSettings {
         flag(id, "criticals"),
         flag(id, "shields"),
         flag(id, "strafing"),
-        drill,
         aimError,
         decisionTicks,
         perceptionTicks,

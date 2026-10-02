@@ -219,6 +219,18 @@ public final class PracticePlugin extends JavaPlugin implements Listener {
     try {
       BotAdapters.getAdapter();
       getLogger().info("Successfully loaded NMS adapter for Minecraft " + serverVersion);
+      if (serverVersion.equals("1.20.6")) {
+        try {
+          for (var pack : getServer().getDatapackManager().getPacks()) {
+            if (pack.getName().equalsIgnoreCase("update_1_21") && !pack.isEnabled()) {
+              pack.setEnabled(true);
+              getLogger().info("Enabled update_1_21 datapack for Wind Charges.");
+            }
+          }
+        } catch (Throwable t) {
+          getLogger().warning("Could not auto-enable update_1_21 datapack: " + t.getMessage());
+        }
+      }
     } catch (UnsupportedOperationException | IllegalStateException e) {
       getLogger().severe("Failed to initialize version adapter: " + e.getMessage());
       getServer().getPluginManager().disablePlugin(this);
@@ -455,7 +467,7 @@ public final class PracticePlugin extends JavaPlugin implements Listener {
     }
     lastSelections.put(p.getUniqueId(), choice);
     p.sendMessage(TextUI.legacy(
-        Component.text("Arena: " + session.arenaName + " | Drill: " + session.options.drill())));
+        Component.text("Arena: " + session.arenaName)));
     p.sendMessage(TextUI.legacy(
         Component.text(
             "Starting "
@@ -775,7 +787,7 @@ public final class PracticePlugin extends JavaPlugin implements Listener {
               a[0].equals("arena") && a[1].equalsIgnoreCase("setradius")
                   ? arenaNames()
                   : a[0].equals("start")
-                      ? List.of("endless", "match", "duel", "dummy")
+                      ? Arrays.stream(PracticeMode.values()).map(PracticeMode::id).toList()
                       : a[0].equals("kit") && a[1].equals("create") ? kits.keySet() : List.of();
           case 5 -> a[0].equals("start") ? List.of("1", "3", "5", "7", "9", "11") : List.of();
           default -> List.of();
@@ -868,7 +880,9 @@ public final class PracticePlugin extends JavaPlugin implements Listener {
     } else {
       session.round.hit(amount, session.tick);
       session.total.hit(amount, session.tick);
-      if (amount > 0 && source != null && source.equals(session.owner)) session.bot.onOpponentHit();
+      if (amount > 0 && source != null && source.equals(session.owner)) {
+        session.bot.onOpponentHit();
+      }
     }
 
   }
@@ -1314,20 +1328,53 @@ public final class PracticePlugin extends JavaPlugin implements Listener {
     e.blockList().removeIf(b -> inArena(b.getLocation()) || webs.owns(b));
   }
 
-  @EventHandler
+  @EventHandler(priority = EventPriority.HIGH)
   public void interact(PlayerInteractEvent e) {
-    PracticeSession session = sessionFor(e.getPlayer());
+    Player player = e.getPlayer();
+    PracticeSession session = sessionFor(player);
+    if (session == null || !participant(player)) return;
+
+    if ((e.getAction() == Action.RIGHT_CLICK_AIR || e.getAction() == Action.RIGHT_CLICK_BLOCK)
+        && e.getItem() != null
+        && e.getItem().getType() == Material.WIND_CHARGE) {
+      if (session.fighting()) {
+        if (!player.hasCooldown(Material.WIND_CHARGE)) {
+          player.setCooldown(Material.WIND_CHARGE, 10);
+          player.getWorld().playSound(player.getLocation(), Sound.ENTITY_WIND_CHARGE_THROW, 0.5f, 1.0f);
+          try {
+            WindCharge charge = BotAdapters.getAdapter().launchWindCharge(player);
+            if (charge != null) {
+              charge
+                  .getPersistentDataContainer()
+                  .set(gearKey, org.bukkit.persistence.PersistentDataType.BYTE, (byte) 1);
+              charge.setPersistent(false);
+              projectiles.add(charge);
+              session.round.utility();
+              session.total.utility();
+            }
+          } catch (Throwable t) {
+            getLogger().warning("Could not launch WindCharge: " + t.getMessage());
+          }
+          if (player.getGameMode() != GameMode.CREATIVE) {
+            e.getItem().subtract(1);
+          }
+        }
+      }
+      e.setUseItemInHand(Event.Result.DENY);
+      e.setUseInteractedBlock(Event.Result.DENY);
+      e.setCancelled(true);
+      return;
+    }
+
     if (e.getClickedBlock() != null && protectedFrom(session, e.getClickedBlock().getLocation())) {
       e.setUseInteractedBlock(Event.Result.DENY);
       e.setUseItemInHand(Event.Result.DENY);
       return;
     }
-    if (!participant(e.getPlayer())) return;
     if (!session.fighting()) {
       e.setUseInteractedBlock(Event.Result.DENY);
       e.setUseItemInHand(Event.Result.DENY);
     }
-
   }
 
   @EventHandler

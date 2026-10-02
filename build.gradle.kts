@@ -80,5 +80,17 @@ tasks.runServer {
         val eulaFile = dir.file("eula.txt").asFile
         eulaFile.parentFile.mkdirs()
         eulaFile.writeText("eula=true\n")
+
+        if (minecraftVersion.startsWith("1.20")) {
+            val propsFile = dir.file("server.properties").asFile
+            if (!propsFile.exists()) {
+                propsFile.writeText("initial-enabled-packs=vanilla,update_1_21\n")
+            } else {
+                val content = propsFile.readText()
+                if (content.contains("initial-enabled-packs=vanilla") && !content.contains("update_1_21")) {
+                    propsFile.writeText(content.replace("initial-enabled-packs=vanilla", "initial-enabled-packs=vanilla,update_1_21"))
+                }
+            }
+        }
     }
 }

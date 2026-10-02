@@ -10,7 +10,7 @@ A Paper Minecraft plugin for 1v1 PvP practice against a custom bot.
 
 ## Commands
 
-* `/practice menu` — Open the practice menu
+* `/practice` — Open the practice gui
 * `/practice start` — Start a match against the bot
 * `/practice stop` — End the current match
 * `/practice settings` — Open bot and match settings

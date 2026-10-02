@@ -1,6 +1,5 @@
 package dev.insanmiy.practiceplugin;
 
-import dev.insanmiy.practiceplugin.model.BotOptions;
 import java.io.*;
 import java.util.*;
 import net.kyori.adventure.text.Component;
@@ -146,7 +145,7 @@ final class SettingsMenu implements Listener {
       return new int[] {
         0, 1, 2, 3, 5, 6, 7, 8,
         9, 17,
-        18, 26,
+        18, 25, 26,
         27, 35,
         36, 37, 38, 39, 40, 41, 42, 43, 44,
         46, 47, 48, 50, 51, 52
@@ -212,17 +211,6 @@ final class SettingsMenu implements Listener {
                   "Click to toggle",
                   "Saved for your sessions"));
         });
-
-    view.inventory.setItem(
-        25,
-        item(
-            Material.TARGET,
-            "Drill: " + title(prefs.options(id).drill().name()),
-            "Click to cycle drill mode",
-            "Full combat: all enabled tactics",
-            "Melee only: no offensive utilities",
-            "No healing: no bot food or healing potions",
-            "Shield pressure: axe counters; no ranged/web attacks"));
 
     NUMBERS.forEach(
         (slot, key) ->
@@ -367,11 +355,6 @@ final class SettingsMenu implements Listener {
         String key = NUMBERS.get(slot);
         int max = key.equals("saturation") ? 20 : 60, min = key.equals("saturation") ? 0 : 1;
         prefs.set(id, key, Math.max(min, Math.min(max, prefs.number(id, key) + (right ? -1 : 1))));
-        p.playSound(p.getLocation(), Sound.UI_BUTTON_CLICK, 0.4f, 1.0f);
-      } else if (slot == 25) {
-        var values = BotOptions.Drill.values();
-        prefs.set(
-            id, "drill", values[(prefs.options(id).drill().ordinal() + 1) % values.length].name());
         p.playSound(p.getLocation(), Sound.UI_BUTTON_CLICK, 0.4f, 1.0f);
       } else return;
       open(p);

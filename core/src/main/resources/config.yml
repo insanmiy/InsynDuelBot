@@ -9,7 +9,7 @@ config-version: 7
 arena:
   # Block protection radius (in blocks) around the arena center.
   # Outside players cannot place or break blocks within this area.
-  radius: 16.0
+  radius: 32.0
 
   # Maximum allowed arena radius limit (in blocks).
   # Set to 0.0 for unlimited arena radius.
@@ -40,7 +40,7 @@ session:
   countdown-seconds: 5
 
   # Pause delay in seconds between rounds in a series before the next round begins.
-  between-round-seconds: 5
+  between-round-seconds: 3
 
 # Name of the practice bot entity shown in game.
 bot-name: YourNameHere

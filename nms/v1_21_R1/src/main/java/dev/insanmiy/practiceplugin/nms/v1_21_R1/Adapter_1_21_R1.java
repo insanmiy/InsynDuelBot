@@ -39,4 +39,9 @@ public final class Adapter_1_21_R1 implements BotAdapter {
   public int mend(Player player, int amount) {
     return NativeExperience.mend(player, amount);
   }
+
+  @Override
+  public org.bukkit.entity.WindCharge launchWindCharge(Player player) {
+    return player.launchProjectile(org.bukkit.entity.WindCharge.class);
+  }
 }

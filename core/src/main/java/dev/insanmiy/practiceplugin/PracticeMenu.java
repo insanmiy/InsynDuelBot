@@ -290,9 +290,16 @@ final class PracticeMenu implements Listener {
                   lore.toArray(String[]::new));
         } else if (screen == Screen.MODES) {
           PracticeMode mode = PracticeMode.parse(name);
+          Material modeIcon =
+              switch (mode) {
+                case DUMMY -> Material.ARMOR_STAND;
+                case MATCH -> Material.GOLDEN_SWORD;
+                case DUEL -> Material.IRON_SWORD;
+                case ENDLESS -> Material.TARGET;
+              };
           card =
               icon(
-                  mode == PracticeMode.DUMMY ? Material.ARMOR_STAND : Material.TARGET,
+                  modeIcon,
                   pretty(name),
                   NamedTextColor.AQUA,
                   choice.mode() == mode,
@@ -373,7 +380,7 @@ final class PracticeMenu implements Listener {
               NamedTextColor.AQUA,
               false,
               "Bot attack skill, reaction speed, aim accuracy,",
-              "tactics, drills, animations and match rules",
+              "tactics, animations and match rules",
               "Click to customize without config.yml"));
       if (page > 0)
         inventory.setItem(36, icon(Material.ARROW, "Previous page", NamedTextColor.AQUA, false));

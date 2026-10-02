@@ -52,6 +52,7 @@ public final class NmsBot implements BotPlatform {
   private boolean teleporting;
   // Combat timers and strafe state
   private int ticks, strafe = 1, shieldUntil, resetSprintUntil, stuck;
+  private float inputZ, inputX;
   private Location previous;
   private Vec3 pendingVelocity;
   private Integer pendingTeleport;
@@ -169,6 +170,8 @@ public final class NmsBot implements BotPlatform {
     pendingVelocity = null;
     handle.zza = 0;
     handle.xxa = 0;
+    inputZ = 0;
+    inputX = 0;
     handle.setJumping(false);
     teleporting = true;
     try {
@@ -234,10 +237,8 @@ public final class NmsBot implements BotPlatform {
       boolean aggressiveKnockbackResist = d.sprintResetChance() >= 0.85 || d.decisionTicks() <= 2;
       if (aggressiveKnockbackResist
           && handle.onGround()
-          && pendingVelocity.horizontalDistanceSqr() > 0.02) {
-        handle.jumpFromGround();
-        handle.zza = 1.0f;
-        handle.setSprinting(true);
+          && pendingVelocity.horizontalDistanceSqr() > 0.04) {
+        handle.zza = 0.6f;
       }
       pendingVelocity = null;
     }
@@ -246,6 +247,8 @@ public final class NmsBot implements BotPlatform {
       utility.pause(ticks);
       handle.zza = 0;
       handle.xxa = 0;
+      inputZ = 0;
+      inputX = 0;
       handle.setDeltaMovement(Vec3.ZERO);
       handle.stopUsingItem();
       return;
@@ -257,22 +260,47 @@ public final class NmsBot implements BotPlatform {
     if (!d.attacksEnabled()) {
       handle.zza = 0;
       handle.xxa = 0;
+      inputZ = 0;
+      inputX = 0;
       handle.setSprinting(false);
       handle.stopUsingItem();
     } else if (ticks % d.decisionTicks() == 0 || critical.tracking(ticks) || utility.busy(ticks)) {
       // Run combat decision check
       decide(target, history.getFirst(), d, arena);
       decided = true;
+      inputZ = handle.zza;
+      inputX = handle.xxa;
     }
-    if (!decided && d.attacksEnabled() && !utility.busy(ticks))
+    if (!decided && d.attacksEnabled() && !utility.busy(ticks)) {
       combatLook(target, history.getFirst(), d);
+      handle.zza = inputZ;
+      handle.xxa = inputX;
+    }
     avoidHazards();
+    inputZ = handle.zza;
+    inputX = handle.xxa;
 
     Vec3 beforeTravel = handle.position();
 
     handle.setJumping(d.attacksEnabled() && handle.isInWater());
     var beforeLevel = handle.level();
     int beforeEpoch = movementEpoch;
+    float travelZ = handle.zza * 0.72f;
+    float travelX = handle.xxa * 0.72f;
+    handle.travel(new Vec3(travelX, handle.yya, travelZ));
+    if (handle.onGround()) {
+      double maxSpeed = handle.isSprinting() ? 0.30 : 0.23;
+      var speedAttr = handle.getAttribute(net.minecraft.world.entity.ai.attributes.Attributes.MOVEMENT_SPEED);
+      if (speedAttr != null && speedAttr.getValue() > 0) {
+        maxSpeed *= (speedAttr.getValue() / 0.1);
+      }
+      Vec3 dm = handle.getDeltaMovement();
+      double horizSqr = dm.x * dm.x + dm.z * dm.z;
+      if (horizSqr > maxSpeed * maxSpeed) {
+        double factor = maxSpeed / Math.sqrt(horizSqr);
+        handle.setDeltaMovement(dm.x * factor, dm.y, dm.z * factor);
+      }
+    }
     // Process entity tick
     handle.doTick();
 
@@ -318,10 +346,7 @@ public final class NmsBot implements BotPlatform {
     // Switch to axe against shields
     int sword = weapon("_SWORD"), axe = weapon("_AXE");
     boolean playerShielding = perceived.blocking() || target.isBlocking();
-    if (axe >= 0
-        && (playerShielding
-            || options.drill()
-                == dev.insanmiy.practiceplugin.model.BotOptions.Drill.SHIELD_PRESSURE))
+    if (axe >= 0 && playerShielding)
       axeUntil = ticks + 25;
     int selected = axe >= 0 && ticks < axeUntil && playerShielding ? axe : (sword >= 0 ? sword : axe);
     boolean switchedWeapon = selected >= 0 && selected != player().getInventory().getHeldItemSlot();
@@ -334,9 +359,15 @@ public final class NmsBot implements BotPlatform {
       swingClock.reset(ticks);
     }
     // Update movement inputs
-    handle.zza = distance > 1.1 ? 1.0f : (float) Math.min(0.9f, Math.max(0.25f, 0.35f + (d.sprintResetChance() * 0.45f)));
-    handle.xxa = distance < 5 ? (float) d.strafeStrength() * strafe : 0;
-    handle.setSprinting(ticks >= resetSprintUntil && (distance > 1.0 || d.sprintResetChance() >= 0.7));
+    if (distance > 3.0) {
+      handle.zza = 1.0f;
+    } else if (distance > 1.8) {
+      handle.zza = 0.7f;
+    } else {
+      handle.zza = (float) Math.min(0.45f, Math.max(0.15f, 0.25f + (d.sprintResetChance() * 0.2f)));
+    }
+    handle.xxa = distance < 5 ? (float) (d.strafeStrength() * 0.55) * strafe : 0;
+    handle.setSprinting(ticks >= resetSprintUntil && distance > 2.2);
     avoidHazards();
     if (ticks < shieldUntil) {
       handle.zza *= .2f;

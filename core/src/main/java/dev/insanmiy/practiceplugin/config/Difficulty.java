@@ -185,8 +185,6 @@ public record Difficulty(
   }
 
   public Difficulty withOptions(dev.insanmiy.practiceplugin.model.BotOptions options) {
-    boolean pressure =
-        options.drill() == dev.insanmiy.practiceplugin.model.BotOptions.Drill.SHIELD_PRESSURE;
     int dec = options.decisionTicks() > 0 ? options.decisionTicks() : decisionTicks;
     int per = options.perceptionTicks() >= 0 ? options.perceptionTicks() : perceptionTicks;
     double aim = options.aimError() >= 0 ? options.aimError() : aimError;
@@ -195,7 +193,7 @@ public record Difficulty(
         !options.shields()
             ? 0
             : (options.shieldChance() >= 0 ? options.shieldChance() : shieldChance);
-    boolean axeCounter = pressure || options.counters();
+    boolean axeCounter = options.counters();
     double sprint =
         options.sprintResetChance() >= 0 ? options.sprintResetChance() : sprintResetChance;
     double strafe =

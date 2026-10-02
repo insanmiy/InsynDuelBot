@@ -42,6 +42,7 @@ public final class PracticeSession {
   private final BossBar bar =
       Bukkit.createBossBar("DuelBot", org.bukkit.boss.BarColor.RED, org.bukkit.boss.BarStyle.SOLID);
 
+
   PracticeSession(
       PracticePlugin plugin,
       Player owner,
@@ -54,9 +55,9 @@ public final class PracticeSession {
     this.owner = owner;
     this.arena = arena;
     this.kit = kit;
-    options = plugin.settings().options(owner.getUniqueId());
-    difficulty = difficulty.withOptions(options);
-    this.difficulty = mode == PracticeMode.DUMMY ? difficulty.passive() : difficulty;
+    this.options = plugin.settings().options(owner.getUniqueId());
+    Difficulty configured = difficulty.withOptions(this.options);
+    this.difficulty = mode == PracticeMode.DUMMY ? configured.passive() : configured;
     startingSaturation = plugin.settings().number(owner.getUniqueId(), "saturation");
     this.mode = mode;
     hud = plugin.settings().flag(owner.getUniqueId(), "hud");
@@ -184,6 +185,7 @@ public final class PracticeSession {
         p.setTotalExperience(0);
         BotAdapters.getAdapter().prepareRound(p);
       }
+
       round = new CombatStats();
     } finally {
       internalTeleport = false;
@@ -221,6 +223,7 @@ public final class PracticeSession {
         owner.sendMessage(TextUI.legacy(Component.text("Fight! /practice stop to finish.")));
       }
     }
+
     if (tick % 5 == 0 && hud) {
       bar.setTitle(TextUI.legacy(
           Component.text(
@@ -252,6 +255,8 @@ public final class PracticeSession {
                   + String.format(java.util.Locale.ROOT, "%.1f", owner.getSaturation())));
     }
   }
+
+
 
   static int countApples(Player player) {
     return Arrays.stream(player.getInventory().getContents())
