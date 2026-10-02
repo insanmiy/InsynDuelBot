@@ -32,8 +32,7 @@ public final class PracticePlugin extends JavaPlugin implements Listener {
   private ProgressStore progress;
   private PracticeMenu menu;
   private KitEditor kitEditor;
-  private TemporaryWebs webs;
-  private TemporaryWater water;
+  private TemporaryBlocks blocks;
   private final Set<Projectile> projectiles = new HashSet<>();
 
   void clearUtilities(PracticeSession session) {
@@ -45,37 +44,30 @@ public final class PracticePlugin extends JavaPlugin implements Listener {
           return true;
         });
     try {
-      water.restoreOwner(owner);
-      webs.restoreOwner(owner);
-      water.restoreOwner(owner);
+      blocks.restoreOwner(owner);
     } catch (java.io.IOException e) {
-      throw new IllegalStateException("Could not save session cleanup", e);
+      throw new IllegalStateException("Could Not Save Session Cleanup", e);
+    }
+    World world = session.arena.playerSpawn().getWorld();
+    if (world != null){
+      for (Entity entity : world.getEntities()) {
+        if (!(entity instanceof Player) && session.arena.contains(entity.getLocation())){
+          entity.remove();
+        }
+      }
     }
   }
 
   void clearUtilities() {
     projectiles.forEach(Entity::remove);
     projectiles.clear();
-    if (water != null) {
+    if (blocks != null){
       try {
-        water.restoreAll();
+        if (!blocks.restoreAll()){
+          getLogger().warning("Block Recovery Retained For An Unloaded World.");
+        }
       } catch (java.io.IOException e) {
-        throw new IllegalStateException("Could not save water cleanup journal", e);
-      }
-    }
-    if (webs != null) {
-      try {
-        if (!webs.restoreAll()) getLogger().warning("Web recovery retained for an unloaded world.");
-      } catch (java.io.IOException e) {
-        throw new IllegalStateException("Could not save web cleanup journal", e);
-      }
-    }
-    if (water != null) {
-      try {
-        if (!water.restoreAll())
-          getLogger().warning("Water recovery retained for an unloaded world.");
-      } catch (java.io.IOException e) {
-        throw new IllegalStateException("Could not finish water cleanup", e);
+        throw new IllegalStateException("Could Not Save Block Cleanup Journal", e);
       }
     }
   }
@@ -252,8 +244,7 @@ public final class PracticePlugin extends JavaPlugin implements Listener {
       return;
     }
     progress = new ProgressStore(this);
-    webs = new TemporaryWebs(this);
-    water = new TemporaryWater(this, webs);
+    blocks = new TemporaryBlocks(this);
     clearUtilities();
     for (World world : Bukkit.getWorlds())
       for (Entity entity : world.getEntities())
@@ -278,12 +269,6 @@ public final class PracticePlugin extends JavaPlugin implements Listener {
         .runTaskTimer(
             this,
             () -> {
-              try {
-                webs.tick();
-                water.tick();
-              } catch (java.io.IOException e) {
-                getLogger().severe("Web cleanup journal failed: " + e.getMessage());
-              }
               projectiles.removeIf(p -> !p.isValid());
               for (PracticeSession session : List.copyOf(sessions.values())) {
                 try {
@@ -832,6 +817,7 @@ public final class PracticePlugin extends JavaPlugin implements Listener {
         || !session.fighting()
         || session.bot == null
         || !event.getEntity().equals(session.bot.player())) return;
+    @SuppressWarnings("unused")
     Object source =
         event.getDamager() instanceof Projectile p ? p.getShooter() : event.getDamager();
     session.bot.onIncomingDamage(event.getFinalDamage());
@@ -1121,17 +1107,16 @@ public final class PracticePlugin extends JavaPlugin implements Listener {
     tagBucketResult(e);
     try {
       Material fluid = e.getBucket() == Material.LAVA_BUCKET ? Material.LAVA : Material.WATER;
-      if (!water.record(e.getBlock(), null, session.owner.getUniqueId(), fluid)) {
+      if (!blocks.recordFluid(e.getBlock(), null, session.owner.getUniqueId(), fluid)){
         e.setCancelled(true);
         e.getPlayer()
             .sendMessage(TextUI.legacy(
                 Component.text(
-                    "Place water/lava into air or a web; waterlogging and oversized flows are not"
-                        + " supported in practice.")));
+                    "Place Water Or Lava Into Air Or A Placed Block; Oversized Flows Are Not Supported In Practice.")));
       }
     } catch (java.io.IOException failure) {
       e.setCancelled(true);
-      getLogger().severe("Water journal failed: " + failure.getMessage());
+      getLogger().severe("Water Journal Failed: " + failure.getMessage());
     }
   }
 
@@ -1139,18 +1124,24 @@ public final class PracticePlugin extends JavaPlugin implements Listener {
   public void fillWater(PlayerBucketFillEvent e) {
     PracticeSession session = sessionFor(e.getPlayer());
     if (protectedFrom(session, e.getBlock().getLocation())
-        || water.owns(e.getBlock())
+        || blocks.owns(e.getBlock())
             && (session == null
-                || !session.owner.getUniqueId().equals(water.owner(e.getBlock())))) {
+                || !session.owner.getUniqueId().equals(blocks.owner(e.getBlock())))){
       e.setCancelled(true);
       return;
     }
-    if (!participant(e.getPlayer())) return;
+    if (!participant(e.getPlayer())){
+      return;
+    }
     if (!session.fighting()
         || e.getItemStack() == null
         || (e.getItemStack().getType() != Material.WATER_BUCKET
-            && e.getItemStack().getType() != Material.LAVA_BUCKET)) e.setCancelled(true);
-    else tagBucketResult(e);
+            && e.getItemStack().getType() != Material.LAVA_BUCKET)){
+      e.setCancelled(true);
+    }
+    else {
+      tagBucketResult(e);
+    }
   }
 
   private void tagBucketResult(PlayerBucketEvent e) {
@@ -1165,55 +1156,66 @@ public final class PracticePlugin extends JavaPlugin implements Listener {
 
   @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
   public void waterFlow(BlockFromToEvent e) {
-    if (!water.owns(e.getBlock())) return;
-    PracticeSession source = sessions.get(water.owner(e.getBlock()));
-    if (protectedFrom(source, e.getToBlock().getLocation())) {
+    if (!blocks.owns(e.getBlock())){
+      return;
+    }
+    PracticeSession source = sessions.get(blocks.owner(e.getBlock()));
+    if (protectedFrom(source, e.getToBlock().getLocation())){
       e.setCancelled(true);
       return;
     }
     try {
-      if (!water.record(e.getToBlock(), e.getBlock(), water.owner(e.getBlock())))
+      if (!blocks.recordFluid(e.getToBlock(), e.getBlock(), blocks.owner(e.getBlock()))){
         e.setCancelled(true);
+      }
     } catch (java.io.IOException failure) {
       e.setCancelled(true);
-      getLogger().severe("Water flow journal failed: " + failure.getMessage());
+      getLogger().severe("Water Flow Journal Failed: " + failure.getMessage());
     }
   }
 
   @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
   public void waterFreeze(BlockFormEvent e) {
-    if (water.owns(e.getBlock())) e.setCancelled(true);
+    if (blocks.owns(e.getBlock())){
+      e.setCancelled(true);
+    }
   }
 
   @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
   public void practiceIgnition(BlockIgniteEvent e) {
     var source = e.getIgnitingBlock();
 
-    if (source != null && (water.owns(source) || webs.fire(source))) {
+    if (source != null && (blocks.owns(source) || blocks.fire(source))){
       e.setCancelled(true);
       return;
     }
     PracticeSession session = e.getPlayer() == null ? null : sessionFor(e.getPlayer());
-    if (protectedFrom(session, e.getBlock().getLocation())) {
+    if (protectedFrom(session, e.getBlock().getLocation())){
       e.setCancelled(true);
       return;
     }
-    if (session == null) return;
-    if (!session.fighting()) {
+    if (session == null){
+      return;
+    }
+    if (!session.fighting()){
       e.setCancelled(true);
       return;
     }
     try {
-      if (!webs.recordFire(e.getBlock(), session.owner.getUniqueId())) e.setCancelled(true);
+      if (!blocks.recordFire(e.getBlock(), session.owner.getUniqueId())){
+        e.setCancelled(true);
+      }
     } catch (java.io.IOException failure) {
       e.setCancelled(true);
-      getLogger().severe("Fire journal failed: " + failure.getMessage());
+      getLogger().severe("Fire Journal Failed: " + failure.getMessage());
     }
   }
 
   @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
   public void practiceFireSpread(BlockSpreadEvent e) {
-    if (webs.fire(e.getSource())) e.setCancelled(true);
+    if (blocks.fire(e.getSource())){
+      e.setCancelled(true);
+    }
   }
 
   @EventHandler
@@ -1225,32 +1227,38 @@ public final class PracticePlugin extends JavaPlugin implements Listener {
 
   @EventHandler
   public void extendPiston(BlockPistonExtendEvent e) {
-    if (e.getBlocks().stream().anyMatch(webs::owns)) e.setCancelled(true);
+    if (e.getBlocks().stream().anyMatch(blocks::owns)){
+      e.setCancelled(true);
+    }
   }
 
   @EventHandler
   public void retractPiston(BlockPistonRetractEvent e) {
-    if (e.getBlocks().stream().anyMatch(webs::owns)) e.setCancelled(true);
+    if (e.getBlocks().stream().anyMatch(blocks::owns)){
+      e.setCancelled(true);
+    }
   }
 
   @EventHandler
   public void burnWeb(BlockBurnEvent e) {
-    if (webs.owns(e.getBlock())
-        || (e.getIgnitingBlock() != null && webs.fire(e.getIgnitingBlock()))
-        || protectedFrom(null, e.getBlock().getLocation())) e.setCancelled(true);
+    if (blocks.owns(e.getBlock())
+        || (e.getIgnitingBlock() != null && blocks.fire(e.getIgnitingBlock()))
+        || protectedFrom(null, e.getBlock().getLocation())){
+      e.setCancelled(true);
+    }
   }
 
   @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
   public void breakBlock(BlockBreakEvent e) {
     PracticeSession session = sessionFor(e.getPlayer());
     if (protectedFrom(session, e.getBlock().getLocation())
-        || webs.owns(e.getBlock())
-            && (session == null || !session.owner.getUniqueId().equals(webs.owner(e.getBlock())))) {
+        || blocks.owns(e.getBlock())
+            && (session == null || !session.owner.getUniqueId().equals(blocks.owner(e.getBlock())))){
       e.setCancelled(true);
       return;
     }
     if (dev.insanmiy.practiceplugin.model.BlockAccess.shouldCancel(
-        participant(e.getPlayer()), session != null && session.fighting())) {
+        participant(e.getPlayer()), session != null && session.fighting())){
       e.setCancelled(true);
       return;
     }
@@ -1264,29 +1272,28 @@ public final class PracticePlugin extends JavaPlugin implements Listener {
   @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
   public void placeBlock(BlockPlaceEvent e) {
     PracticeSession session = sessionFor(e.getPlayer());
-    if (protectedFrom(session, e.getBlock().getLocation())) {
+    if (protectedFrom(session, e.getBlock().getLocation())){
       e.setCancelled(true);
       return;
     }
     if (dev.insanmiy.practiceplugin.model.BlockAccess.shouldCancel(
-        participant(e.getPlayer()), session != null && session.fighting())) {
+        participant(e.getPlayer()), session != null && session.fighting())){
       e.setCancelled(true);
       return;
     }
-    if (participant(e.getPlayer())
-        && session.fighting()
-        && e.getBlock().getType() == Material.COBWEB) {
+    if (participant(e.getPlayer()) && session.fighting()){
       try {
-        if (webs.record(e.getBlock(), e.getBlockReplacedState(), session.owner.getUniqueId()))
+        if (blocks.record(e.getBlock(), e.getBlockReplacedState(), session.owner.getUniqueId())){
           return;
+        }
       } catch (java.io.IOException failure) {
-        getLogger().severe("Web placement cancelled: journal could not be saved.");
+        getLogger().severe("Block Placement Cancelled: Journal Could Not Be Saved.");
       }
       e.setCancelled(true);
       e.getPlayer()
           .sendMessage(TextUI.legacy(
               Component.text(
-                  "Web placement cancelled because safe cleanup could not be recorded.")));
+                  "Block Placement Cancelled Because Safe Cleanup Could Not Be Recorded.")));
     }
   }
 
@@ -1300,12 +1307,12 @@ public final class PracticePlugin extends JavaPlugin implements Listener {
 
   @EventHandler
   public void explode(EntityExplodeEvent e) {
-    e.blockList().removeIf(b -> inArena(b.getLocation()) || webs.owns(b));
+    e.blockList().removeIf(b -> inArena(b.getLocation()) || blocks.owns(b));
   }
 
   @EventHandler
   public void explodeBlock(BlockExplodeEvent e) {
-    e.blockList().removeIf(b -> inArena(b.getLocation()) || webs.owns(b));
+    e.blockList().removeIf(b -> inArena(b.getLocation()) || blocks.owns(b));
   }
 
   @EventHandler(priority = EventPriority.HIGH)

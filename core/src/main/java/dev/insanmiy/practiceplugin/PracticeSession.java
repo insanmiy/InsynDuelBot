@@ -356,7 +356,6 @@ public final class PracticeSession {
 
   void win(boolean player) {
     if (!match.win(player)) return;
-    plugin.clearUtilities(this);
     if (player) roundsWon++;
     else roundsLost++;
     owner.sendMessage(TextUI.legacy(
