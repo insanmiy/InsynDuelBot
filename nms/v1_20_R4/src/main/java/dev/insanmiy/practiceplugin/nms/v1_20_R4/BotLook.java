@@ -11,8 +11,9 @@ final class BotLook {
 
   static void towards(ServerPlayer bot, float yaw, float pitch, float speed) {
     bot.setYRot(dev.insanmiy.practiceplugin.model.LookMotion.turn(bot.getYRot(), yaw, speed));
-    bot.setXRot(
-        bot.getXRot() + Math.max(-speed * .6f, Math.min(speed * .6f, pitch - bot.getXRot())));
+    float targetPitch = Math.max(-90.0f, Math.min(90.0f, pitch));
+    float deltaPitch = Math.max(-speed * .6f, Math.min(speed * .6f, targetPitch - bot.getXRot()));
+    bot.setXRot(Math.max(-90.0f, Math.min(90.0f, bot.getXRot() + deltaPitch)));
     bot.setYHeadRot(bot.getYRot());
   }
 

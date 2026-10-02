@@ -178,7 +178,7 @@ public final class NmsBot implements BotPlatform {
       teleporting = false;
     }
     acknowledgeTeleport();
-    handle.setHealth(20);
+    handle.setHealth(handle.getMaxHealth());
     handle.resetAttackStrengthTicker();
     history.clear();
     stuck = 0;
@@ -228,6 +228,10 @@ public final class NmsBot implements BotPlatform {
     this.currentDifficulty = d;
     ticks++;
     acknowledgeTeleport();
+    if (shieldUntil > 0 && (ticks >= shieldUntil || player().hasCooldown(Material.SHIELD))) {
+      shieldUntil = 0;
+      handle.stopUsingItem();
+    }
     // Apply knockback and optional sprint jump
     if (pendingVelocity != null) {
       handle.setDeltaMovement(pendingVelocity);
@@ -235,7 +239,7 @@ public final class NmsBot implements BotPlatform {
       if (aggressiveKnockbackResist
           && handle.onGround()
           && pendingVelocity.horizontalDistanceSqr() > 0.02) {
-        handle.jumpFromGround();
+        if (pendingVelocity.y <= 0.05) handle.jumpFromGround();
         handle.zza = 1.0f;
         handle.setSprinting(true);
       }
@@ -250,6 +254,9 @@ public final class NmsBot implements BotPlatform {
       handle.stopUsingItem();
       return;
     }
+    if (ticks >= resetSprintUntil && !handle.isSprinting() && handle.zza > 0 && d.attacksEnabled() && ticks >= shieldUntil) {
+      handle.setSprinting(true);
+    }
     // Record target position history
     history.addLast(new Observation(target.getLocation(), target.isBlocking()));
     while (history.size() > d.perceptionTicks() + 1) history.removeFirst();
@@ -261,7 +268,7 @@ public final class NmsBot implements BotPlatform {
       handle.stopUsingItem();
     } else if (ticks % d.decisionTicks() == 0 || critical.tracking(ticks) || utility.busy(ticks)) {
       // Run combat decision check
-      decide(target, history.getFirst(), d, arena);
+      decide(target, history.getFirst(), d);
       decided = true;
     }
     if (!decided && d.attacksEnabled() && !utility.busy(ticks))
@@ -297,7 +304,7 @@ public final class NmsBot implements BotPlatform {
     }
   }
 
-  private void decide(Player target, Observation perceived, Difficulty d, Arena arena) {
+  private void decide(Player target, Observation perceived, Difficulty d) {
     Location here = player().getLocation();
     Vector direction = perceived.location().toVector().subtract(here.toVector());
     double distance = direction.length();
@@ -320,7 +327,7 @@ public final class NmsBot implements BotPlatform {
     boolean playerShielding = perceived.blocking() || target.isBlocking();
     if (axe >= 0 && playerShielding)
       axeUntil = ticks + 25;
-    int selected = axe >= 0 && ticks < axeUntil && playerShielding ? axe : (sword >= 0 ? sword : axe);
+    int selected = axe >= 0 && ticks < axeUntil ? axe : (sword >= 0 ? sword : axe);
     boolean switchedWeapon = selected >= 0 && selected != player().getInventory().getHeldItemSlot();
     if (selected >= 0) player().getInventory().setHeldItemSlot(selected);
     if (switchedWeapon) {
@@ -334,12 +341,12 @@ public final class NmsBot implements BotPlatform {
     handle.zza = distance > 1.1 ? 1.0f : (float) Math.min(0.9f, Math.max(0.25f, 0.35f + (d.sprintResetChance() * 0.45f)));
     handle.xxa = distance < 5 ? (float) d.strafeStrength() * strafe : 0;
     handle.setSprinting(ticks >= resetSprintUntil && (distance > 1.0 || d.sprintResetChance() >= 0.7));
-    avoidHazards();
-    if (ticks < shieldUntil) {
+    if (ticks < shieldUntil && !player().hasCooldown(Material.SHIELD)) {
       handle.zza *= .2f;
       handle.xxa *= .2f;
       return;
     }
+    shieldUntil = 0;
     handle.stopUsingItem();
     // Check line of sight and obstructions
     Vector facing = player().getEyeLocation().getDirection();
@@ -364,7 +371,7 @@ public final class NmsBot implements BotPlatform {
             && !handle.onClimbable()
             && !handle.isInWater()
             && !handle.isPassenger()
-            && !player().hasPotionEffect(org.bukkit.potion.PotionEffectType.BLINDNESS)
+            && !handle.hasEffect(net.minecraft.world.effect.MobEffects.BLINDNESS)
             && !((net.minecraft.server.level.ServerLevel) handle.level()).paperConfig().entities.behavior.disablePlayerCrits
             && !perceived.blocking();
     double critChance = d.decisionTicks() <= 1 ? 0.98 : (d.decisionTicks() <= 3 ? 0.85 : (d.decisionTicks() <= 6 ? 0.50 : 0.20));
@@ -402,7 +409,8 @@ public final class NmsBot implements BotPlatform {
       critical.attacked();
       if (random.nextDouble() < d.sprintResetChance()) {
         handle.setSprinting(false);
-        resetSprintUntil = ticks + 1;
+        int sprintDelay = Math.max(1, (int) Math.round((1.0 - d.sprintResetChance()) * 5.0 + 1.0));
+        resetSprintUntil = ticks + sprintDelay;
       }
     // Block with shield if safe
     } else if (distance < 3.6
@@ -454,14 +462,13 @@ public final class NmsBot implements BotPlatform {
                 direction,
                 hit.getHitPosition().distance(player().getEyeLocation().toVector()))
             != null) return;
-    Location look = player().getEyeLocation().setDirection(direction);
-    handle.setYRot(look.getYaw());
-    handle.setXRot(look.getPitch());
     handle.setSprinting(false);
     swingClock.attempted(ticks);
     strike(player(), target);
     critical.attacked();
-    resetSprintUntil = ticks + 1;
+    double sprintChance = currentDifficulty != null ? currentDifficulty.sprintResetChance() : 0.85;
+    int sprintDelay = Math.max(1, (int) Math.round((1.0 - sprintChance) * 5.0 + 1.0));
+    resetSprintUntil = ticks + sprintDelay;
   }
 
   // Avoid falling into hazards
