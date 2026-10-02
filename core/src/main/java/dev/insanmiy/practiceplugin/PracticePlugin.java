@@ -834,7 +834,7 @@ public final class PracticePlugin extends JavaPlugin implements Listener {
         || !event.getEntity().equals(session.bot.player())) return;
     Object source =
         event.getDamager() instanceof Projectile p ? p.getShooter() : event.getDamager();
-    if (session.owner.equals(source)) session.bot.onIncomingDamage(event.getFinalDamage());
+    session.bot.onIncomingDamage(event.getFinalDamage());
   }
 
   @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
@@ -844,44 +844,25 @@ public final class PracticePlugin extends JavaPlugin implements Listener {
         && projectile.getShooter() instanceof Entity shooter) source = shooter;
     PracticeSession victimSession = sessionFor(e.getEntity());
     PracticeSession attackSession = sessionFor(source);
-    PracticeSession session = victimSession != null ? victimSession : attackSession;
-    if (session == null) return;
-    if (attackSession != null && victimSession != attackSession) {
+    if (victimSession == null) return;
+    if (attackSession != null && attackSession != victimSession) {
       e.setCancelled(true);
       return;
     }
-    boolean victim = victimSession != null;
-    boolean attacker = attackSession == session;
-    if (!victim && !attacker) return;
-    boolean utilitySelfDamage =
-        victim
-            && (source != null
-                    && source.equals(e.getEntity())
-                    && e instanceof EntityDamageByEntityEvent by
-                    && by.getDamager() instanceof Projectile
-                || e.getCause() == EntityDamageEvent.DamageCause.POISON
-                || e.getCause() == EntityDamageEvent.DamageCause.FIRE_TICK
-                || e.getCause() == EntityDamageEvent.DamageCause.FIRE
-                || e.getCause() == EntityDamageEvent.DamageCause.LAVA
-                || e.getCause() == EntityDamageEvent.DamageCause.FALL);
-    if (!victim
-        || !attacker && !utilitySelfDamage
-        || !session.fighting()
-        || session.endingRound
-        || source != null && source.equals(e.getEntity()) && !utilitySelfDamage) {
+    if (!victimSession.fighting() || victimSession.endingRound) {
       e.setCancelled(true);
       return;
     }
     Player damaged = (Player) e.getEntity();
     double amount = Math.max(0, Math.min(e.getFinalDamage(), damaged.getHealth()));
-    if (damaged.equals(session.owner)) {
-      session.round.hurt(amount);
-      session.total.hurt(amount);
+    if (damaged.equals(victimSession.owner)) {
+      victimSession.round.hurt(amount);
+      victimSession.total.hurt(amount);
     } else {
-      session.round.hit(amount, session.tick);
-      session.total.hit(amount, session.tick);
-      if (amount > 0 && source != null && source.equals(session.owner)) {
-        session.bot.onOpponentHit();
+      victimSession.round.hit(amount, victimSession.tick);
+      victimSession.total.hit(amount, victimSession.tick);
+      if (amount > 0 && source != null && source.equals(victimSession.owner)) {
+        victimSession.bot.onOpponentHit();
       }
     }
 
@@ -1045,8 +1026,7 @@ public final class PracticePlugin extends JavaPlugin implements Listener {
     if (session == null
         || !session.fighting()
         || e.getEntity() instanceof AbstractArrow && e.getHitBlock() != null
-        || e.getHitEntity() != null
-            && (!(e.getHitEntity() instanceof Player p) || !session.participant(p))) {
+        || e.getHitEntity() instanceof Player p && !session.participant(p)) {
       e.setCancelled(true);
       e.getEntity().remove();
     }

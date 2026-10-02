@@ -22,7 +22,8 @@ final class PaperHooks implements Listener {
 
   @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
   public void isolateMelee(PrePlayerAttackEntityEvent e) {
-    PracticeSession attacker = plugin.sessionFor(e.getPlayer()), victim = plugin.sessionFor(e.getAttacked());
+    if (!(e.getAttacked() instanceof Player target)) return;
+    PracticeSession attacker = plugin.sessionFor(e.getPlayer()), victim = plugin.sessionFor(target);
     if ((attacker != null || victim != null)
         && (attacker != victim || !attacker.fighting() || attacker.endingRound))
       e.setCancelled(true);

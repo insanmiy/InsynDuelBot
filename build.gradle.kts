@@ -6,7 +6,7 @@ plugins {
 
 allprojects {
     group = "dev.insanmiy"
-    version = "1.0.0-BETA.0.2"
+    version = "1.0.2"
 
     repositories {
         mavenCentral()
@@ -28,7 +28,7 @@ subprojects {
 }
 
 tasks.jar {
-    archiveFileName.set("InsynDuelBot.jar")
+    archiveFileName.set("InsynDuelBot_" + version + ".jar")
 
     from(project(":core").sourceSets.main.get().output)
     from(project(":nms:v1_20_R4").sourceSets.main.get().output)

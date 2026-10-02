@@ -139,8 +139,6 @@ public final class Kit {
         throw new IllegalArgumentException("Inventory slots must be 0..35");
       ItemStack item = parseItem(slots.get(key));
       Material type = item.getType();
-      if (!type.isAir() && !supported(type))
-        throw new IllegalArgumentException("Unknown kit item: " + type);
       if (melee(type)) enchant(item, c.getConfigurationSection("weapon-enchantments"));
       if (type == Material.BOW || type == Material.CROSSBOW)
         enchant(item, c.getConfigurationSection("bow-enchantments"));
