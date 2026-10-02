@@ -2,7 +2,6 @@ package dev.insanmiy.practiceplugin;
 
 import dev.insanmiy.practiceplugin.model.BotOptions;
 import java.io.*;
-import java.nio.file.*;
 import java.util.UUID;
 import org.bukkit.configuration.file.YamlConfiguration;
 
