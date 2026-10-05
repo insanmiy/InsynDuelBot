@@ -2,30 +2,67 @@ package dev.insanmiy.practiceplugin.bot;
 
 import org.bukkit.Location;
 import org.bukkit.Material;
+import org.bukkit.World;
+import org.bukkit.block.Block;
 import org.bukkit.util.Vector;
 
 public final class TacticalMovement {
+  private static final double[] OFFSETS = {-.3, .3};
+  private static final double[] ANGLES = {
+    0, Math.PI / 6, -Math.PI / 6, Math.PI / 3, -Math.PI / 3, Math.PI / 2, -Math.PI / 2
+  };
+
   private TacticalMovement() {}
 
   public static boolean clearPath(Location from, Vector direction, double distance) {
+    World world = from.getWorld();
+    if (world == null) return false;
+    double fromX = from.getX(), fromY = from.getY(), fromZ = from.getZ();
+    double dirX = direction.getX(), dirY = direction.getY(), dirZ = direction.getZ();
+
     for (double step = .35; step <= distance + .01; step += .35) {
-      Location at = from.clone().add(direction.clone().multiply(step));
-      for (double x : new double[] {-.3, .3})
-        for (double z : new double[] {-.3, .3}) {
-          Location edge = at.clone().add(x, 0, z);
-          if (!clear(edge) || !clear(edge.clone().add(0, 1, 0))) return false;
-          Material floor = edge.clone().subtract(0, .15, 0).getBlock().getType();
+      double atX = fromX + dirX * step;
+      double atY = fromY + dirY * step;
+      double atZ = fromZ + dirZ * step;
+      for (double x : OFFSETS) {
+        for (double z : OFFSETS) {
+          double edgeX = atX + x;
+          double edgeY = atY;
+          double edgeZ = atZ + z;
+
+          Block edgeBlock =
+              world.getBlockAt(
+                  Location.locToBlock(edgeX),
+                  Location.locToBlock(edgeY),
+                  Location.locToBlock(edgeZ));
+          if (!clear(edgeBlock)) return false;
+
+          Block aboveBlock =
+              world.getBlockAt(
+                  Location.locToBlock(edgeX),
+                  Location.locToBlock(edgeY + 1.0),
+                  Location.locToBlock(edgeZ));
+          if (!clear(aboveBlock)) return false;
+
+          Block floorBlock =
+              world.getBlockAt(
+                  Location.locToBlock(edgeX),
+                  Location.locToBlock(edgeY - 0.15),
+                  Location.locToBlock(edgeZ));
+          Material floorType = floorBlock.getType();
           if (!dev.insanmiy.practiceplugin.model.TraversalRules.supported(
-              floor.isSolid(), hazardous(floor), water(edge.getBlock().getType()), water(floor)))
+              floorType.isSolid(), hazardous(floorType), water(edgeBlock.getType()), water(floorType))) {
             return false;
+          }
         }
+      }
     }
     return true;
   }
 
-  private static boolean clear(Location at) {
-    return (water(at.getBlock().getType()) || at.getBlock().isPassable())
-        && !hazardous(at.getBlock().getType());
+  private static boolean clear(Block block) {
+    Material type = block.getType();
+    return (water(type) || block.isPassable()) && !hazardous(type);
   }
 
   private static boolean hazardous(Material material) {
@@ -56,27 +93,30 @@ public final class TacticalMovement {
     away.normalize();
     Vector best = null;
     double bestScore = -Double.MAX_VALUE;
-    for (double angle :
-        new double[] {
-          0, Math.PI / 6, -Math.PI / 6, Math.PI / 3, -Math.PI / 3, Math.PI / 2, -Math.PI / 2
-        }) {
+    Location eyeTarget = target.clone().add(0, 1.5, 0);
+    Vector eyeTargetVec = eyeTarget.toVector();
+    double selfTargetDist = self.distance(target);
+    World world = self.getWorld();
+
+    for (double angle : ANGLES) {
       Vector candidate = away.clone().rotateAroundY(angle);
       if (!clearPath(self, candidate, 2.8)) continue;
       Location end = self.clone().add(candidate.clone().multiply(2.8));
-      Vector sight =
-          target.clone().add(0, 1.5, 0).toVector().subtract(end.clone().add(0, 1.5, 0).toVector());
+      Location endEye = end.clone().add(0, 1.5, 0);
+      Vector sight = eyeTargetVec.clone().subtract(endEye.toVector());
+      double sightLenSq = sight.lengthSquared();
       boolean cover =
-          sight.lengthSquared() > .01
-              && self.getWorld()
-                      .rayTraceBlocks(
-                          end.clone().add(0, 1.5, 0),
+          sightLenSq > .01
+              && world != null
+              && world.rayTraceBlocks(
+                          endEye,
                           sight.clone().normalize(),
-                          sight.length(),
+                          Math.sqrt(sightLenSq),
                           org.bukkit.FluidCollisionMode.NEVER,
                           true)
                   != null;
       double score =
-          (end.distance(target) - self.distance(target)) * 4
+          (end.distance(target) - selfTargetDist) * 4
               + (cover ? 5 : 0)
               + (clearPath(self, candidate, 4.2) ? 1 : 0);
       if (score > bestScore) {

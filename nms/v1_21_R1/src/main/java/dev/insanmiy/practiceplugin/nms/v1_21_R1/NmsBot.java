@@ -474,22 +474,29 @@ public final class NmsBot implements BotPlatform {
 
   // Avoid falling into hazards
   private void avoidHazards() {
-    if (!handle.onGround() && !handle.isInWater()) return;
+    if ((!handle.onGround() && !handle.isInWater()) || (handle.zza == 0 && handle.xxa == 0)) return;
     double yaw = Math.toRadians(handle.getYRot());
-    Vector forward = new Vector(-Math.sin(yaw), 0, Math.cos(yaw));
-    Vector side = new Vector(Math.cos(yaw), 0, Math.sin(yaw));
-    Vector movement = forward.clone().multiply(handle.zza).add(side.clone().multiply(handle.xxa));
-    if (movement.lengthSquared() < .001
-        || TacticalMovement.clearPath(player().getLocation(), movement.normalize(), .7)) return;
+    double sin = Math.sin(yaw), cos = Math.cos(yaw);
+    double moveX = -sin * handle.zza + cos * handle.xxa;
+    double moveZ = cos * handle.zza + sin * handle.xxa;
+    double lenSq = moveX * moveX + moveZ * moveZ;
+    if (lenSq < .001) return;
+
+    Location loc = player().getLocation();
+    double invLen = 1.0 / Math.sqrt(lenSq);
+    if (TacticalMovement.clearPath(loc, new Vector(moveX * invLen, 0, moveZ * invLen), .7)) return;
+
     handle.zza = 0;
     handle.setSprinting(false);
-    if (TacticalMovement.clearPath(player().getLocation(), side.clone().multiply(strafe), .7))
+    Vector sideStrafe = new Vector(cos * strafe, 0, sin * strafe);
+    if (TacticalMovement.clearPath(loc, sideStrafe, .7)) {
       handle.xxa = .55f * strafe;
-    else if (TacticalMovement.clearPath(
-        player().getLocation(), side.clone().multiply(-strafe), .7)) {
+    } else if (TacticalMovement.clearPath(loc, sideStrafe.multiply(-1), .7)) {
       strafe *= -1;
       handle.xxa = .55f * strafe;
-    } else handle.xxa = 0;
+    } else {
+      handle.xxa = 0;
+    }
   }
 
   // Aim towards target
