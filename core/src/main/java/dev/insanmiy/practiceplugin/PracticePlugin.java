@@ -37,12 +37,11 @@ public final class PracticePlugin extends JavaPlugin implements Listener {
 
   void clearUtilities(PracticeSession session) {
     UUID owner = session.owner.getUniqueId();
-    projectiles.removeIf(
-        p -> {
-          if (sessionFor(p) != session) return false;
-          p.remove();
-          return true;
-        });
+    session.projectiles.forEach(p -> {
+      projectiles.remove(p);
+      p.remove();
+    });
+    session.projectiles.clear();
     try {
       blocks.restoreOwner(owner);
     } catch (java.io.IOException e) {
@@ -59,6 +58,9 @@ public final class PracticePlugin extends JavaPlugin implements Listener {
   }
 
   void clearUtilities() {
+    for (PracticeSession s : sessions.values()) {
+      s.projectiles.clear();
+    }
     projectiles.forEach(Entity::remove);
     projectiles.clear();
     if (blocks != null){
@@ -271,6 +273,7 @@ public final class PracticePlugin extends JavaPlugin implements Listener {
             () -> {
               projectiles.removeIf(p -> !p.isValid());
               for (PracticeSession session : List.copyOf(sessions.values())) {
+                session.projectiles.removeIf(p -> !p.isValid());
                 try {
                   session.tick();
                 } catch (Exception | LinkageError e) {
@@ -291,6 +294,7 @@ public final class PracticePlugin extends JavaPlugin implements Listener {
     if (menu != null) menu.closeAll();
     if (kitEditor != null) kitEditor.closeAll();
     if (progress != null) progress.save();
+    if (blocks != null) { try { blocks.flush(); } catch (java.io.IOException ignored) {} }
   }
 
   NamespacedKey gearKey() {
@@ -983,8 +987,8 @@ public final class PracticePlugin extends JavaPlugin implements Listener {
   public void launch(ProjectileLaunchEvent e) {
     if (!(e.getEntity().getShooter() instanceof Player shooter) || !participant(shooter)) return;
     PracticeSession session = sessionFor(shooter);
-    if (!session.fighting()
-        || projectiles.stream().filter(p -> sessionFor(p) == session).count() >= 128) {
+    session.projectiles.removeIf(p -> !p.isValid());
+    if (!session.fighting() || session.projectiles.size() >= 128) {
       e.setCancelled(true);
       return;
     }
@@ -995,6 +999,7 @@ public final class PracticePlugin extends JavaPlugin implements Listener {
     if (e.getEntity() instanceof AbstractArrow arrow)
       arrow.setPickupStatus(AbstractArrow.PickupStatus.DISALLOWED);
     projectiles.add(e.getEntity());
+    session.projectiles.add(e.getEntity());
     session.round.utility();
     session.total.utility();
   }
@@ -1339,6 +1344,7 @@ public final class PracticePlugin extends JavaPlugin implements Listener {
                   .set(gearKey, org.bukkit.persistence.PersistentDataType.BYTE, (byte) 1);
               charge.setPersistent(false);
               projectiles.add(charge);
+              session.projectiles.add(charge);
               session.round.utility();
               session.total.utility();
             }

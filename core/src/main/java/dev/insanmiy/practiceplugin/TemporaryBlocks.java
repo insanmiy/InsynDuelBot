@@ -21,6 +21,8 @@ final class TemporaryBlocks {
 
   private final File file;
   private final Map<String, Entry> entries = new LinkedHashMap<>();
+  private final Map<UUID, Integer> ownerCounts = new HashMap<>();
+  private boolean dirty;
 
   TemporaryBlocks(PracticePlugin plugin) {
     file = new File(plugin.getDataFolder(), "temporary-blocks.yml");
@@ -31,10 +33,14 @@ final class TemporaryBlocks {
         continue;
       }
       int x = c.getInt("x"), y = c.getInt("y"), z = c.getInt("z");
+      UUID owner = c.getString("owner") == null ? null : UUID.fromString(c.getString("owner"));
+      if (owner != null) {
+        ownerCounts.put(owner, ownerCounts.getOrDefault(owner, 0) + 1);
+      }
       entries.put(
           key,
           new Entry(
-              c.getString("owner") == null ? null : UUID.fromString(c.getString("owner")),
+              owner,
               UUID.fromString(c.getString("world")),
               x,
               y,
@@ -88,8 +94,7 @@ final class TemporaryBlocks {
       return false;
     }
     if (original instanceof org.bukkit.block.TileState
-        || entries.values().stream().filter(e -> Objects.equals(e.owner(), owner)).count() >= 1024
-            && !owns(b)){
+        || (owner != null && ownerCounts.getOrDefault(owner, 0) >= 1024 && !owns(b))){
       return false;
     }
     String key = key(b);
@@ -113,17 +118,10 @@ final class TemporaryBlocks {
             b.getZ(),
             baseline,
             expected));
-    try {
-      save();
-    } catch (IOException e) {
-      if (previous == null){
-        entries.remove(key);
-      }
-      else {
-        entries.put(key, previous);
-      }
-      throw e;
+    if (previous == null && owner != null) {
+      ownerCounts.put(owner, ownerCounts.getOrDefault(owner, 0) + 1);
     }
+    dirty = true;
     return true;
   }
 
@@ -144,8 +142,8 @@ final class TemporaryBlocks {
       return true;
     }
     if (previous == null
-            && entries.values().stream().filter(e -> Objects.equals(e.owner(), owner)).count()
-                >= 1024
+            && owner != null
+            && ownerCounts.getOrDefault(owner, 0) >= 1024
         || !(block.getType().isAir() || owns(block))){
       return false;
     }
@@ -175,17 +173,10 @@ final class TemporaryBlocks {
             original,
             fluid);
     entries.put(key(block), entry);
-    try {
-      save();
-    } catch (IOException e) {
-      if (previous == null){
-        entries.remove(key(block));
-      }
-      else {
-        entries.put(key(block), previous);
-      }
-      throw e;
+    if (previous == null && owner != null) {
+      ownerCounts.put(owner, ownerCounts.getOrDefault(owner, 0) + 1);
     }
+    dirty = true;
     return true;
   }
 
@@ -198,6 +189,12 @@ final class TemporaryBlocks {
     restore(true, owner);
   }
 
+  void flush() throws IOException {
+    if (dirty) {
+      save();
+    }
+  }
+
   private void restore(boolean all, UUID owner) throws IOException {
     boolean changed = false;
     var iterator = entries.entrySet().iterator();
@@ -205,6 +202,11 @@ final class TemporaryBlocks {
       Entry e = iterator.next().getValue();
       if (owner != null && !owner.equals(e.owner())){
         continue;
+      }
+      if (e.owner() != null) {
+        int count = ownerCounts.getOrDefault(e.owner(), 1) - 1;
+        if (count <= 0) ownerCounts.remove(e.owner());
+        else ownerCounts.put(e.owner(), count);
       }
       World world = Bukkit.getWorld(e.world());
       if (world == null){
@@ -243,12 +245,13 @@ final class TemporaryBlocks {
       iterator.remove();
       changed = true;
     }
-    if (changed){
+    if (changed || dirty){
       save();
     }
   }
 
   private void save() throws IOException {
+    dirty = false;
     var data = new YamlConfiguration();
     entries.forEach(
         (key, e) -> {
