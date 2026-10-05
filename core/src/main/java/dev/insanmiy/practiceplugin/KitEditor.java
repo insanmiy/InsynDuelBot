@@ -662,7 +662,7 @@ final class KitEditor implements Listener {
     }
     if (conflicts(item, enchant))
       throw new IllegalArgumentException("Remove the conflicting enchantment first.");
-    item.addEnchantment(enchant, level);
+    item.addUnsafeEnchantment(enchant, level);
   }
 
   private static void removeEnchants(ItemStack item) {
@@ -895,7 +895,7 @@ final class KitEditor implements Listener {
               .forEach(
                   (e, level) -> {
                     if (e.canEnchantItem(target) && !conflicts(target, e))
-                      target.addEnchantment(e, Math.max(target.getEnchantmentLevel(e), level));
+                      target.addUnsafeEnchantment(e, Math.max(target.getEnchantmentLevel(e), level));
                   });
         }
         player.sendMessage(TextUI.legacy(Component.text("Copied compatible enchantments to equipped armor.")));

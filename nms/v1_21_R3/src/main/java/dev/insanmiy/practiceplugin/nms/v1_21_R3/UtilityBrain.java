@@ -263,7 +263,7 @@ final class UtilityBrain {
       Location at = target.getLocation().getBlock().getLocation();
       Vector towardSelf =
           self.getLocation().toVector().subtract(target.getLocation().toVector()).setY(0);
-      boolean approaching = target.getVelocity().clone().setY(0).dot(towardSelf.normalize()) > .04;
+      boolean approaching = towardSelf.lengthSquared() >= 0.001 && target.getVelocity().clone().setY(0).dot(towardSelf.normalize()) > .04;
       boolean opportunity = approaching || target.isBlocking() || fraction < .6;
       if (web >= 0
           && webs.shouldPlace(tick, distance, nearbyWeb(at), opportunity)

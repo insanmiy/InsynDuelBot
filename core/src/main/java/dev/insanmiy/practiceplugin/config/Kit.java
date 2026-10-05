@@ -207,7 +207,7 @@ public final class Kit {
           var enchantment = id == null ? null : org.bukkit.Registry.ENCHANTMENT.get(id);
           int level = Integer.parseInt(String.valueOf(e.getValue()));
           if (enchantment != null && level >= 1 && enchantment.canEnchantItem(item)) {
-            item.addEnchantment(enchantment, Math.min(level, enchantment.getMaxLevel()));
+            item.addUnsafeEnchantment(enchantment, Math.min(level, enchantment.getMaxLevel()));
           }
         }
       }
@@ -242,7 +242,7 @@ public final class Kit {
       if (enchantment == null || level < 1 || level > enchantment.getMaxLevel())
         throw new IllegalArgumentException("Invalid enchantment " + key + " for " + item.getType());
       if (!enchantment.canEnchantItem(item)) continue;
-      item.addEnchantment(enchantment, level);
+      item.addUnsafeEnchantment(enchantment, level);
     }
   }
 

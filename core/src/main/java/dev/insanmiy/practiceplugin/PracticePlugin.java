@@ -807,6 +807,9 @@ public final class PracticePlugin extends JavaPlugin implements Listener {
       e.quitMessage(null);
       return;
     }
+    UUID uid = e.getPlayer().getUniqueId();
+    lastSelections.remove(uid);
+    if (menu != null) menu.cleanup(uid);
     if (participant(e.getPlayer())) stop(session, "Player disconnected.");
   }
 

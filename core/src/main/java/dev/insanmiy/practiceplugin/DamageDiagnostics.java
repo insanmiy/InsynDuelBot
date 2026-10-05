@@ -11,6 +11,10 @@ final class DamageDiagnostics {
   private final Map<UUID, Swing> swings = new HashMap<>();
   private boolean enabled;
 
+  void cleanup(UUID id) {
+    swings.remove(id);
+  }
+
   void toggle(Player owner) {
     enabled = !enabled;
     swings.clear();
@@ -43,7 +47,7 @@ final class DamageDiagnostics {
       return;
     }
 
-    Swing swing = swings.get(attacker.getUniqueId());
+    Swing swing = swings.remove(attacker.getUniqueId());
     boolean known =
         swing != null
             && swing.tick() == ServerFeatures.tick()

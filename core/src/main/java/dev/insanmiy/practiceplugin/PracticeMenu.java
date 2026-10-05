@@ -716,6 +716,10 @@ final class PracticeMenu implements Listener {
     return drafts.get(id);
   }
 
+  void cleanup(UUID id) {
+    drafts.remove(id);
+  }
+
   void closeAll() {
     for (Player player : Bukkit.getOnlinePlayers()) {
       if (player.getOpenInventory().getTopInventory().getHolder() instanceof View){

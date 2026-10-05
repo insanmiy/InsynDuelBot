@@ -414,6 +414,7 @@ public final class NmsBot implements BotPlatform {
       }
     // Block with shield if safe
     } else if (distance < 3.6
+        && distance > 0.05
         && target
                 .getEyeLocation()
                 .getDirection()

@@ -25,7 +25,7 @@ Requires Java 21.
 ./gradlew build
 ```
 
-The compiled JAR will be in `build/libs/InsynDuelBot.jar`.
+The compiled JAR will be in `build/libs/InsynDuelBot_{version}.jar`.
 
 ## License
 

@@ -35,7 +35,7 @@ final class QuickEnchant {
                   e ->
                       !e.equals(enchant) && (e.conflictsWith(enchant) || enchant.conflictsWith(e)));
       if (conflict) continue;
-      item.addEnchantment(enchant, enchant.getMaxLevel());
+      item.addUnsafeEnchantment(enchant, enchant.getMaxLevel());
       applied++;
     }
     return applied;
