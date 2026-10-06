@@ -800,8 +800,6 @@ public final class PracticePlugin extends JavaPlugin implements Listener {
               () -> {
                 if (sessionFor(e.getPlayer()) == null) recovery.restore(e.getPlayer());
               });
-    for (PracticeSession session : sessions.values())
-      if (session.bot != null) ServerFeatures.unlist(e.getPlayer(), session.bot.player());
   }
 
   @EventHandler

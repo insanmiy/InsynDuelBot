@@ -35,7 +35,7 @@ public final class BotAdapters {
   }
 
   private static String getAdapterClassName(String version) {
-    if ("1.20.6".equals(version)) {
+    if ("1.20.5".equals(version) || "1.20.6".equals(version)) {
       return "dev.insanmiy.practiceplugin.nms.v1_20_R4.Adapter_1_20_R4";
     }
 

@@ -87,17 +87,6 @@ public final class PracticeSession {
       internalTeleport = false;
     }
     if (hud) bar.addPlayer(owner);
-    plugin
-        .getServer()
-        .getScheduler()
-        .runTaskLater(
-            plugin,
-            () -> {
-              if (closing || bot == null) return;
-              for (Player viewer : Bukkit.getOnlinePlayers())
-                if (!plugin.isBot(viewer)) ServerFeatures.unlist(viewer, bot.player());
-            },
-            20);
   }
 
   void replaceDeadBot() {
