@@ -21,7 +21,7 @@ session:
   default-kit: modern-diamond-sword
 
   # Default bot combat difficulty tier (can be any difficulty defined under 'difficulties:').
-  default-difficulty: lt4
+  default-difficulty: normal
 
   # Default practice match mode:
   # - endless: Continuous fight where the bot respawns upon defeat
@@ -41,6 +41,9 @@ session:
 
   # Pause delay in seconds between rounds in a series before the next round begins.
   between-round-seconds: 3
+
+  # Seconds before a round with no winner is reset (0 = no timeout).
+  round-timeout-seconds: 0
 
 # Name of the practice bot entity shown in game.
 bot-name: YourNameHere
@@ -69,7 +72,21 @@ menu-animations: true
 # - sprint-reset-chance: Chance to sprint-reset (W-tap) after each hit to deal combo knockback (0.0 - 1.0).
 # - strafe-strength:     Lateral dodging movement speed multiplier (0.0 - 1.0; 1.0 = max strafe).
 # - heal-threshold:      Health percentage threshold to drink/splash pots or eat gapples (0.0 - 1.0).
+# - attacks-enabled:     Whether the bot actively attacks back (set false for peaceful / passive).
 difficulties:
+  dummy:
+    decision-ticks: 10
+    perception-ticks: 10
+    aim-error: 14.0
+    attack-charge: 1.0
+    shield-chance: 0.1
+    counters: false
+    sprint-reset-chance: 0.1
+    strafe-strength: 0.2
+    heal-threshold: 0.35
+    shield-ticks: 8
+    attacks-enabled: false
+
   lt5:
     decision-ticks: 10
     perception-ticks: 10

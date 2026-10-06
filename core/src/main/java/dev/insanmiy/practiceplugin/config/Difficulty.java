@@ -141,25 +141,20 @@ public record Difficulty(
     String desc = c.getString("description", null);
     String iconName = c.getString("icon", null);
     Material parsedIcon = null;
-    if (iconName != null) {
-      try {
-        parsedIcon = Material.matchMaterial(iconName);
-      } catch (Exception ignored) {
-      }
-    }
+    if (iconName != null) parsedIcon = Material.matchMaterial(iconName);
     return new Difficulty(
         name,
         c.getInt("decision-ticks", 4),
         c.getInt("perception-ticks", 2),
         c.getDouble("aim-error", 4.0),
-        1.0,
+        c.getDouble("attack-charge", 1.0),
         c.getDouble("shield-chance", 0.5),
         c.getBoolean("counters", false),
         c.getDouble("sprint-reset-chance", 0.5),
         c.getDouble("strafe-strength", .65),
         c.getDouble("heal-threshold", .5),
         c.getInt("shield-ticks", 6),
-        true,
+        c.getBoolean("attacks-enabled", true),
         dispName,
         desc,
         parsedIcon);
@@ -193,7 +188,7 @@ public record Difficulty(
         !options.shields()
             ? 0
             : (options.shieldChance() >= 0 ? options.shieldChance() : shieldChance);
-    boolean axeCounter = options.counters();
+    boolean axeCounter = counters && options.counters();
     double sprint =
         options.sprintResetChance() >= 0 ? options.sprintResetChance() : sprintResetChance;
     double strafe =
