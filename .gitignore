@@ -14,4 +14,7 @@ replay_pid*
 .settings
 .vscode
 test.bat
+*.iml
+out/
+bin/
 *.md

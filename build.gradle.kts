@@ -6,7 +6,6 @@ plugins {
 
 allprojects {
     group = "dev.insanmiy"
-    version = "1.1.0"
 
     repositories {
         mavenCentral()
@@ -31,9 +30,7 @@ tasks.jar {
     archiveFileName.set("InsynDuelBot_" + version + ".jar")
 
     from(project(":core").sourceSets.main.get().output)
-    from(project(":nms:v1_20_R4").sourceSets.main.get().output)
-    from(project(":nms:v1_21_R1").sourceSets.main.get().output)
-    from(project(":nms:v1_21_R3").sourceSets.main.get().output)
+    project(":nms").subprojects.forEach { from(it.sourceSets.main.get().output) }
 
     manifest {
         attributes["paperweight-mappings-namespace"] = "mojang"
