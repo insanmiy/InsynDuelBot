@@ -145,6 +145,9 @@ public final class Kit {
       items.put(slot, item);
     }
     ItemStack offhand = parseItem(c.get("offhand", "AIR"));
+    armor.forEach(Kit::allowed);
+    items.values().forEach(Kit::allowed);
+    allowed(offhand);
     return new Kit(
         name,
         c.getString("description", "Custom PvP kit"),
@@ -171,8 +174,21 @@ public final class Kit {
   }
 
   public static boolean armorItem(Material type) {
-    return List.of("_BOOTS", "_LEGGINGS", "_CHESTPLATE", "_HELMET").stream()
-        .anyMatch(type.name()::endsWith);
+    String n = type.name();
+    return n.endsWith("_BOOTS")
+        || n.endsWith("_LEGGINGS")
+        || n.endsWith("_CHESTPLATE")
+        || n.endsWith("_HELMET");
+  }
+
+  private static void allowed(ItemStack item) {
+    String n = item.getType().name();
+    if (n.endsWith("_SPAWN_EGG")
+        || n.contains("COMMAND_BLOCK")
+        || n.startsWith("STRUCTURE_")
+        || Set.of("BEDROCK", "BARRIER", "DEBUG_STICK", "JIGSAW", "LIGHT", "SPAWNER", "KNOWLEDGE_BOOK")
+            .contains(n))
+      throw new IllegalArgumentException("Item not allowed in kits: " + n);
   }
 
   public static boolean ammunition(Material type) {

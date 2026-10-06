@@ -7,6 +7,7 @@ import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.YamlConfiguration;
 
 final class CustomKitStore {
+  static final int MAX_PER_PLAYER = 50;
   private final Path file;
 
   CustomKitStore(Path file) {
@@ -57,6 +58,13 @@ final class CustomKitStore {
     check(old, expected, player, admin);
     if (old == null && (reserved.contains(name) || yaml.contains(name)))
       throw new IllegalArgumentException("Name already used. Choose a new name.");
+    if (old == null
+        && !admin
+        && yaml.getKeys(false).stream()
+                .filter(k -> player.toString().equals(yaml.getString(k + ".owner")))
+                .count()
+            >= MAX_PER_PLAYER)
+      throw new IllegalArgumentException("Custom kit limit reached (" + MAX_PER_PLAYER + ").");
     String owner = old == null ? player.toString() : old.getString("owner");
     yaml.set(name, null);
     var target = yaml.createSection(name);

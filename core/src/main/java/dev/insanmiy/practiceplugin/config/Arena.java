@@ -31,17 +31,29 @@ public record Arena(Location playerSpawn, Location botSpawn, double radius) {
     return playerSpawn.clone().add(botSpawn.toVector()).multiply(.5);
   }
 
-  public boolean overlaps(Arena other) {
-    if (!playerSpawn.getWorld().equals(other.playerSpawn.getWorld())) return false;
-    Location a = center(), b = other.center();
+  private boolean sameWorld(World world) {
+    return world != null && world.equals(playerSpawn.getWorld());
+  }
 
-    return Math.hypot(a.getX() - b.getX(), a.getZ() - b.getZ()) < radius + other.radius + 24;
+  private double centerX() {
+    return (playerSpawn.getX() + botSpawn.getX()) / 2;
+  }
+
+  private double centerZ() {
+    return (playerSpawn.getZ() + botSpawn.getZ()) / 2;
+  }
+
+  public boolean overlaps(Arena other) {
+    if (!sameWorld(other.playerSpawn.getWorld())) return false;
+    double dx = centerX() - other.centerX(), dz = centerZ() - other.centerZ();
+    double reach = radius + other.radius + 24;
+    return dx * dx + dz * dz < reach * reach;
   }
 
   public boolean contains(Location l) {
-    if (!playerSpawn.getWorld().equals(l.getWorld())) return false;
-    Location c = center();
-    return Math.hypot(l.getX() - c.getX(), l.getZ() - c.getZ()) <= radius
-        && l.getY() >= c.getY() - 5;
+    if (!sameWorld(l.getWorld())) return false;
+    double dx = l.getX() - centerX(), dz = l.getZ() - centerZ();
+    return dx * dx + dz * dz <= radius * radius
+        && l.getY() >= (playerSpawn.getY() + botSpawn.getY()) / 2 - 5;
   }
 }

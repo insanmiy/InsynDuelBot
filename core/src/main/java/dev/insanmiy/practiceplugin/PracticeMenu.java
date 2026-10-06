@@ -42,7 +42,7 @@ final class PracticeMenu implements Listener {
   PracticeMenu(PracticePlugin plugin) {
     this.plugin = plugin;
     favoritesFile = new File(plugin.getDataFolder(), "menu-favorites.yml");
-    favorites = YamlConfiguration.loadConfiguration(favoritesFile);
+    favorites = YamlFiles.load(favoritesFile);
   }
 
   private static final class View implements AnimatedMenu {
@@ -659,16 +659,7 @@ final class PracticeMenu implements Listener {
                     }
                     else {
                       player.closeInventory();
-                      Bukkit.dispatchCommand(
-                          player,
-                          "practice start "
-                              + choice.kit()
-                              + " "
-                              + choice.difficulty()
-                              + " "
-                              + choice.mode().id()
-                              + " "
-                              + choice.bestOf());
+                      plugin.startFromMenu(player, choice);
                     }
                   }
                   case 50 -> {

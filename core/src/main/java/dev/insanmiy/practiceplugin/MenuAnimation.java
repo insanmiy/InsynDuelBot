@@ -7,6 +7,19 @@ import org.bukkit.inventory.ItemStack;
 final class MenuAnimation implements Runnable {
   private final PracticePlugin plugin;
   private int frame;
+  private final ItemStack[] panes = new ItemStack[3];
+
+  private ItemStack pane(int variant) {
+    if (panes[variant] == null) {
+      panes[variant] =
+          new ItemStack(
+              variant == 0
+                  ? Material.LIGHT_BLUE_STAINED_GLASS_PANE
+                  : variant == 1 ? Material.CYAN_STAINED_GLASS_PANE : Material.BLUE_STAINED_GLASS_PANE);
+      ItemMetadata.edit(panes[variant], meta -> TextUI.name(meta, Component.text(" ")));
+    }
+    return panes[variant];
+  }
 
   MenuAnimation(PracticePlugin plugin) {
     this.plugin = plugin;
@@ -16,20 +29,12 @@ final class MenuAnimation implements Runnable {
     if (!plugin.getConfig().getBoolean("menu-animations", true)) return;
     frame++;
     for (var player : Bukkit.getOnlinePlayers()) {
-      if (!plugin.settings().flag(player.getUniqueId(), "animations")) continue;
       var inventory = player.getOpenInventory().getTopInventory();
       if (!(inventory.getHolder() instanceof AnimatedMenu menu)) continue;
+      if (!plugin.settings().flag(player.getUniqueId(), "animations")) continue;
       int[] slots = menu.decorativeSlots();
       for (int i = 0; i < slots.length; i++) {
-        Material color =
-            (i + frame) % 8 < 2
-                ? Material.LIGHT_BLUE_STAINED_GLASS_PANE
-                : (i + frame) % 8 < 4
-                    ? Material.CYAN_STAINED_GLASS_PANE
-                    : Material.BLUE_STAINED_GLASS_PANE;
-        ItemStack pane = new ItemStack(color);
-        dev.insanmiy.practiceplugin.ItemMetadata.edit(pane, meta -> TextUI.name(meta, Component.text(" ")));
-        inventory.setItem(slots[i], pane);
+        inventory.setItem(slots[i], pane((i + frame) % 8 < 2 ? 0 : (i + frame) % 8 < 4 ? 1 : 2));
       }
       if (menu.pulseSlot() >= 0) {
         ItemStack button = inventory.getItem(menu.pulseSlot());

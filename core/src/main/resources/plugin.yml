@@ -9,7 +9,7 @@ commands:
   practice:
     description: PvP bot practice
     aliases: [p, prac]
-    usage: /practice <menu|settings|start|stop|pause|resume|rematch|hud|damage|stats|kits|difficulties|kit|status|arena|reload>
+    usage: /practice <menu|settings|start|stop|pause|resume|rematch|hud|damage|stats|kits|difficulties|kit [editor|info|create|import|edit|save|copy|rename|delete]|status|arena|reload>
     permission: practice.use
 permissions:
   practice.use:
@@ -17,5 +17,6 @@ permissions:
   practice.admin:
     default: op
   practice.kits:
-    description: Create unlimited custom kits and edit your own kits
+    description: Create custom kits (up to 50) and edit your own kits
     default: true
+

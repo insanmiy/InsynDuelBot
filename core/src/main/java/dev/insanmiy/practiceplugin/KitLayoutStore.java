@@ -90,6 +90,7 @@ final class KitLayoutStore {
     if (layout == null || layout.slots().isEmpty()) return;
     String specificKey = key(playerId, difficulty, kitName);
     String genericKey = key(playerId, "", kitName);
+    if (layout.equals(memory.get(specificKey)) && layout.equals(memory.get(genericKey))) return;
     memory.put(specificKey, layout);
     memory.put(genericKey, layout);
 
