@@ -200,9 +200,11 @@ public final class PracticeSession {
       if (destination != null) relocateBot(destination);
       else return;
     }
-    if (owner.getLocation().getY() < owner.getWorld().getMinHeight() + 2
-        || bot.player().getLocation().getY() < bot.player().getWorld().getMinHeight() + 2)
+    boolean ownerFell = owner.getLocation().getY() < owner.getWorld().getMinHeight() + 2;
+    if (ownerFell || bot.player().getLocation().getY() < bot.player().getWorld().getMinHeight() + 2) {
+      if (fighting() && !endingRound) win(!ownerFell);
       resetRound();
+    }
     if (match.paused()) {
       bot.tick(owner, difficulty, arena, false);
       return;
@@ -211,6 +213,12 @@ public final class PracticeSession {
     if (fighting()) totalFightTicks++;
     bot.tick(owner, difficulty, arena, fighting());
     if (closing) return;
+    int timeout = plugin.getConfig().getInt("session.round-timeout-seconds", 0);
+    if (timeout > 0 && fighting() && tick - fightStart >= timeout * 20L) {
+      owner.sendMessage(TextUI.legacy(Component.text("Round timed out; resetting.")));
+      fightStart = tick;
+      resetRound();
+    }
     if (match.tick()) {
       if (match.phase() == Match.Phase.COUNTDOWN) resetRound();
       else if (match.phase() == Match.Phase.FIGHT) {
@@ -365,49 +373,29 @@ public final class PracticeSession {
       if (playerWonSeries) seriesWon++;
       else seriesLost++;
 
-      if (mode == PracticeMode.DUEL) {
-        String result = playerWonSeries ? "You won the duel!" : "Bot won the duel!";
-        NamedTextColor titleColor = playerWonSeries ? NamedTextColor.GREEN : NamedTextColor.RED;
-        String titleText = playerWonSeries ? "VICTORY!" : "DEFEAT!";
-
-        owner.sendMessage(TextUI.legacy(Component.text("Duel finished! " + result)));
+      boolean duel = mode == PracticeMode.DUEL;
+      String score = match.playerWins() + "-" + match.botWins();
+      String result;
+      if (duel || mode == PracticeMode.MATCH) {
+        String kind = duel ? "duel" : "match";
+        result = (playerWonSeries ? "You won the " : "Bot won the ") + kind + (duel ? "!" : " " + score + "!");
+        owner.sendMessage(TextUI.legacy(Component.text(
+            (duel ? "Duel" : "Match") + " finished! " + result)));
         owner.showTitle(Title.title(
-            Component.text(titleText, titleColor),
-            Component.text(result, NamedTextColor.GRAY)));
-
+            Component.text(
+                (duel ? "" : "MATCH ") + (playerWonSeries ? "VICTORY!" : "DEFEAT!"),
+                playerWonSeries ? NamedTextColor.GREEN : NamedTextColor.RED),
+            duel
+                ? Component.text(result, NamedTextColor.GRAY)
+                : Component.text("Final score: " + score, NamedTextColor.GOLD)));
         Sound sound = playerWonSeries ? Sound.UI_TOAST_CHALLENGE_COMPLETE : Sound.ENTITY_WITHER_DEATH;
         owner.playSound(owner.getLocation(), sound, 0.8f, 1.0f);
-
-        plugin.getServer().getScheduler().runTaskLater(plugin, () -> {
-          plugin.stop(this, result);
-        }, 40L);
-        return;
+      } else {
+        result = "Series finished: " + score + ".";
+        owner.sendMessage(TextUI.legacy(Component.text(result)));
       }
-      if (mode == PracticeMode.MATCH) {
-        String score = match.playerWins() + "-" + match.botWins();
-        String result = (playerWonSeries ? "You won the match " : "Bot won the match ") + score + "!";
-        NamedTextColor titleColor = playerWonSeries ? NamedTextColor.GREEN : NamedTextColor.RED;
-        String titleText = playerWonSeries ? "MATCH VICTORY!" : "MATCH DEFEAT!";
-
-        owner.sendMessage(TextUI.legacy(Component.text("Match finished! " + result)));
-        owner.showTitle(Title.title(
-            Component.text(titleText, titleColor),
-            Component.text("Final score: " + score, NamedTextColor.GOLD)));
-
-        Sound sound = playerWonSeries ? Sound.UI_TOAST_CHALLENGE_COMPLETE : Sound.ENTITY_WITHER_DEATH;
-        owner.playSound(owner.getLocation(), sound, 0.8f, 1.0f);
-
-        plugin.getServer().getScheduler().runTaskLater(plugin, () -> {
-          plugin.stop(this, result);
-        }, 40L);
-        return;
-      }
-
-      String result = "Series finished: " + match.playerWins() + "-" + match.botWins() + ".";
-      owner.sendMessage(TextUI.legacy(Component.text(result)));
-      plugin.getServer().getScheduler().runTaskLater(plugin, () -> {
-        plugin.stop(this, result);
-      }, 40L);
+      String finalResult = result;
+      plugin.getServer().getScheduler().runTaskLater(plugin, () -> plugin.stop(this, finalResult), 40L);
     }
   }
 

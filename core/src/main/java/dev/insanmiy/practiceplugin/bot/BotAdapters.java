@@ -5,7 +5,7 @@ import org.bukkit.Bukkit;
 // Resolves the BotAdapter for the running Minecraft version
 public final class BotAdapters {
 
-  private static BotAdapter activeAdapter;
+  private static volatile BotAdapter activeAdapter;
 
   // Get active BotAdapter
   public static BotAdapter getAdapter() {
@@ -46,6 +46,10 @@ public final class BotAdapters {
     if (version.startsWith("1.21.")) {
       try {
         int patch = Integer.parseInt(version.substring("1.21.".length()));
+        if (patch > 4)
+          Bukkit.getLogger().warning(
+              "[InsynDuelBot] The 1.21.2+ adapter is only built and tested against 1.21.4; "
+                  + version + " is unverified.");
         if (patch >= 2 && patch <= 11) {
           return "dev.insanmiy.practiceplugin.nms.v1_21_R3.Adapter_1_21_R3";
         }

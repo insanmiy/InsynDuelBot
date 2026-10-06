@@ -6,13 +6,12 @@ import org.bukkit.event.Listener;
 import org.bukkit.event.entity.PlayerDeathEvent;
 
 final class ServerFeatures {
-  private static int ticks;
   private ServerFeatures() {}
 
-  static int tick() { return ticks; }
+  static int tick() { return Bukkit.getCurrentTick(); }
 
   static void register(PracticePlugin plugin) {
-    Bukkit.getScheduler().runTaskTimer(plugin, () -> ticks++, 1, 1);
+
     Listener listener;
     try {
       Class.forName("io.papermc.paper.event.player.PrePlayerAttackEntityEvent");
@@ -27,10 +26,7 @@ final class ServerFeatures {
   }
 
   static String critical(org.bukkit.event.entity.EntityDamageByEntityEvent event) {
-    try {
-      return Boolean.TRUE.equals(event.getClass().getMethod("isCritical").invoke(event)) ? "YES" : "no";
-    } catch (NoSuchMethodException e) { return "unavailable"; }
-    catch (ReflectiveOperationException e) { throw new IllegalStateException(e); }
+    return event.isCritical() ? "YES" : "no";
   }
 
   static boolean revive(PlayerDeathEvent event) {

@@ -57,14 +57,7 @@ public final class Match {
     return phase;
   }
 
-  public void restartSeries() {
-    if (phase != Phase.FINISHED) throw new IllegalStateException("Series is not finished");
-    playerWins = 0;
-    botWins = 0;
-    round = 1;
-    phase = Phase.COUNTDOWN;
-    remaining = countdown;
-  }
+
 
   public boolean paused() {
     return paused;

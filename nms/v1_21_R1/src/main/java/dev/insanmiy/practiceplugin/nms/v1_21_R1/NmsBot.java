@@ -350,9 +350,9 @@ public final class NmsBot implements BotPlatform {
     handle.stopUsingItem();
     // Check line of sight and obstructions
     Vector facing = player().getEyeLocation().getDirection();
-    var hit = target.getBoundingBox().expand(0.2).rayTrace(player().getEyeLocation().toVector(), facing, 3.2);
+    var hit = target.getBoundingBox().expand(0.2).rayTrace(player().getEyeLocation().toVector(), facing, 3.0);
     double rayLength =
-        hit == null ? 3.2 : hit.getHitPosition().distance(player().getEyeLocation().toVector());
+        hit == null ? 3.0 : hit.getHitPosition().distance(player().getEyeLocation().toVector());
     var obstruction = CombatSight.obstruction(player(), facing, rayLength);
     if (obstruction != null) {
       if (obstruction.getType() == Material.COBWEB) utility.clearWeb(obstruction, ticks);
@@ -383,7 +383,7 @@ public final class NmsBot implements BotPlatform {
             handle.fallDistance > 0 && handle.getDeltaMovement().y < 0,
             critEligible,
             ready,
-            distance <= 3.2 && player().hasLineOfSight(target),
+            distance <= 3.0 && player().hasLineOfSight(target),
             distance <= 2.9
                 && !handle.horizontalCollision
                 && ((ServerLevel) handle.level())
@@ -456,7 +456,7 @@ public final class NmsBot implements BotPlatform {
             minCharge)
         || charge < minCharge) return;
     Vector direction = player().getEyeLocation().getDirection();
-    var hit = target.getBoundingBox().expand(0.2).rayTrace(player().getEyeLocation().toVector(), direction, 3.2);
+    var hit = target.getBoundingBox().expand(0.2).rayTrace(player().getEyeLocation().toVector(), direction, 3.0);
     if (hit == null
         || CombatSight.obstruction(
                 player(),

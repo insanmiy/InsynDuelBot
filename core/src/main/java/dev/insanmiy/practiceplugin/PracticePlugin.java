@@ -50,7 +50,11 @@ public final class PracticePlugin extends JavaPlugin implements Listener {
     World world = session.arena.playerSpawn().getWorld();
     if (world != null){
       for (Entity entity : world.getEntities()) {
-        if (!(entity instanceof Player) && session.arena.contains(entity.getLocation())){
+        if ((entity instanceof Item
+                || entity instanceof Projectile
+                || entity instanceof ExperienceOrb
+                || entity instanceof AreaEffectCloud)
+            && session.arena.contains(entity.getLocation())){
           entity.remove();
         }
       }
@@ -82,6 +86,7 @@ public final class PracticePlugin extends JavaPlugin implements Listener {
     if (!(entity instanceof Player p)) return null;
     PracticeSession own = sessions.get(p.getUniqueId());
     if (own != null) return own;
+    if (!bots.contains(p.getUniqueId())) return null;
     return sessions.values().stream().filter(s -> s.participant(p)).findFirst().orElse(null);
   }
 
@@ -192,14 +197,14 @@ public final class PracticePlugin extends JavaPlugin implements Listener {
     if (!kits.containsKey(defaultKit) && !kits.isEmpty()) {
       defaultKit = kits.keySet().iterator().next();
     }
-    String defaultDiff = getConfig().getString("session.default-difficulty", "lt4");
+    String defaultDiff = getConfig().getString("session.default-difficulty", "normal");
     if (!difficulties.containsKey(defaultDiff) && !difficulties.isEmpty()) {
       defaultDiff = difficulties.keySet().iterator().next();
     }
     return new Selection(
         defaultKit,
         defaultDiff,
-        PracticeMode.parse(getConfig().getString("session.default-mode", "endless")),
+        PracticeMode.parse(getConfig().getString("session.default-mode", "match")),
         getConfig().getInt("session.best-of", 5));
   }
 
@@ -243,6 +248,19 @@ public final class PracticePlugin extends JavaPlugin implements Listener {
     }
     progress = new ProgressStore(this);
     blocks = new TemporaryBlocks(this);
+    getServer()
+        .getScheduler()
+        .runTaskTimer(
+            this,
+            () -> {
+              try {
+                blocks.flush();
+              } catch (java.io.IOException e) {
+                getLogger().log(java.util.logging.Level.SEVERE, "Could not save block journal", e);
+              }
+            },
+            20,
+            20);
     clearUtilities();
     for (World world : Bukkit.getWorlds())
       for (Entity entity : world.getEntities())
@@ -290,7 +308,13 @@ public final class PracticePlugin extends JavaPlugin implements Listener {
     if (menu != null) menu.closeAll();
     if (kitEditor != null) kitEditor.closeAll();
     if (progress != null) progress.save();
-    if (blocks != null) { try { blocks.flush(); } catch (java.io.IOException ignored) {} }
+    if (blocks != null) {
+      try {
+        blocks.flush();
+      } catch (java.io.IOException e) {
+        getLogger().log(java.util.logging.Level.SEVERE, "Could not save block journal", e);
+      }
+    }
   }
 
   NamespacedKey gearKey() {
@@ -327,11 +351,11 @@ public final class PracticePlugin extends JavaPlugin implements Listener {
     if (old == null || sessions.get(old.owner.getUniqueId()) != old) return;
     try {
       old.close();
-      old.owner.sendMessage(TextUI.legacy(Component.text(message)));
     } catch (Exception e) {
       getLogger()
           .log(java.util.logging.Level.SEVERE, "Cleanup failed; recovery record retained", e);
     } finally {
+      old.owner.sendMessage(TextUI.legacy(Component.text(message)));
       sessions.remove(old.owner.getUniqueId(), old);
       if (old.botId != null) bots.remove(old.botId);
     }
@@ -387,9 +411,9 @@ public final class PracticePlugin extends JavaPlugin implements Listener {
       getConfig().set("session.starting-saturation", 20);
     if (bestOf < 1 || bestOf > 99 || bestOf % 2 == 0) getConfig().set("session.best-of", 5);
     try {
-      PracticeMode.parse(getConfig().getString("session.default-mode", "endless"));
+      PracticeMode.parse(getConfig().getString("session.default-mode", "match"));
     } catch (IllegalArgumentException e) {
-      getConfig().set("session.default-mode", "endless");
+      getConfig().set("session.default-mode", "match");
     }
     String configuredDiff = getConfig().getString("session.default-difficulty");
     if (configuredDiff != null && !difficulties.containsKey(configuredDiff) && !difficulties.isEmpty()) {
@@ -398,6 +422,17 @@ public final class PracticePlugin extends JavaPlugin implements Listener {
     String configuredKit = getConfig().getString("session.default-kit");
     if (configuredKit != null && !kits.containsKey(configuredKit) && !kits.isEmpty()) {
       getConfig().set("session.default-kit", kits.keySet().iterator().next());
+    }
+  }
+
+  void startFromMenu(Player p, Selection choice) {
+    try {
+      start(p, choice);
+    } catch (IllegalArgumentException e) {
+      p.sendMessage(TextUI.legacy(Component.text(e.getMessage())));
+    } catch (Exception | LinkageError e) {
+      getLogger().log(java.util.logging.Level.SEVERE, "Practice start failed", e);
+      p.sendMessage(TextUI.legacy(Component.text("Practice could not start. Check the server log.")));
     }
   }
 
@@ -486,7 +521,7 @@ public final class PracticePlugin extends JavaPlugin implements Listener {
         bot = getConfig().getLocation(path + ".bot");
     if (player == null || bot == null)
       throw new IllegalArgumentException("Set both spawns: /practice arena setplayer and setbot.");
-    double radius = getConfig().getDouble(path + ".radius", 16);
+    double radius = getConfig().getDouble(path + ".radius", getConfig().getDouble("arena.radius", 32));
     double maxRadius = getConfig().getDouble("arena.max-radius", 0.0);
     if (maxRadius > 0 && radius > maxRadius)
       throw new IllegalArgumentException(
@@ -518,7 +553,7 @@ public final class PracticePlugin extends JavaPlugin implements Listener {
           start(
               p,
               new Selection(
-                  args.length > 1 ? args[1] : d.kit(),
+                  args.length > 1 ? args[1].toLowerCase(Locale.ROOT) : d.kit(),
                   args.length > 2 ? args[2] : d.difficulty(),
                   args.length > 3 ? PracticeMode.parse(args[3]) : d.mode(),
                   args.length > 4 ? Integer.parseInt(args[4]) : d.bestOf()));
@@ -687,6 +722,8 @@ public final class PracticePlugin extends JavaPlugin implements Listener {
                         + " <info|create|import|edit|save|copy|rename|delete> <name> | status | arena"
                         + " <setplayer|setbot|setradius|info> [name] | reload")));
       }
+    } catch (NumberFormatException e) {
+      sender.sendMessage(TextUI.legacy(Component.text("Expected a number but got: " + e.getMessage())));
     } catch (IllegalArgumentException e) {
       sender.sendMessage(TextUI.legacy(Component.text(e.getMessage())));
     } catch (Exception | LinkageError e) {
@@ -704,42 +741,18 @@ public final class PracticePlugin extends JavaPlugin implements Listener {
 
   @Override
   public List<String> onTabComplete(CommandSender s, Command c, String label, String[] a) {
+    a[0] = a[0].toLowerCase(Locale.ROOT);
     Collection<String> choices =
         switch (a.length) {
-          case 1 ->
-              s.hasPermission("practice.admin")
-                  ? List.of(
-                      "menu",
-                      "settings",
-                      "start",
-                      "stop",
-                      "pause",
-                      "resume",
-                      "rematch",
-                      "hud",
-                      "damage",
-                      "stats",
-                      "kits",
-                      "difficulties",
-                      "kit",
-                      "status",
-                      "arena",
-                      "reload")
-                  : List.of(
-                      "menu",
-                      "settings",
-                      "start",
-                      "stop",
-                      "pause",
-                      "resume",
-                      "rematch",
-                      "hud",
-                      "damage",
-                      "stats",
-                      "kits",
-                      "difficulties",
-                      "kit",
-                      "status");
+          case 1 -> {
+            List<String> subs =
+                new ArrayList<>(
+                    List.of(
+                        "menu", "settings", "start", "stop", "pause", "resume", "rematch", "hud",
+                        "damage", "stats", "kits", "difficulties", "kit", "status"));
+            if (s.hasPermission("practice.admin")) subs.addAll(List.of("arena", "reload"));
+            yield subs;
+          }
           case 2 ->
               switch (a[0]) {
                 case "start" -> kits.keySet();
@@ -815,9 +828,7 @@ public final class PracticePlugin extends JavaPlugin implements Listener {
         || !session.fighting()
         || session.bot == null
         || !event.getEntity().equals(session.bot.player())) return;
-    @SuppressWarnings("unused")
-    Object source =
-        event.getDamager() instanceof Projectile p ? p.getShooter() : event.getDamager();
+
     session.bot.onIncomingDamage(event.getFinalDamage());
   }
 
@@ -837,8 +848,9 @@ public final class PracticePlugin extends JavaPlugin implements Listener {
       e.setCancelled(true);
       return;
     }
-    Player damaged = (Player) e.getEntity();
+    if (!(e.getEntity() instanceof Player damaged)) return;
     double amount = Math.max(0, Math.min(e.getFinalDamage(), damaged.getHealth()));
+    if (e.getFinalDamage() >= damaged.getHealth()) victimSession.finishingBlow = e;
     if (damaged.equals(victimSession.owner)) {
       victimSession.round.hurt(amount);
       victimSession.total.hurt(amount);
@@ -900,7 +912,7 @@ public final class PracticePlugin extends JavaPlugin implements Listener {
   @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
   public void move(PlayerMoveEvent e) {
     PracticeSession session = sessionFor(e.getPlayer());
-    if (participant(e.getPlayer())
+    if (session != null
         && !session.fighting()
         && !session.internalTeleport
         && !(e instanceof PlayerTeleportEvent)) {
@@ -997,8 +1009,8 @@ public final class PracticePlugin extends JavaPlugin implements Listener {
 
   @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
   public void projectileHit(ProjectileHitEvent e) {
-    PracticeSession session = sessionFor(e.getEntity());
     if (!practiceProjectile(e.getEntity())) return;
+    PracticeSession session = sessionFor(e.getEntity());
 
     if (session != null
         && session.fighting()
@@ -1058,18 +1070,19 @@ public final class PracticePlugin extends JavaPlugin implements Listener {
     }
   }
 
+  private static final Set<Material> DRINKABLES =
+      Set.of(
+          Material.POTION,
+          Material.HONEY_BOTTLE,
+          Material.MUSHROOM_STEW,
+          Material.RABBIT_STEW,
+          Material.BEETROOT_SOUP,
+          Material.SUSPICIOUS_STEW);
+
   @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
   public void potionBottle(PlayerItemConsumeEvent e) {
     PracticeSession session = sessionFor(e.getPlayer());
-    if (participant(e.getPlayer())
-        && Set.of(
-                Material.POTION,
-                Material.HONEY_BOTTLE,
-                Material.MUSHROOM_STEW,
-                Material.RABBIT_STEW,
-                Material.BEETROOT_SOUP,
-                Material.SUSPICIOUS_STEW)
-            .contains(e.getItem().getType())) {
+    if (session != null && DRINKABLES.contains(e.getItem().getType())) {
       PracticeSession active = session;
       getServer()
           .getScheduler()
@@ -1082,6 +1095,7 @@ public final class PracticePlugin extends JavaPlugin implements Listener {
                 for (int slot = 0; slot < 36; slot++) {
                   var remainder = inventory.getItem(slot);
                   if (remainder != null
+                      && !remainder.hasItemMeta()
                       && (remainder.getType() == Material.BOWL
                           || remainder.getType() == Material.GLASS_BOTTLE))
                     inventory.setItem(slot, null);
@@ -1338,12 +1352,10 @@ public final class PracticePlugin extends JavaPlugin implements Listener {
               session.projectiles.add(charge);
               session.round.utility();
               session.total.utility();
+              if (player.getGameMode() != GameMode.CREATIVE) e.getItem().subtract(1);
             }
           } catch (Throwable t) {
             getLogger().warning("Could not launch WindCharge: " + t.getMessage());
-          }
-          if (player.getGameMode() != GameMode.CREATIVE) {
-            e.getItem().subtract(1);
           }
         }
       }

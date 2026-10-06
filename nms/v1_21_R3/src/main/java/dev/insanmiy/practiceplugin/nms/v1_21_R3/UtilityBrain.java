@@ -677,6 +677,7 @@ final class UtilityBrain {
   }
 
   private boolean selfPotion(int slot, Player target, int tick, double healthFraction) {
+    if (slot < 0 || player().getInventory().getItem(slot) == null) return false;
     if (player().getInventory().getItem(slot).getType() != Material.SPLASH_POTION) {
       retreat();
       prepare(slot, tick, this::nativeUse, () -> true);
@@ -1008,7 +1009,7 @@ final class UtilityBrain {
         ItemStack item = self.getInventory().getItem(potSlot);
         if (item == null) continue;
         if (item.getType() == Material.SPLASH_POTION) {
-          int selected = select(potSlot);
+          select(potSlot);
           handle.setXRot(85f);
           BotLook.publish(handle);
           nativeUse();
