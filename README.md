@@ -30,3 +30,7 @@ The compiled JAR will be in `build/libs/InsynDuelBot_{version}.jar`.
 ## License
 
 Licensed under the [MIT License](LICENSE).
+
+## Testing
+
+Everything is tested on a 1.20.6 Paper superflat world and a 1.21.4 Paper superflat world.
