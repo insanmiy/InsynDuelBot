@@ -175,10 +175,6 @@ public final class PracticePlugin extends JavaPlugin implements Listener {
             .anyMatch(i -> i != null && !i.getType().isAir())
         || !p.getItemOnCursor().getType().isAir())
       problems.add("Empty inventory, armor and offhand");
-    var maxHealthAttr = Attributes.get(p, Attributes.MAX_HEALTH);
-    if (maxHealthAttr != null && !maxHealthAttr.getModifiers().isEmpty())
-      problems.add("Remove external max-health modifiers");
-
     if (recovery.pending(p)) problems.add("Recovery pending; start will retry it");
     return problems;
   }
@@ -426,9 +422,6 @@ public final class PracticePlugin extends JavaPlugin implements Listener {
             .anyMatch(i -> i != null && !i.getType().isAir())
         || !p.getItemOnCursor().getType().isAir())
       throw new IllegalArgumentException("Empty inventory, armor, off-hand, and cursor first.");
-    var maxHealthAttr = Attributes.get(p, Attributes.MAX_HEALTH);
-    if (maxHealthAttr != null && !maxHealthAttr.getModifiers().isEmpty())
-      throw new IllegalArgumentException("Remove external maximum-health modifiers first.");
     if (p.isInvulnerable())
       throw new IllegalArgumentException("Disable invulnerability before practicing.");
     Kit kit = kits.get(choice.kit());

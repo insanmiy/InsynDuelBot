@@ -12,6 +12,7 @@ import net.kyori.adventure.title.Title;
 import org.bukkit.*;
 import org.bukkit.attribute.Attribute;
 import org.bukkit.attribute.AttributeInstance;
+import org.bukkit.attribute.AttributeModifier;
 import org.bukkit.entity.Player;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.util.Vector;
@@ -39,6 +40,7 @@ public final class PracticeSession {
   final DamageDiagnostics damageDiagnostics = new DamageDiagnostics();
   org.bukkit.event.entity.EntityDamageEvent finishingBlow;
   private boolean hud;
+  private final List<AttributeModifier> strippedModifiers = new ArrayList<>();
   private final List<PausedState> pausedStates = new ArrayList<>();
   private final BossBar bar =
       Bukkit.createBossBar("DuelBot", org.bukkit.boss.BarColor.RED, org.bukkit.boss.BarStyle.SOLID);
@@ -72,6 +74,7 @@ public final class PracticeSession {
   void begin() {
     internalTeleport = true;
     try {
+      stripModifiers(owner, true);
       bot =
           BotAdapters.getAdapter().createBot(
               owner,
@@ -147,6 +150,7 @@ public final class PracticeSession {
           plugin.layouts().getLayout(owner.getUniqueId(), difficulty.name(), kit.name());
       for (Player p : new Player[] {owner, bot.player()}) {
         p.getActivePotionEffects().forEach(e -> p.removePotionEffect(e.getType()));
+        stripModifiers(p, false);
         AttributeInstance maxHealthAttr = Attributes.get(p, Attributes.MAX_HEALTH);
         if (maxHealthAttr != null) {
           maxHealthAttr.setBaseValue(kit.health());
@@ -156,6 +160,7 @@ public final class PracticeSession {
             plugin.gearKey(),
             plugin.slotKey(),
             p.equals(owner) ? ownerLayout : null);
+        stripModifiers(p, false);
         double currentMaxHealth = Attributes.getValue(p, Attributes.MAX_HEALTH, kit.health());
         if (Math.abs(currentMaxHealth - kit.health()) > .001)
           throw new IllegalStateException("An external health modifier prevents equal kit health");
@@ -422,6 +427,7 @@ public final class PracticeSession {
         if (bot != null) bot.close();
       }
     } finally {
+      restoreModifiers();
       internalTeleport = true;
       try {
         plugin.recovery().restore(owner);
@@ -429,6 +435,28 @@ public final class PracticeSession {
         internalTeleport = false;
         plugin.progress().record(this);
       }
+    }
+  }
+
+  private void stripModifiers(Player player, boolean save) {
+    AttributeInstance maxHealthAttr = Attributes.get(player, Attributes.MAX_HEALTH);
+    if (maxHealthAttr != null) {
+      for (AttributeModifier mod : List.copyOf(maxHealthAttr.getModifiers())) {
+        if (save) strippedModifiers.add(mod);
+        maxHealthAttr.removeModifier(mod);
+      }
+    }
+  }
+
+  private void restoreModifiers() {
+    AttributeInstance maxHealth = Attributes.get(owner, Attributes.MAX_HEALTH);
+    if (maxHealth != null) {
+      for (AttributeModifier mod : strippedModifiers) {
+        try {
+          maxHealth.addModifier(mod);
+        } catch (IllegalArgumentException ignored) {}
+      }
+      strippedModifiers.clear();
     }
   }
 }
