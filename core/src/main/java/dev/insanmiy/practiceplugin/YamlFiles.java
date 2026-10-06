@@ -29,6 +29,21 @@ final class YamlFiles {
     }
   }
 
+  // loadConfiguration, but a corrupt file is moved aside so it is never overwritten.
+  static YamlConfiguration load(java.io.File file) {
+    try {
+      return readOrEmpty(file.toPath());
+    } catch (IOException e) {
+      try {
+        Files.move(
+            file.toPath(),
+            file.toPath().resolveSibling(file.getName() + ".corrupt-" + System.currentTimeMillis()));
+      } catch (IOException ignored) {
+      }
+      return new YamlConfiguration();
+    }
+  }
+
   static void write(Path file, YamlConfiguration yaml) throws IOException {
     write(file, yaml, null);
   }

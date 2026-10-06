@@ -13,7 +13,7 @@ final class ProgressStore {
   ProgressStore(PracticePlugin plugin) {
     this.plugin = plugin;
     file = new File(plugin.getDataFolder(), "stats.yml");
-    data = YamlConfiguration.loadConfiguration(file);
+    data = YamlFiles.load(file);
   }
 
   void record(PracticeSession s) {

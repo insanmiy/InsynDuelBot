@@ -23,14 +23,14 @@ final class PlayerSettings {
       java.util.function.Supplier<org.bukkit.configuration.ConfigurationSection> defaults) {
     this.defaults = defaults;
     this.file = file;
-    data = YamlConfiguration.loadConfiguration(file);
+    data = YamlFiles.load(file);
   }
 
   boolean flag(UUID id, String key) {
     boolean fallback =
         key.equals("animations")
             ? defaults.get().getBoolean("menu-animations", true)
-            : key.equals("hud") ? defaults.get().getBoolean("hud", true) : true;
+            : key.equals("hud") ? defaults.get().getBoolean("hud", false) : true;
     return data.getBoolean(id + "." + key, fallback);
   }
 
@@ -38,7 +38,7 @@ final class PlayerSettings {
     int fallback =
         switch (key) {
           case "countdown" -> defaults.get().getInt("session.countdown-seconds", 3);
-          case "between-rounds" -> defaults.get().getInt("session.between-round-seconds", 2);
+          case "between-rounds" -> defaults.get().getInt("session.between-round-seconds", 3);
           case "saturation" -> defaults.get().getInt("session.starting-saturation", 20);
           default -> 0;
         };

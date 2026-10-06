@@ -26,11 +26,19 @@ final class TemporaryBlocks {
 
   TemporaryBlocks(PracticePlugin plugin) {
     file = new File(plugin.getDataFolder(), "temporary-blocks.yml");
-    var data = YamlConfiguration.loadConfiguration(file);
+    var data = YamlFiles.load(file);
     for (String key : data.getKeys(false)) {
-      var c = data.getConfigurationSection(key);
+      try {
+        read(key, data.getConfigurationSection(key));
+      } catch (RuntimeException e) {
+        plugin.getLogger().warning("Skipping bad journal entry " + key + ": " + e);
+      }
+    }
+  }
+
+  private void read(String key, org.bukkit.configuration.ConfigurationSection c) {
       if (c == null){
-        continue;
+        return;
       }
       int x = c.getInt("x"), y = c.getInt("y"), z = c.getInt("z");
       UUID owner = c.getString("owner") == null ? null : UUID.fromString(c.getString("owner"));
@@ -50,7 +58,22 @@ final class TemporaryBlocks {
               c.getInt("originZ", z),
               c.getString("original", "minecraft:air"),
               Material.valueOf(c.getString("expected", "AIR"))));
-    }
+  }
+
+  private static final Set<Material> TALL_PLANTS =
+      Set.of(
+          Material.TALL_GRASS,
+          Material.LARGE_FERN,
+          Material.SUNFLOWER,
+          Material.LILAC,
+          Material.ROSE_BUSH,
+          Material.PEONY,
+          Material.TALL_SEAGRASS,
+          Material.SMALL_DRIPLEAF,
+          Material.PITCHER_PLANT);
+
+  private Entry at(Block b) {
+    return entries.isEmpty() ? null : entries.get(key(b));
   }
 
   private static String key(Block b) {
@@ -58,21 +81,21 @@ final class TemporaryBlocks {
   }
 
   UUID owner(Block b) {
-    Entry entry = entries.get(key(b));
+    Entry entry = at(b);
     return entry == null ? null : entry.owner();
   }
 
   boolean owns(Block b) {
-    return entries.containsKey(key(b));
+    return at(b) != null;
   }
 
   String original(Block b) {
-    Entry entry = entries.get(key(b));
+    Entry entry = at(b);
     return entry == null ? null : entry.original();
   }
 
   boolean fire(Block b) {
-    Entry entry = entries.get(key(b));
+    Entry entry = at(b);
     return entry != null && entry.expected() == Material.FIRE;
   }
 
@@ -203,31 +226,21 @@ final class TemporaryBlocks {
       if (owner != null && !owner.equals(e.owner())){
         continue;
       }
+      World world = Bukkit.getWorld(e.world());
+      if (world == null){
+        continue;
+      }
       if (e.owner() != null) {
         int count = ownerCounts.getOrDefault(e.owner(), 1) - 1;
         if (count <= 0) ownerCounts.remove(e.owner());
         else ownerCounts.put(e.owner(), count);
-      }
-      World world = Bukkit.getWorld(e.world());
-      if (world == null){
-        continue;
       }
       Block block = world.getBlockAt(e.x(), e.y(), e.z());
 
       if (block.getType() == e.expected() || block.getType().isAir()){
         var original = Bukkit.createBlockData(e.original());
 
-        if (Set.of(
-                    Material.TALL_GRASS,
-                    Material.LARGE_FERN,
-                    Material.SUNFLOWER,
-                    Material.LILAC,
-                    Material.ROSE_BUSH,
-                    Material.PEONY,
-                    Material.TALL_SEAGRASS,
-                    Material.SMALL_DRIPLEAF,
-                    Material.PITCHER_PLANT)
-                .contains(original.getMaterial())
+        if (TALL_PLANTS.contains(original.getMaterial())
             && original instanceof org.bukkit.block.data.Bisected plant
             && plant.getHalf() == org.bukkit.block.data.Bisected.Half.BOTTOM){
           Block above = block.getRelative(org.bukkit.block.BlockFace.UP);

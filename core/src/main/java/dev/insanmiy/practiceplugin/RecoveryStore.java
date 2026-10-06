@@ -26,7 +26,7 @@ public final class RecoveryStore {
         || file.exists()
             && p.getUniqueId()
                 .toString()
-                .equals(YamlConfiguration.loadConfiguration(file).getString("uuid"));
+                .equals(YamlFiles.load(file).getString("uuid"));
   }
 
   public boolean pending() {
@@ -46,6 +46,7 @@ public final class RecoveryStore {
     c.set("health", p.getHealth());
     var maxHealth = Attributes.get(p, Attributes.MAX_HEALTH);
     c.set("max-health-base", maxHealth != null ? maxHealth.getBaseValue() : 20.0);
+    if (maxHealth != null) c.set("max-health-modifiers", new java.util.ArrayList<>(maxHealth.getModifiers()));
     c.set("food", p.getFoodLevel());
     c.set("saturation", p.getSaturation());
     c.set("exhaustion", p.getExhaustion());
@@ -67,7 +68,7 @@ public final class RecoveryStore {
     clearGear(p);
     if (!pending(p)) return true;
     File file = playerFile(p).exists() ? playerFile(p) : this.file;
-    YamlConfiguration c = YamlConfiguration.loadConfiguration(file);
+    YamlConfiguration c = YamlFiles.load(file);
     if (!p.getUniqueId().toString().equals(c.getString("uuid"))) return false;
     if (p.isDead()) return false;
     try {
@@ -79,6 +80,9 @@ public final class RecoveryStore {
       var maxHealthInstance = Attributes.get(p, Attributes.MAX_HEALTH);
       if (maxHealthInstance != null) {
         maxHealthInstance.setBaseValue(c.getDouble("max-health-base", 20));
+        for (Object m : c.getList("max-health-modifiers", java.util.List.of()))
+          if (m instanceof org.bukkit.attribute.AttributeModifier mod
+              && !maxHealthInstance.getModifiers().contains(mod)) maxHealthInstance.addModifier(mod);
       }
       double maxAllowedHealth = Attributes.getValue(p, Attributes.MAX_HEALTH, 20.0);
       p.setHealth(Math.max(.5, Math.min(c.getDouble("health"), maxAllowedHealth)));
