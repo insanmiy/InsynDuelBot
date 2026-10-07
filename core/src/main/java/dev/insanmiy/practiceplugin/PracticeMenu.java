@@ -296,7 +296,6 @@ final class PracticeMenu implements Listener {
           PracticeMode mode = PracticeMode.parse(name);
           Material modeIcon =
               switch (mode) {
-                case DUMMY -> Material.ARMOR_STAND;
                 case MATCH -> Material.GOLDEN_SWORD;
                 case DUEL -> Material.IRON_SWORD;
                 case ENDLESS -> Material.TARGET;
@@ -312,9 +311,7 @@ final class PracticeMenu implements Listener {
                       ? "Best Of " + choice.bestOf() + "; First To " + (choice.bestOf() / 2 + 1) + " Wins"
                       : mode == PracticeMode.DUEL
                           ? "Single 1v1 Duel To Knockout"
-                          : mode == PracticeMode.DUMMY
-                              ? "Passive Target For Combos"
-                              : "Continuous Rounds With Score Tracking",
+                          : "Continuous Rounds With Score Tracking",
                   "Click To Select");
         }
         else {
@@ -358,7 +355,6 @@ final class PracticeMenu implements Listener {
     PracticeMode currentMode = choice.mode();
     Material modeIcon =
         switch (currentMode) {
-          case DUMMY -> Material.ARMOR_STAND;
           case MATCH -> Material.GOLDEN_SWORD;
           case DUEL -> Material.IRON_SWORD;
           case ENDLESS -> Material.TARGET;

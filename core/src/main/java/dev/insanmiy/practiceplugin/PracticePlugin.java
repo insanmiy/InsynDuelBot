@@ -717,7 +717,7 @@ public final class PracticePlugin extends JavaPlugin implements Listener {
             sender.sendMessage(TextUI.legacy(
                 Component.text(
                     "/practice menu | settings | start [kit] [difficulty]"
-                        + " [endless|match|duel|dummy] [best-of] | stop | pause | resume | rematch"
+                        + " [endless|match|duel] [best-of] | stop | pause | resume | rematch"
                         + " | hud | damage | stats | kits | difficulties | kit editor | kit"
                         + " <info|create|import|edit|save|copy|rename|delete> <name> | status | arena"
                         + " <setplayer|setbot|setradius|info> [name] | reload")));

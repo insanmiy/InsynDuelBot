@@ -59,8 +59,7 @@ public final class PracticeSession {
     this.arena = arena;
     this.kit = kit;
     this.options = plugin.settings().options(owner.getUniqueId());
-    Difficulty configured = difficulty.withOptions(this.options);
-    this.difficulty = mode == PracticeMode.DUMMY ? configured.passive() : configured;
+    this.difficulty = difficulty.withOptions(this.options);
     startingSaturation = plugin.settings().number(owner.getUniqueId(), "saturation");
     this.mode = mode;
     hud = plugin.settings().flag(owner.getUniqueId(), "hud");

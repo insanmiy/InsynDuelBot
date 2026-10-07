@@ -5,8 +5,7 @@ import java.util.Locale;
 public enum PracticeMode {
   MATCH("Best-of series"),
   DUEL("Single 1v1 duel"),
-  ENDLESS("Endless sparring"),
-  DUMMY("Passive combo dummy");
+  ENDLESS("Endless sparring");
   private final String description;
 
   PracticeMode(String description) {
@@ -25,7 +24,7 @@ public enum PracticeMode {
     try {
       return valueOf(name.toUpperCase(Locale.ROOT));
     } catch (IllegalArgumentException e) {
-      throw new IllegalArgumentException("Mode must be match, duel, endless, or dummy.");
+      throw new IllegalArgumentException("Mode must be match, duel, or endless.");
     }
   }
 }

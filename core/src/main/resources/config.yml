@@ -5,7 +5,6 @@
 config-version: 7
 
 # Arena Settings
-
 arena:
   # Block protection radius (in blocks) around the arena center.
   # Outside players cannot place or break blocks within this area.
@@ -18,16 +17,15 @@ arena:
 # Session & Match Defaults
 session:
   # Default kit chosen when a player opens the practice menu for the first time.
-  default-kit: modern-diamond-sword
+  default-kit: modern-netherite-sword
 
   # Default bot combat difficulty tier (can be any difficulty defined under 'difficulties:').
-  default-difficulty: normal
+  default-difficulty: lt4
 
   # Default practice match mode:
   # - endless: Continuous fight where the bot respawns upon defeat
   # - match:   Best-of series with rounds and score tracking
   # - duel:    Single 1v1 round to the death
-  # - dummy:   Passive bot that does not attack back (for combo practice)
   default-mode: match
 
   # Series round count for "match" mode (e.g. 5 = best of 5, first to 3 wins).
