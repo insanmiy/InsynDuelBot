@@ -16,8 +16,11 @@ public final class NativeExperience {
   private static Method findMend() {
     Method match = null;
     for (Method method : ExperienceOrb.class.getDeclaredMethods()) {
+      Class<?>[] params = method.getParameterTypes();
       if (method.getReturnType() == int.class
-          && java.util.Arrays.equals(method.getParameterTypes(), new Class<?>[] {ServerPlayer.class, int.class})) {
+          && params.length == 2
+          && (params[0] == ServerPlayer.class || params[0] == net.minecraft.world.entity.player.Player.class)
+          && params[1] == int.class) {
         if (match != null) throw new IllegalStateException("Ambiguous native Mending method");
         match = method;
       }
