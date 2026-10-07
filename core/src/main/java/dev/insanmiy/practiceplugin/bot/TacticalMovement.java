@@ -18,46 +18,84 @@ public final class TacticalMovement {
     World world = from.getWorld();
     if (world == null) return false;
     double fromX = from.getX(), fromY = from.getY(), fromZ = from.getZ();
-    double dirX = direction.getX(), dirY = direction.getY(), dirZ = direction.getZ();
+    double dirX = direction.getX(), dirZ = direction.getZ();
+
+    double currentY = fromY;
 
     for (double step = .35; step <= distance + .01; step += .35) {
       double atX = fromX + dirX * step;
-      double atY = fromY + dirY * step;
       double atZ = fromZ + dirZ * step;
+      double maxSupportedY = -Double.MAX_VALUE;
+
       for (double x : OFFSETS) {
         for (double z : OFFSETS) {
           double edgeX = atX + x;
-          double edgeY = atY;
           double edgeZ = atZ + z;
 
-          Block edgeBlock =
-              world.getBlockAt(
-                  Location.locToBlock(edgeX),
-                  Location.locToBlock(edgeY),
-                  Location.locToBlock(edgeZ));
-          if (!clear(edgeBlock)) return false;
-
-          Block aboveBlock =
-              world.getBlockAt(
-                  Location.locToBlock(edgeX),
-                  Location.locToBlock(edgeY + 1.0),
-                  Location.locToBlock(edgeZ));
-          if (!clear(aboveBlock)) return false;
-
-          Block floorBlock =
-              world.getBlockAt(
-                  Location.locToBlock(edgeX),
-                  Location.locToBlock(edgeY - 0.15),
-                  Location.locToBlock(edgeZ));
-          Material floorType = floorBlock.getType();
-          if (!dev.insanmiy.practiceplugin.model.TraversalRules.supported(
-              floorType.isSolid(), hazardous(floorType), water(edgeBlock.getType()), water(floorType))) {
-            return false;
+          Double cornerY = evaluateStep(world, edgeX, currentY, edgeZ, fromY);
+          if (cornerY == null) return false;
+          if (cornerY > maxSupportedY) {
+            maxSupportedY = cornerY;
           }
         }
       }
+      currentY = maxSupportedY;
     }
     return true;
+  }
+
+  private static Double evaluateStep(
+      World world, double edgeX, double currentY, double edgeZ, double fromY) {
+    int blockX = Location.locToBlock(edgeX);
+    int blockZ = Location.locToBlock(edgeZ);
+
+    Block edgeBlock = world.getBlockAt(blockX, Location.locToBlock(currentY), blockZ);
+
+    // Check if there is an obstacle at feet level
+    if (!clear(edgeBlock)) {
+      // Check if this obstacle is a safe 1-block step-up that can be jumped onto
+      Material edgeType = edgeBlock.getType();
+      if (edgeType.isSolid() && !hazardous(edgeType)) {
+        Block stepFeet = world.getBlockAt(blockX, Location.locToBlock(currentY + 1.0), blockZ);
+        Block stepHead = world.getBlockAt(blockX, Location.locToBlock(currentY + 2.0), blockZ);
+        Block jumpHeadroom = world.getBlockAt(blockX, Location.locToBlock(fromY + 2.0), blockZ);
+        if (clear(stepFeet) && clear(stepHead) && clear(jumpHeadroom)) {
+          return currentY + 1.0;
+        }
+      }
+      // Wall > 1 block high, hazardous block, or obstructed headroom
+      return null;
+    }
+
+    // Feet level is clear; ensure eye level is also clear
+    Block aboveBlock = world.getBlockAt(blockX, Location.locToBlock(currentY + 1.0), blockZ);
+    if (!clear(aboveBlock)) return null;
+
+    // Check immediate floor at current elevation
+    Block floorBlock = world.getBlockAt(blockX, Location.locToBlock(currentY - 0.15), blockZ);
+    Material floorType = floorBlock.getType();
+    if (hazardous(floorType)) return null;
+    if (dev.insanmiy.practiceplugin.model.TraversalRules.supported(
+        floorType.isSolid(), false, water(edgeBlock.getType()), water(floorType))) {
+      return currentY;
+    }
+
+    // Floor is air/unsupported: check for safe ledge drops (1 to 3 blocks down)
+    for (int drop = 1; drop <= 3; drop++) {
+      Block dropAir = world.getBlockAt(blockX, Location.locToBlock(currentY - drop + 0.85), blockZ);
+      if (!clear(dropAir)) return null;
+
+      Block landing = world.getBlockAt(blockX, Location.locToBlock(currentY - drop - 0.15), blockZ);
+      Material landingType = landing.getType();
+      if (hazardous(landingType)) return null;
+      if (dev.insanmiy.practiceplugin.model.TraversalRules.supported(
+          landingType.isSolid(), false, water(dropAir.getType()), water(landingType))) {
+        return currentY - drop;
+      }
+    }
+
+    // Drop > 3 blocks (cliff or void)
+    return null;
   }
 
   private static boolean clear(Block block) {

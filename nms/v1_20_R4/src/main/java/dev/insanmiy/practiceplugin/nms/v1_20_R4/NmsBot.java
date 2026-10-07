@@ -279,6 +279,9 @@ public final class NmsBot implements BotPlatform {
     if (!decided && d.attacksEnabled() && !utility.busy(ticks))
       combatLook(target, history.getFirst(), d);
     avoidHazards();
+    if (handle.horizontalCollision && handle.onGround() && handle.zza > 0) {
+      handle.jumpFromGround();
+    }
 
     Vec3 beforeTravel = handle.position();
 
