@@ -30,7 +30,9 @@ import org.bukkit.craftbukkit.entity.CraftPlayer;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.util.Vector;
+import org.jetbrains.annotations.NotNull;
 
+@SuppressWarnings("resource")
 public final class NmsBot implements BotPlatform {
   private final MinecraftServer server;
   private final ServerPlayer handle;
@@ -81,7 +83,7 @@ public final class NmsBot implements BotPlatform {
       handle.connection =
           new ServerGamePacketListenerImpl(server, connection, handle, cookie) {
             @Override
-            public void send(Packet<?> packet) {
+            public void send(@NotNull Packet<?> packet) {
 
               if (packet instanceof ClientboundSetEntityMotionPacket motion
                   && motion.getId() == handle.getId())
@@ -91,7 +93,7 @@ public final class NmsBot implements BotPlatform {
             }
 
             @Override
-            public void send(Packet<?> packet, PacketSendListener listener) {
+            public void send(@NotNull Packet<?> packet, PacketSendListener listener) {
               send(packet);
             }
           };
@@ -126,12 +128,8 @@ public final class NmsBot implements BotPlatform {
     ((CraftPlayer) player).getHandle().detectEquipmentUpdatesPublic();
   }
 
-  public static double attackCharge(Player player) {
-    return ((CraftPlayer) player).getHandle().getAttackStrengthScale(.5f);
-  }
-
   public static boolean criticalsEnabled(Player player) {
-    return !((ServerLevel) ((CraftPlayer) player).getHandle().level())
+    return !((CraftPlayer) player).getHandle().level()
         .paperConfig()
         .entities
         .behavior
@@ -341,7 +339,7 @@ public final class NmsBot implements BotPlatform {
       swingClock.reset(ticks);
     }
     // Update movement inputs
-    handle.zza = distance > 1.1 ? 1.0f : (float) Math.min(0.9f, Math.max(0.25f, 0.35f + (d.sprintResetChance() * 0.45f)));
+    handle.zza = distance > 1.1 ? 1.0f : Math.clamp((float) (0.35f + d.sprintResetChance() * 0.45f), 0.25f, 0.9f);
     handle.xxa = distance < 5 ? (float) d.strafeStrength() * strafe : 0;
     handle.setSprinting(ticks >= resetSprintUntil && (distance > 1.0 || d.sprintResetChance() >= 0.7));
     if (ticks < shieldUntil && !player().hasCooldown(Material.SHIELD)) {
@@ -375,7 +373,7 @@ public final class NmsBot implements BotPlatform {
             && !handle.isInWater()
             && !handle.isPassenger()
             && !handle.hasEffect(net.minecraft.world.effect.MobEffects.BLINDNESS)
-            && !((net.minecraft.server.level.ServerLevel) handle.level()).paperConfig().entities.behavior.disablePlayerCrits
+            && !handle.level().paperConfig().entities.behavior.disablePlayerCrits
             && !perceived.blocking();
     double critChance = d.decisionTicks() <= 1 ? 0.98 : (d.decisionTicks() <= 3 ? 0.85 : (d.decisionTicks() <= 6 ? 0.50 : 0.20));
     // Check if critical jump is ready
@@ -389,7 +387,7 @@ public final class NmsBot implements BotPlatform {
             distance <= 3.0 && player().hasLineOfSight(target),
             distance <= 2.9
                 && !handle.horizontalCollision
-                && ((ServerLevel) handle.level())
+                && handle.level()
                     .noCollision(handle, handle.getBoundingBox().expandTowards(0, 1.3, 0))
                 && random.nextDouble() < critChance);
     if (criticalAction != CriticalWindow.Action.NONE) {
@@ -403,8 +401,7 @@ public final class NmsBot implements BotPlatform {
       if (criticalAction == CriticalWindow.Action.WAIT) return;
     }
     boolean opponentHoldingAxe =
-        target.getInventory().getItemInMainHand() != null
-            && target.getInventory().getItemInMainHand().getType().name().endsWith("_AXE");
+        target.getInventory().getItemInMainHand().getType().name().endsWith("_AXE");
     // Attack target and reset sprint
     if (ready && hit != null && player().hasLineOfSight(target)) {
       swingClock.attempted(ticks);
@@ -448,7 +445,7 @@ public final class NmsBot implements BotPlatform {
         || handle.isInWater()
         || handle.isPassenger()
         || handle.hasEffect(net.minecraft.world.effect.MobEffects.BLINDNESS)
-        || ((net.minecraft.server.level.ServerLevel) handle.level()).paperConfig().entities.behavior.disablePlayerCrits
+        || handle.level().paperConfig().entities.behavior.disablePlayerCrits
         || !Kit.melee(player().getInventory().getItemInMainHand().getType())) return;
     double charge = handle.getAttackStrengthScale(0);
     double minCharge = currentDifficulty != null ? currentDifficulty.attackCharge() : 1.0;
@@ -518,7 +515,7 @@ public final class NmsBot implements BotPlatform {
     double baseSpeed = (450.0 / (difficulty.decisionTicks() + 0.25))
         - (difficulty.aimError() * 5.0)
         - (difficulty.perceptionTicks() * 10.0);
-    float turnSpeed = (float) Math.max(30.0, Math.min(360.0, baseSpeed));
+    float turnSpeed = (float) Math.clamp(baseSpeed, 30.0, 360.0);
     BotLook.towards(
         handle, aim.getYaw() + error + survey, aim.getPitch() + (survey == 0 ? 0 : 3), turnSpeed);
   }
@@ -536,8 +533,7 @@ public final class NmsBot implements BotPlatform {
     if (closed) return;
     closed = true;
     try {
-      if (handle.connection != null) server.getPlayerList().remove(handle);
-      else handle.discard();
+      server.getPlayerList().remove(handle);
     } finally {
       connection.active = false;
       connection.channel.close();
@@ -562,12 +558,12 @@ public final class NmsBot implements BotPlatform {
     }
 
     @Override
-    public void send(Packet<?> packet) {}
+    public void send(@NotNull Packet<?> packet) {}
 
     @Override
-    public void send(Packet<?> packet, PacketSendListener listener) {}
+    public void send(@NotNull Packet<?> packet, PacketSendListener listener) {}
 
     @Override
-    public void send(Packet<?> packet, PacketSendListener listener, boolean flush) {}
+    public void send(@NotNull Packet<?> packet, PacketSendListener listener, boolean flush) {}
   }
 }
