@@ -14,7 +14,7 @@ A Paper Minecraft plugin for 1v1 PvP practice against a custom bot.
 
 ## Commands
 
-* `/practice` — Open The gui
+* `/practice` — Open The GUI
 * `/practice start` — Start A Match Against The Bot
 * `/practice stop` — End The Current Match
 * `/practice settings` — Open Bot And Match Settings
@@ -37,7 +37,7 @@ Licensed Under The [MIT License](LICENSE).
 
 ## Contributing & Support
 
-Found A Bug Or Have An Idea? [Open an issue](../../issues). Pull Requests Are Welcome.
+Found A Bug Or Have An Idea? [Open An Issue](../../issues). Pull Requests Are Welcome.
 
 ## Notice
 
