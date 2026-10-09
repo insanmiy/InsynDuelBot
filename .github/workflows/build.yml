@@ -3,6 +3,9 @@ on: [push]
 jobs:
   build:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        version: ["1.20.6", "1.21.1", "1.21.4"]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-java@v4
@@ -10,8 +13,12 @@ jobs:
           distribution: temurin
           java-version: 21
       - uses: gradle/actions/setup-gradle@v4
+      - run: chmod +x ./gradlew
       - run: ./gradlew build
+      - name: Test Minecraft ${{ matrix.version }}
+        run: (sleep 45 && echo "stop") | ./gradlew runServer -PminecraftVersion="${{ matrix.version }}"
       - uses: actions/upload-artifact@v4
+        if: matrix.version == '1.21.1'
         with:
           name: InsynDuelBot
           path: build/libs/*.jar
