@@ -2,35 +2,43 @@
 
 A Paper Minecraft plugin for 1v1 PvP practice against a custom bot.
 
+![License](https://img.shields.io/github/license/insanmiy/InsynDuelBot)
+![Java](https://img.shields.io/badge/Java-21-orange)
+![Paper](https://img.shields.io/badge/Paper-1.20.5--1.21.11-blue)
+
 ## Features
 
-* Custom PvP bot with combat movement, strafing, and sprint resetting
-* Built in kits, custom kit editor, and customizable difficulties
-* Multi-version support for Paper 1.20.5 through 1.21.11 (Probably broken)
+* Custom PvP bot With Combat Movement, Strafing, And Sprint Resetting
+* Built In Kits, Custom Kit Editor, And Customizable Difficulties
+* Multi Version Support For Paper 1.20.5 Through 1.21.11 (Still Probably Broken)
 
 ## Commands
 
-* `/practice` — Open the practice gui
-* `/practice start` — Start a match against the bot
-* `/practice stop` — End the current match
-* `/practice settings` — Open bot and match settings
+* `/practice` — Open The gui
+* `/practice start` — Start A Match Against The Bot
+* `/practice stop` — End The Current Match
+* `/practice settings` — Open Bot And Match Settings
 
 Aliases: `/p`, `/prac`
 
 ## Building
 
-Requires Java 21.
+1. Install A Version Of  [JDK 21](https://www.oracle.com/java/technologies/downloads)
+2. Install Latest Version Of [Gradle](https://docs.gradle.org/current/userguide/installation.html)
 
-```bash
-./gradlew build
-```
+On Windows; `gradlew build`\
+On Linux/macOS; `./gradlew build`
 
-The compiled JAR will be in `build/libs/InsynDuelBot_{version}.jar`.
+The Compiled JAR Will Be In `build/libs`.
 
 ## License
 
-Licensed under the [MIT License](LICENSE).
+Licensed Under The [MIT License](LICENSE).
 
-## Testing
+## Contributing & Support
 
-Everything is tested on a 1.20.6 Paper superflat world and a 1.21.4 Paper superflat world.
+Found A Bug Or Have An Idea? [Open an issue](../../issues). Pull Requests Are Welcome.
+
+## Notice
+
+This Is A Passion Project, Nothing More.
