@@ -43,7 +43,7 @@ final class ProgressStore {
     String p = id + "." + mode.id() + ".";
     return String.format(
         java.util.Locale.ROOT,
-        "%s: %d sessions | rounds %dW/%dL | %d hits | best combo %d | %.1f minutes",
+        "%s: %d Sessions | Rounds %dW/%dL | %d Hits | Best Combo %d | %.1f Minutes",
         mode.id(),
         data.getLong(p + "sessions"),
         data.getLong(p + "rounds-won"),
@@ -57,7 +57,7 @@ final class ProgressStore {
     try {
       YamlFiles.write(file.toPath(), data);
     } catch (IOException e) {
-      plugin.getLogger().log(java.util.logging.Level.SEVERE, "Could not save practice stats", e);
+      plugin.getLogger().log(java.util.logging.Level.SEVERE, "Could Not Save Practice Stats", e);
     }
   }
 }

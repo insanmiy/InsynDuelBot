@@ -37,7 +37,7 @@ public final class RecoveryStore {
   }
 
   public void capture(Player p) throws IOException {
-    if (pending(p)) throw new IOException("An earlier recovery for this player is pending.");
+    if (pending(p)) throw new IOException("An Earlier Recovery For This Player Is Pending.");
     File file = playerFile(p);
     Files.createDirectories(file.toPath().getParent());
     YamlConfiguration c = new YamlConfiguration();
@@ -74,7 +74,7 @@ public final class RecoveryStore {
     try {
       Location location = c.getLocation("location");
       if (location == null || location.getWorld() == null)
-        throw new IOException("Recovery world unavailable");
+        throw new IOException("Recovery World Unavailable");
       p.getActivePotionEffects().forEach(e -> p.removePotionEffect(e.getType()));
       p.setAbsorptionAmount(0);
       var maxHealthInstance = Attributes.get(p, Attributes.MAX_HEALTH);
@@ -97,12 +97,12 @@ public final class RecoveryStore {
       p.setVelocity(new org.bukkit.util.Vector());
       p.setCooldown(Material.SHIELD, 0);
       p.setCooldown(Material.ENDER_PEARL, c.getInt("pearl-cooldown", 0));
-      if (!p.teleport(location)) throw new IOException("Return teleport was cancelled");
+      if (!p.teleport(location)) throw new IOException("Return Teleport Was Cancelled");
       p.saveData();
       Files.delete(file.toPath());
       return true;
     } catch (Exception e) {
-      plugin.getLogger().severe("Recovery retained for " + p.getName() + ": " + e.getMessage());
+      plugin.getLogger().severe("Recovery Retained For " + p.getName() + ": " + e.getMessage());
       return false;
     }
   }

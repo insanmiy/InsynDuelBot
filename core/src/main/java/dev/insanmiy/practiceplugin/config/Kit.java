@@ -29,7 +29,7 @@ public final class Kit {
       double health,
       boolean regeneration) {
     if (!Double.isFinite(health) || health < 2 || health > 100)
-      throw new IllegalArgumentException("Kit health must be 2..100 HP.");
+      throw new IllegalArgumentException("Kit Health Must Be 2..100 HP.");
     this.name = name;
     this.description = description;
     this.armor = armor.stream().map(ItemStack::clone).toList();
@@ -112,11 +112,11 @@ public final class Kit {
     return health
         + " HP | "
         + count(Material.GOLDEN_APPLE)
-        + " apples | "
+        + " Apples | "
         + count(Material.SPLASH_POTION)
-        + " splash pots | "
+        + " Splash Pots | "
         + count(Material.COBWEB)
-        + " webs | "
+        + " Webs | "
         + count(Material.EXPERIENCE_BOTTLE)
         + " XP | "
         + description;
@@ -126,7 +126,7 @@ public final class Kit {
     List<?> rawArmor = c.getList("armor", List.of());
     List<ItemStack> armor = rawArmor.stream().map(Kit::parseItem).toList();
     if (armor.size() != 4)
-      throw new IllegalArgumentException("armor requires boots, leggings, chestplate, helmet");
+      throw new IllegalArgumentException("Armor Requires Boots, Leggings, Chestplate, Helmet.");
     for (int i = 0; i < 4; i++) {
       enchant(armor.get(i), c.getConfigurationSection("armor-enchantments"));
     }
@@ -136,7 +136,7 @@ public final class Kit {
     for (String key : slots.getKeys(false)) {
       int slot = Integer.parseInt(key);
       if (slot < 0 || slot > 35)
-        throw new IllegalArgumentException("Inventory slots must be 0..35");
+        throw new IllegalArgumentException("Inventory Slots Must Be 0..35.");
       ItemStack item = parseItem(slots.get(key));
       Material type = item.getType();
       if (melee(type)) enchant(item, c.getConfigurationSection("weapon-enchantments"));
@@ -188,7 +188,7 @@ public final class Kit {
         || n.startsWith("STRUCTURE_")
         || Set.of("BEDROCK", "BARRIER", "DEBUG_STICK", "JIGSAW", "LIGHT", "SPAWNER", "KNOWLEDGE_BOOK")
             .contains(n))
-      throw new IllegalArgumentException("Item not allowed in kits: " + n);
+      throw new IllegalArgumentException("Item Not Allowed In Kits: " + n);
   }
 
   public static boolean ammunition(Material type) {
@@ -209,7 +209,7 @@ public final class Kit {
       ItemStack item = parseItem(String.valueOf(material) + ":" + amount);
       if (map.containsKey("potion")) {
         if (!(item.getItemMeta() instanceof PotionMeta meta))
-          throw new IllegalArgumentException("Only potions may specify potion type.");
+          throw new IllegalArgumentException("Only Potions May Specify Potion Type.");
         meta.setBasePotionType(
             PotionType.valueOf(String.valueOf(map.get("potion")).toUpperCase(Locale.ROOT)));
         item.setItemMeta(meta);
@@ -231,17 +231,17 @@ public final class Kit {
     }
     if (raw instanceof ItemStack item) {
       if (item.getType().isAir()) return new ItemStack(Material.AIR);
-      if (item.getAmount() < 1) throw new IllegalArgumentException("Invalid item count");
+      if (item.getAmount() < 1) throw new IllegalArgumentException("Invalid Item Count.");
       return item.clone();
     }
     String[] parts = String.valueOf(raw).split(":", -1);
-    if (parts.length > 2) throw new IllegalArgumentException("Expected MATERIAL:amount");
+    if (parts.length > 2) throw new IllegalArgumentException("Expected Material:Amount.");
     Material type = Material.matchMaterial(parts[0]);
     if (type == null || !type.isItem() && type != Material.AIR)
-      throw new IllegalArgumentException("Unknown item: " + raw);
+      throw new IllegalArgumentException("Unknown Item: " + raw);
     int count = parts.length == 2 ? Integer.parseInt(parts[1]) : 1;
     if (count < 1 || type != Material.AIR && count > type.getMaxStackSize())
-      throw new IllegalArgumentException("Invalid amount for " + type);
+      throw new IllegalArgumentException("Invalid Amount For " + type);
     return new ItemStack(type, count);
   }
 
@@ -256,7 +256,7 @@ public final class Kit {
               : org.bukkit.Registry.ENCHANTMENT.get(id);
       int level = c.getInt(key);
       if (enchantment == null || level < 1 || level > enchantment.getMaxLevel())
-        throw new IllegalArgumentException("Invalid enchantment " + key + " for " + item.getType());
+        throw new IllegalArgumentException("Invalid Enchantment " + key + " For " + item.getType());
       if (!enchantment.canEnchantItem(item)) continue;
       item.addUnsafeEnchantment(enchantment, level);
     }
@@ -264,7 +264,7 @@ public final class Kit {
 
   public static void capture(Player player, ConfigurationSection c) {
     c.createSection("items");
-    c.set("description", "Saved by " + player.getName());
+    c.set("description", "Saved By " + player.getName());
     c.set("health", Attributes.getValue(player, Attributes.MAX_HEALTH, 20.0));
     c.set("natural-regeneration", true);
     c.set(

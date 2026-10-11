@@ -20,11 +20,11 @@ public final class Match {
 
   public Match(int countdown, int intermission, int bestOf) {
     if (countdown < 1 || intermission < 1)
-      throw new IllegalArgumentException("Timings must be positive");
+      throw new IllegalArgumentException("Timings Must Be Positive");
     this.countdown = countdown;
     this.intermission = intermission;
     if (bestOf < 0 || bestOf > 99 || bestOf != 0 && bestOf % 2 == 0)
-      throw new IllegalArgumentException("Best-of must be odd (1-99), or 0 for endless.");
+      throw new IllegalArgumentException("Best Of Must Be Odd (1 To 99), Or 0 For Endless.");
     winsRequired = bestOf == 0 ? 0 : bestOf / 2 + 1;
     remaining = countdown;
   }

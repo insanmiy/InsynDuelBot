@@ -95,7 +95,7 @@ public record Difficulty(
         || !unit(healThreshold)
         || shieldTicks < 1
         || shieldTicks > 40)
-      throw new IllegalArgumentException("Invalid difficulty values for " + name);
+      throw new IllegalArgumentException("Invalid Difficulty Values For " + name);
   }
 
   private static boolean unit(double d) {

@@ -73,7 +73,7 @@ final class KitEditor implements Listener {
               54,
               Component.text(
                   screen == Screen.LIBRARY || screen == Screen.TEMPLATES
-                      ? (screen == Screen.LIBRARY ? "CUSTOM KITS / " : "COPY A TEMPLATE / ")
+                      ? (screen == Screen.LIBRARY ? "Custom Kits / " : "Copy A Template / ")
                           + (page + 1)
                       : screen
                           + " / "
@@ -113,9 +113,9 @@ final class KitEditor implements Listener {
 
   void allowed(Player player) {
     if (!player.hasPermission("practice.kits") && !player.hasPermission("practice.admin"))
-      throw new IllegalArgumentException("Missing permission: practice.kits");
+      throw new IllegalArgumentException("Missing Permission: practice.kits");
     if (plugin.sessionFor(player) != null)
-      throw new IllegalArgumentException("Stop practice before editing kits.");
+      throw new IllegalArgumentException("Stop Practice Before Editing Kits.");
   }
 
   void command(Player player, String[] args) throws IOException {
@@ -127,7 +127,7 @@ final class KitEditor implements Listener {
     }
     if (args.length < 3)
       throw new IllegalArgumentException(
-          "/practice kit <create|import|edit|save|delete|copy|rename> <name>");
+          "/practice Kit <Create|Import|Edit|Save|Delete|Copy|Rename> <Name>");
     String name = CustomKitStore.name(args[2]);
     switch (action) {
       case "create" -> create(player, name, args.length > 3 ? args[3] : null);
@@ -137,16 +137,16 @@ final class KitEditor implements Listener {
         var candidate = new YamlConfiguration();
         Kit.capture(player, candidate);
         save(player, name, candidate, null);
-        player.sendMessage(TextUI.legacy(Component.text("Saved " + name + ". Your inventory was not changed.")));
+        player.sendMessage(TextUI.legacy(Component.text("Saved " + name + ". Your Inventory Was Not Changed.")));
       }
       case "copy" -> {
         if (args.length != 4)
-          throw new IllegalArgumentException("/practice kit copy <source> <new-name>");
+          throw new IllegalArgumentException("/practice Kit Copy <Source> <New Name>");
         create(player, CustomKitStore.name(args[3]), name);
       }
       case "rename" -> {
         if (args.length != 4)
-          throw new IllegalArgumentException("/practice kit rename <old-name> <new-name>");
+          throw new IllegalArgumentException("/practice Kit Rename <Old Name> <New Name>");
         store.rename(
             name,
             args[3],
@@ -154,7 +154,7 @@ final class KitEditor implements Listener {
             player.hasPermission("practice.admin"),
             plugin.kits().keySet());
         plugin.refreshKits();
-        player.sendMessage(TextUI.legacy(Component.text("Renamed kit to " + CustomKitStore.name(args[3]))));
+        player.sendMessage(TextUI.legacy(Component.text("Renamed Kit To " + CustomKitStore.name(args[3]))));
         library(player, 0);
       }
       case "delete" -> {
@@ -163,7 +163,7 @@ final class KitEditor implements Listener {
       }
       default ->
           throw new IllegalArgumentException(
-              "Use editor, create, import, edit, save, copy, rename, delete or info.");
+              "Use Editor, Create, Import, Edit, Save, Copy, Rename, Delete Or Info.");
     }
   }
 
@@ -193,11 +193,11 @@ final class KitEditor implements Listener {
     allowed(player);
     name = CustomKitStore.name(name);
     if (plugin.kits().containsKey(name) || store.read().contains(name))
-      throw new IllegalArgumentException("Name already used. Choose a new name.");
+      throw new IllegalArgumentException("Name Already Used. Choose A New Name.");
     Draft draft = new Draft(name);
     if (template != null) {
       Kit kit = plugin.kits().get(template.toLowerCase(Locale.ROOT));
-      if (kit == null) throw new IllegalArgumentException("Unknown template kit.");
+      if (kit == null) throw new IllegalArgumentException("Unknown Template Kit.");
       kit.previewItems().forEach((slot, item) -> draft.items[slot] = item);
       draft.health = kit.health();
       draft.regeneration = kit.regeneration();
@@ -205,7 +205,7 @@ final class KitEditor implements Listener {
     show(player, Screen.EDIT, draft, 0);
     player.sendMessage(TextUI.legacy(
         Component.text(
-            "Editing " + name + ". Click Save to keep it. Closing discards unsaved changes.")));
+            "Editing " + name + ". Click Save To Keep It. Closing Discards Unsaved Changes.")));
   }
 
   private Draft existing(Player player, String name) throws IOException {
@@ -213,7 +213,7 @@ final class KitEditor implements Listener {
     if (!CustomKitStore.editable(
         section, player.getUniqueId(), player.hasPermission("practice.admin")))
       throw new IllegalArgumentException(
-          "You can only edit your own custom kits. Copy a preset to customize it.");
+          "You Can Only Edit Your Own Custom Kits. Copy A Preset To Customize It.");
     Kit kit = Kit.read(name, section);
     Draft draft = new Draft(name);
     draft.revision = CustomKitStore.revision(section);
@@ -232,12 +232,12 @@ final class KitEditor implements Listener {
     allowed(player);
     name = CustomKitStore.name(name);
     if (plugin.kits().containsKey(name) || store.read().contains(name))
-      throw new IllegalArgumentException("Name already used. Choose a new name.");
+      throw new IllegalArgumentException("Name Already Used. Choose A New Name.");
     Draft draft = new Draft(name);
     importInventory(player, draft);
     show(player, Screen.EDIT, draft, 0);
     player.sendMessage(TextUI.legacy(
-        Component.text("Imported your inventory into " + name + ". Click Save to keep it.")));
+        Component.text("Imported Your Inventory Into " + name + ". Click Save To Keep It.")));
   }
 
   private void edit(Player player, String name) throws IOException {
@@ -267,30 +267,30 @@ final class KitEditor implements Listener {
           button(
               Material.WRITABLE_BOOK,
               name,
-              "Left: edit | Right: duplicate",
+              "Left: Edit | Right: Duplicate",
               "/practice kit rename " + name + " <new-name>"));
     }
-    view.inventory.setItem(45, button(Material.ARROW, "Previous page"));
+    view.inventory.setItem(45, button(Material.ARROW, "Previous Page"));
     view.inventory.setItem(
-        46, button(Material.EMERALD, "Create blank kit", "No fixed kit-count limit"));
+        46, button(Material.EMERALD, "Create Blank Kit", "No Fixed Kit-Count Limit"));
     view.inventory.setItem(
         47,
         button(
-            Material.CHEST, "Browse kit templates", "Choose any kit to copy into your own draft"));
+            Material.CHEST, "Browse Kit Templates", "Choose Any Kit To Copy Into Your Own Draft"));
     view.inventory.setItem(
         49,
         button(
             Material.BOOK,
-            names.size() + " custom kits",
+            names.size() + " Custom Kits",
             "/practice kit create <name> [template]"));
-    view.inventory.setItem(52, button(Material.ARROW, "Next page"));
+    view.inventory.setItem(52, button(Material.ARROW, "Next Page"));
     view.inventory.setItem(
         50,
         button(
             Material.HOPPER,
-            "Create from your inventory",
-            "Copies hotbar, inventory, armor and offhand into a new draft",
-            "Your real items stay untouched; click Save when ready",
+            "Create From Your Inventory",
+            "Copies Hotbar, Inventory, Armor And Offhand Into A New Draft",
+            "Your Real Items Stay Untouched; Click Save When Ready",
             "/practice kit import <name>"));
     view.inventory.setItem(53, button(Material.BARRIER, "Close"));
     player.openInventory(view.inventory);
@@ -313,13 +313,13 @@ final class KitEditor implements Listener {
               kit.icon(),
               kit.name(),
               kit.description(),
-              kit.health() + " HP | Click to create an independent copy"));
+              kit.health() + " HP | Click To Create An Independent Copy"));
     }
-    view.inventory.setItem(45, button(Material.ARROW, "Previous page"));
+    view.inventory.setItem(45, button(Material.ARROW, "Previous Page"));
     view.inventory.setItem(
-        49, button(Material.BOOK, "Choose a starting loadout", "Original kits are never modified"));
-    view.inventory.setItem(52, button(Material.ARROW, "Next page"));
-    view.inventory.setItem(53, button(Material.BARRIER, "Back to your kits"));
+        49, button(Material.BOOK, "Choose A Starting Loadout", "Original Kits Are Never Modified"));
+    view.inventory.setItem(52, button(Material.ARROW, "Next Page"));
+    view.inventory.setItem(53, button(Material.BARRIER, "Back To Your Kits"));
     player.openInventory(view.inventory);
   }
 
@@ -365,52 +365,52 @@ final class KitEditor implements Listener {
             empty(draft.items[i])
                 ? button(
                     Material.LIGHT_GRAY_STAINED_GLASS_PANE,
-                    slotName(i) + " / empty",
-                    "Click to choose an item from the GUI",
-                    "Shift-left: paste selected item | Right: clear")
+                    slotName(i) + " / Empty",
+                    "Click To Choose An Item From The GUI",
+                    "Shift-Left: Paste Selected Item | Right: Clear")
                 : displayItem(
                     draft.items[i],
                     slotName(i),
-                    "Click: item settings and enchantments",
-                    "Shift-left: paste selected item | Right: clear"));
+                    "Click: Item Settings And Enchantments",
+                    "Shift-Left: Paste Selected Item | Right: Clear"));
       inv.setItem(
           41,
           button(
               Material.COMPASS,
               "Selected: " + slotName(draft.selected),
-              "Slots 0-8 (top row) are the hotbar",
-              "Click an item: settings / enchants",
-              "Click empty slot: item picker",
-              "Shift-left another slot: copy selected into it",
-              "Click your inventory below to copy an item here"));
+              "Slots 0-8 (Top Row) Are The Hotbar",
+              "Click An Item: Settings / Enchants",
+              "Click Empty Slot: Item Picker",
+              "Shift-Left Another Slot: Copy Selected Into It",
+              "Click Your Inventory Below To Copy An Item Here"));
       inv.setItem(42, button(Material.RED_DYE, "Amount -1", "Shift: -16"));
-      inv.setItem(43, button(Material.LIME_DYE, "Amount +1", "Shift: +16 (native stack limits)"));
+      inv.setItem(43, button(Material.LIME_DYE, "Amount +1", "Shift: +16 (Native Stack Limits)"));
       inv.setItem(
           44,
           button(
-              Material.CHEST, "Choose / replace selected item", "Opens categorized item picker"));
-      inv.setItem(45, button(Material.ARROW, "Discard changes / back"));
+              Material.CHEST, "Choose / Replace Selected Item", "Opens Categorized Item Picker"));
+      inv.setItem(45, button(Material.ARROW, "Discard Changes / Back"));
       inv.setItem(46, button(Material.REDSTONE, "Health -2 / " + draft.health + " HP"));
       inv.setItem(47, button(Material.GLOWSTONE_DUST, "Health +2 / " + draft.health + " HP"));
-      inv.setItem(48, button(Material.COOKED_BEEF, "Natural regeneration: " + draft.regeneration));
+      inv.setItem(48, button(Material.COOKED_BEEF, "Natural Regeneration: " + draft.regeneration));
       inv.setItem(
           49,
           button(
               Material.EMERALD_BLOCK,
-              "SAVE " + draft.name,
-              "Validates and saves to disk",
-              "Both fighters get independent copies"));
+              "Save " + draft.name,
+              "Validates And Saves To Disk",
+              "Both Fighters Get Independent Copies"));
       inv.setItem(
           50,
           button(
               Material.HOPPER,
-              "Import your inventory",
-              "Replaces draft gear; real items untouched"));
-      inv.setItem(51, button(Material.ENCHANTING_TABLE, "Enchant selected item"));
+              "Import Your Inventory",
+              "Replaces Draft Gear; Real Items Untouched"));
+      inv.setItem(51, button(Material.ENCHANTING_TABLE, "Enchant Selected Item"));
       inv.setItem(
           52,
-          button(Material.WRITABLE_BOOK, "Name this kit", "Type a name using the GUI keyboard"));
-      inv.setItem(53, button(Material.BARRIER, "Delete saved kit", "Confirmation required"));
+          button(Material.WRITABLE_BOOK, "Name This Kit", "Type A Name Using The GUI Keyboard"));
+      inv.setItem(53, button(Material.BARRIER, "Delete Saved Kit", "Confirmation Required"));
     } else if (screen == Screen.ITEM) {
       ItemStack item = draft.items[draft.selected];
       if (empty(item)) {
@@ -422,37 +422,37 @@ final class KitEditor implements Listener {
           button(
               Material.COMPASS,
               slotName(draft.selected),
-              "Editing this slot only",
-              "All changes stay in the draft until Save"));
-      inv.setItem(13, displayItem(item, "Current item / " + slotName(draft.selected)));
+              "Editing This Slot Only",
+              "All Changes Stay In The Draft Until Save"));
+      inv.setItem(13, displayItem(item, "Current Item / " + slotName(draft.selected)));
       inv.setItem(
           19,
           button(
               Material.CHEST,
-              "Choose a different item",
-              "Browse all items, equipment, food, potions and blocks"));
+              "Choose A Different Item",
+              "Browse All Items, Equipment, Food, Potions And Blocks"));
       inv.setItem(
           21,
           button(
               Material.ENCHANTING_TABLE,
-              "ADD / EDIT ENCHANTMENTS",
-              "Pick an enchantment, then choose its level"));
+              "Add / Edit Enchantments",
+              "Pick An Enchantment, Then Choose Its Level"));
       inv.setItem(
-          23, button(Material.GRINDSTONE, "Remove all enchantments", "Only changes this item"));
+          23, button(Material.GRINDSTONE, "Remove All Enchantments", "Only Changes This Item"));
       inv.setItem(
           22,
           button(
               Material.NETHER_STAR,
-              "FAST ENCHANT: combat / tool essentials",
-              "Max compatible damage, protection, efficiency and durability",
-              "Skips conflicting enchantments"));
+              "Fast Enchant: Combat / Tool Essentials",
+              "Max Compatible Damage, Protection, Efficiency And Durability",
+              "Skips Conflicting Enchantments"));
       inv.setItem(
           24,
           button(
               Material.EXPERIENCE_BOTTLE,
-              "FAST ENCHANT: Mending + Unbreaking",
-              "One click; respects conflicts such as Infinity"));
-      inv.setItem(25, button(Material.BARRIER, "Clear this slot"));
+              "Fast Enchant: Mending + Unbreaking",
+              "One Click; Respects Conflicts Such As Infinity"));
+      inv.setItem(25, button(Material.BARRIER, "Clear This Slot"));
       int[] amounts = {1, 8, 16, 32, 64};
       for (int i = 0; i < amounts.length; i++) {
         int count = EditorRules.amount(amounts[i], item.getMaxStackSize());
@@ -460,29 +460,29 @@ final class KitEditor implements Listener {
             28 + i,
             button(
                 Material.PAPER,
-                "Set amount: " + count,
-                "Native maximum: " + item.getMaxStackSize()));
+                "Set Amount: " + count,
+                "Native Maximum: " + item.getMaxStackSize()));
       }
       inv.setItem(
           34,
           button(
               Material.CHEST_MINECART,
-              "Fill empty inventory slots with this item",
-              "Slots 9-35 only; existing items are preserved"));
+              "Fill Empty Inventory Slots With This Item",
+              "Slots 9-35 Only; Existing Items Are Preserved"));
       inv.setItem(
           40,
           button(
               Material.ARMOR_STAND,
-              "Copy enchantments to matching armor",
-              "Only compatible, non-conflicting enchants are copied",
-              "Existing armor enchantments are preserved"));
-      inv.setItem(45, button(Material.ARROW, "Back to loadout"));
+              "Copy Enchantments To Matching Armor",
+              "Only Compatible, Non-Conflicting Enchants Are Copied",
+              "Existing Armor Enchantments Are Preserved"));
+      inv.setItem(45, button(Material.ARROW, "Back To Loadout"));
       inv.setItem(48, button(Material.RED_DYE, "Amount -1", "Shift: -16"));
       inv.setItem(
           49,
           button(Material.BOOK, "Amount: " + item.getAmount() + " / " + item.getMaxStackSize()));
       inv.setItem(50, button(Material.LIME_DYE, "Amount +1", "Shift: +16"));
-      inv.setItem(53, button(Material.ARROW, "Back to loadout"));
+      inv.setItem(53, button(Material.ARROW, "Back To Loadout"));
     } else if (screen == Screen.PALETTE) {
       if (draft.paletteCategory == 3)
         for (Material material :
@@ -514,16 +514,16 @@ final class KitEditor implements Listener {
             i,
             displayItem(
                 view.palette.get(page * 45 + i),
-                "Click to use in " + slotName(draft.selected),
-                "Then edit amount and enchantments"));
+                "Click To Use In " + slotName(draft.selected),
+                "Then Edit Amount And Enchantments"));
       if (view.palette.isEmpty())
         inv.setItem(
             22,
             button(
                 Material.BARRIER,
-                "No items for this slot / category",
-                "Try the All items category"));
-      inv.setItem(45, button(Material.ARROW, "Previous page"));
+                "No Items For This Slot / Category",
+                "Try The All Items Category"));
+      inv.setItem(45, button(Material.ARROW, "Previous Page"));
       Material[] icons = {
         Material.DIAMOND_SWORD,
         Material.COOKED_BEEF,
@@ -533,7 +533,7 @@ final class KitEditor implements Listener {
         Material.DIAMOND_CHESTPLATE
       };
       String[] categories = {
-        "Weapons", "Food", "All items", "Potions / tipped arrows", "Blocks", "Equipment"
+        "Weapons", "Food", "All Items", "Potions / Tipped Arrows", "Blocks", "Equipment"
       };
       for (int i = 0; i < categories.length; i++)
         inv.setItem(
@@ -542,9 +542,9 @@ final class KitEditor implements Listener {
                 icons[i],
                 (i == draft.paletteCategory ? "Selected: " : "") + categories[i],
                 "Page " + (page + 1) + " / " + (maxPage + 1),
-                "Copies to " + slotName(draft.selected)));
-      inv.setItem(52, button(Material.ARROW, "Next page"));
-      inv.setItem(53, button(Material.BARRIER, "Back to editor"));
+                "Copies To " + slotName(draft.selected)));
+      inv.setItem(52, button(Material.ARROW, "Next Page"));
+      inv.setItem(53, button(Material.BARRIER, "Back To Editor"));
     } else if (screen == Screen.ENCHANT) {
       ItemStack item = draft.items[draft.selected];
       if (empty(item)) {
@@ -565,15 +565,15 @@ final class KitEditor implements Listener {
             button(
                 Material.ENCHANTED_BOOK,
                 pretty(e.getKey().getKey()) + " / Level " + item.getEnchantmentLevel(e),
-                "Click: exact level | Shift-left: MAX | Right: remove",
+                "Click: Exact Level | Shift-Left: Max | Right: Remove",
                 conflicts(item, e)
-                    ? "CONFLICT: remove the incompatible enchantment first"
-                    : "Compatible with selected item",
-                "Maximum vanilla level: " + e.getMaxLevel()));
+                    ? "Conflict: Remove The Incompatible Enchantment First"
+                    : "Compatible With Selected Item",
+                "Maximum Vanilla Level: " + e.getMaxLevel()));
       }
       if (view.enchants.isEmpty())
-        inv.setItem(22, button(Material.BARRIER, "This item has no compatible enchantments"));
-      inv.setItem(48, button(Material.GRINDSTONE, "Remove all enchantments"));
+        inv.setItem(22, button(Material.BARRIER, "This Item Has No Compatible Enchantments"));
+      inv.setItem(48, button(Material.GRINDSTONE, "Remove All Enchantments"));
       inv.setItem(49, displayItem(item, "Enchanting " + slotName(draft.selected)));
       inv.setItem(53, button(Material.ARROW, "Back"));
     } else if (screen == Screen.LEVEL) {
@@ -584,9 +584,9 @@ final class KitEditor implements Listener {
           button(
               Material.ENCHANTED_BOOK,
               pretty(enchant.getKey().getKey()),
-              "Current level: " + item.getEnchantmentLevel(enchant),
-              "Choose a level below"));
-      inv.setItem(10, button(Material.GRINDSTONE, "Remove this enchantment"));
+              "Current Level: " + item.getEnchantmentLevel(enchant),
+              "Choose A Level Below"));
+      inv.setItem(10, button(Material.GRINDSTONE, "Remove This Enchantment"));
       for (int level = 1; level <= Math.min(30, enchant.getMaxLevel()); level++)
         inv.setItem(
             10 + level,
@@ -594,10 +594,10 @@ final class KitEditor implements Listener {
                 Material.ENCHANTED_BOOK,
                 "Level " + level,
                 conflicts(item, enchant)
-                    ? "Conflicts with an existing enchantment"
-                    : "Click to apply"));
-      inv.setItem(49, displayItem(item, "Your item"));
-      inv.setItem(53, button(Material.ARROW, "Back to enchantments"));
+                    ? "Conflicts With An Existing Enchantment"
+                    : "Click To Apply"));
+      inv.setItem(49, displayItem(item, "Your Item"));
+      inv.setItem(53, button(Material.ARROW, "Back To Enchantments"));
     } else if (screen == Screen.NAME) {
       if (draft.nameInput == null) draft.nameInput = draft.name;
       String alphabet = "abcdefghijklmnopqrstuvwxyz0123456789";
@@ -606,29 +606,29 @@ final class KitEditor implements Listener {
       inv.setItem(36, button(Material.PAPER, "_"));
       inv.setItem(37, button(Material.PAPER, "-"));
       inv.setItem(38, button(Material.ARROW, "Backspace"));
-      inv.setItem(39, button(Material.BARRIER, "Clear name"));
+      inv.setItem(39, button(Material.BARRIER, "Clear Name"));
       inv.setItem(
           40,
           button(
               Material.NAME_TAG,
               "Name: " + draft.nameInput,
-              draft.nameInput.length() + " / 32 characters"));
+              draft.nameInput.length() + " / 32 Characters"));
       inv.setItem(
           49,
           button(
               Material.EMERALD_BLOCK,
-              "Apply name",
-              "Existing saved kits are renamed immediately",
-              "Other draft changes still require Save"));
-      inv.setItem(53, button(Material.ARROW, "Cancel naming"));
+              "Apply Name",
+              "Existing Saved Kits Are Renamed Immediately",
+              "Other Draft Changes Still Require Save"));
+      inv.setItem(53, button(Material.ARROW, "Cancel Naming"));
     } else if (screen == Screen.DELETE) {
       inv.setItem(
           22,
           button(
               Material.TNT,
-              "Confirm deletion: " + draft.name,
-              "Removes the saved custom kit",
-              "Previous file retained as customkits.yml.bak"));
+              "Confirm Deletion: " + draft.name,
+              "Removes The Saved Custom Kit",
+              "Previous File Retained As customkits.yml.bak"));
       inv.setItem(53, button(Material.ARROW, "Cancel"));
     }
     player.openInventory(inv);
@@ -645,7 +645,7 @@ final class KitEditor implements Listener {
 
   private static void put(Draft draft, int slot, ItemStack item) {
     if (!empty(item) && !fits(slot, item.getType()))
-      throw new IllegalArgumentException("That item does not fit " + slotName(slot) + ".");
+      throw new IllegalArgumentException("That Item Does Not Fit " + slotName(slot) + ".");
     draft.items[slot] = empty(item) ? null : item.clone();
   }
 
@@ -661,7 +661,7 @@ final class KitEditor implements Listener {
       return;
     }
     if (conflicts(item, enchant))
-      throw new IllegalArgumentException("Remove the conflicting enchantment first.");
+      throw new IllegalArgumentException("Remove The Conflicting Enchantment First.");
     item.addUnsafeEnchantment(enchant, level);
   }
 
@@ -697,7 +697,7 @@ final class KitEditor implements Listener {
 
   private static YamlConfiguration serialize(Draft draft) {
     var yaml = new YamlConfiguration();
-    yaml.set("description", "Custom kit: " + draft.name);
+    yaml.set("description", "Custom Kit: " + draft.name);
     yaml.set("health", draft.health);
     yaml.set("natural-regeneration", draft.regeneration);
     yaml.createSection("items");
@@ -740,7 +740,7 @@ final class KitEditor implements Listener {
               } catch (IOException e) {
                 player.sendMessage(TextUI.legacy(
                     Component.text(
-                        "Could not complete the kit action. Check the server log before retrying.",
+                        "Could Not Complete The Kit Action. Check The Server Log Before Retrying.",
                         NamedTextColor.RED)));
                 plugin.getLogger().warning(e.toString());
               }
@@ -781,7 +781,7 @@ final class KitEditor implements Listener {
             player.hasPermission("practice.admin"));
         plugin.refreshKits();
         player.sendMessage(TextUI.legacy(
-            Component.text("Deleted " + draft.name + ". Previous file: customkits.yml.bak")));
+            Component.text("Deleted " + draft.name + ". Previous File: customkits.yml.bak")));
         library(player, 0);
       } else if (slot == 53) show(player, Screen.EDIT, draft, 0);
       return;
@@ -812,12 +812,12 @@ final class KitEditor implements Listener {
         if (!name.equals(draft.name)) {
           var saved = store.read();
           if (saved.contains(name) || plugin.kits().containsKey(name))
-            throw new IllegalArgumentException("Name already used.");
+            throw new IllegalArgumentException("Name Already Used.");
           if (draft.revision != null) {
             if (!Objects.equals(
                 draft.revision, CustomKitStore.revision(saved.getConfigurationSection(draft.name))))
               throw new IllegalArgumentException(
-                  "This kit changed. Reopen the editor before renaming it.");
+                  "This Kit Changed. Reopen The Editor Before Renaming It.");
             store.rename(
                 draft.name,
                 name,
@@ -863,7 +863,7 @@ final class KitEditor implements Listener {
             Component.text(
                 "Applied "
                     + applied
-                    + " enchantment upgrades; incompatible/conflicting choices skipped.")));
+                    + " Enchantment Upgrades; Incompatible/Conflicting Choices Skipped.")));
       } else if (slot == 25) {
         draft.items[draft.selected] = null;
         show(player, Screen.EDIT, draft, 0);
@@ -884,10 +884,10 @@ final class KitEditor implements Listener {
             filled++;
           }
         player.sendMessage(TextUI.legacy(
-            Component.text("Filled " + filled + " empty reserve slots. Existing items kept.")));
+            Component.text("Filled " + filled + " Empty Reserve Slots. Existing Items Kept.")));
       } else if (slot == 40) {
         if (!armor(item.getType()))
-          throw new IllegalArgumentException("Select an armor piece first.");
+          throw new IllegalArgumentException("Select An Armor Piece First.");
         for (int i = 36; i < 40; i++) {
           ItemStack target = draft.items[i];
           if (empty(target)) continue;
@@ -898,7 +898,7 @@ final class KitEditor implements Listener {
                       target.addUnsafeEnchantment(e, Math.max(target.getEnchantmentLevel(e), level));
                   });
         }
-        player.sendMessage(TextUI.legacy(Component.text("Copied compatible enchantments to equipped armor.")));
+        player.sendMessage(TextUI.legacy(Component.text("Copied Compatible Enchantments To Equipped Armor.")));
       } else if (slot == 45 || slot == 53) {
         show(player, Screen.EDIT, draft, 0);
         return;
@@ -972,11 +972,11 @@ final class KitEditor implements Listener {
           draft.revision =
               CustomKitStore.revision(store.read().getConfigurationSection(draft.name));
           player.sendMessage(TextUI.legacy(
-              Component.text("Saved " + draft.name + ". Available immediately in /practice.")));
+              Component.text("Saved " + draft.name + ". Available Immediately In /practice.")));
         }
         case 50 -> {
           importInventory(player, draft);
-          player.sendMessage(TextUI.legacy(Component.text("Inventory imported. Click Save to keep these changes.")));
+          player.sendMessage(TextUI.legacy(Component.text("Inventory Imported. Click Save To Keep These Changes.")));
         }
         case 51 -> {
           show(player, Screen.ENCHANT, draft, 0);
@@ -989,7 +989,7 @@ final class KitEditor implements Listener {
         }
         case 53 -> {
           if (draft.revision == null)
-            throw new IllegalArgumentException("This draft is not saved. Use Back to discard it.");
+            throw new IllegalArgumentException("This Draft Is Not Saved. Use Back To Discard It.");
           show(player, Screen.DELETE, draft, 0);
           return;
         }

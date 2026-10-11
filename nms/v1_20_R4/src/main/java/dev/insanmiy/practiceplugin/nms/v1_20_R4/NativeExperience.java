@@ -21,11 +21,11 @@ public final class NativeExperience {
           && params.length == 2
           && (params[0] == ServerPlayer.class || params[0] == net.minecraft.world.entity.player.Player.class)
           && params[1] == int.class) {
-        if (match != null) throw new IllegalStateException("Ambiguous native Mending method");
+        if (match != null) throw new IllegalStateException("Ambiguous Native Mending Method");
         match = method;
       }
     }
-    if (match == null) throw new IllegalStateException("Native Mending method unavailable");
+    if (match == null) throw new IllegalStateException("Native Mending Method Unavailable");
     match.setAccessible(true);
     return match;
   }
@@ -34,6 +34,6 @@ public final class NativeExperience {
     var handle = ((CraftPlayer) player).getHandle();
     var orb = new ExperienceOrb(EntityType.EXPERIENCE_ORB, handle.level());
     try { return (int) MEND.invoke(orb, handle, amount); }
-    catch (ReflectiveOperationException e) { throw new IllegalStateException("Native Mending failed", e); }
+    catch (ReflectiveOperationException e) { throw new IllegalStateException("Native Mending Failed", e); }
   }
 }

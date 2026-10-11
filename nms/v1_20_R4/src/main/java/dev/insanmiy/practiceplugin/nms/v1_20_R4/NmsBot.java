@@ -176,7 +176,7 @@ public final class NmsBot implements BotPlatform {
     teleporting = true;
     try {
       if (!handle.getBukkitEntity().teleport(location))
-        throw new IllegalStateException("Bot teleport cancelled");
+        throw new IllegalStateException("Bot Teleport Cancelled");
     } finally {
       teleporting = false;
     }

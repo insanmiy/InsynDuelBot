@@ -27,7 +27,7 @@ final class SettingsMenu implements Listener {
               "bot-attack-charge",
               Material.DIAMOND_SWORD,
               "Attack Speed (CPS)",
-              "Attack cooldown charge threshold before striking",
+              "Attack Cooldown Charge Threshold Before Striking",
               new String[] {
                 "Full Power (100% / Vanilla)",
                 "Fast (95% Charge)",
@@ -39,7 +39,7 @@ final class SettingsMenu implements Listener {
               "bot-aim",
               Material.BOW,
               "Aim Accuracy",
-              "Crosshair tracking precision and aim spread",
+              "Crosshair Tracking Precision And Aim Spread",
               new String[] {
                 "Godlike (0.0° / 100% Accurate)",
                 "Master (0.2° Error)",
@@ -53,7 +53,7 @@ final class SettingsMenu implements Listener {
               "bot-reaction",
               Material.FEATHER,
               "Reaction Speed",
-              "Decision tick interval and perception reaction time",
+              "Decision Tick Interval And Perception Reaction Time",
               new String[] {
                 "Instant (1t / 50ms)",
                 "Very Fast (2t / 100ms)",
@@ -67,7 +67,7 @@ final class SettingsMenu implements Listener {
               "bot-sprint-reset",
               Material.LEATHER_BOOTS,
               "Sprint-Reset (W-Tap)",
-              "Frequency of sprint-resetting after landing hits",
+              "Frequency Of Sprint-Resetting After Landing Hits",
               new String[] {
                 "Always (100% Combos)",
                 "High (80%)",
@@ -80,7 +80,7 @@ final class SettingsMenu implements Listener {
               "bot-shield-chance",
               Material.SHIELD,
               "Shield Defense",
-              "How consistently the bot blocks incoming attacks",
+              "How Consistently The Bot Blocks Incoming Attacks",
               new String[] {
                 "Always (100% Perfect Blocks)",
                 "High (85%)",
@@ -93,7 +93,7 @@ final class SettingsMenu implements Listener {
               "bot-strafe-speed",
               Material.SUGAR,
               "Strafe Movement",
-              "Dodging and circle-strafing movement speed",
+              "Dodging And Circle-Strafing Movement Speed",
               new String[] {
                 "Max Speed (100%)",
                 "Fast (80%)",
@@ -106,7 +106,7 @@ final class SettingsMenu implements Listener {
               "bot-heal-threshold",
               Material.SPLASH_POTION,
               "Heal Urgency",
-              "Health threshold when the bot uses potions/food",
+              "Health Threshold When The Bot Uses Potions/Food",
               new String[] {
                 "Aggressive (75% HP)",
                 "High (65% HP)",
@@ -163,7 +163,7 @@ final class SettingsMenu implements Listener {
 
   void open(Player p) {
     if (plugin.sessionFor(p) != null)
-      throw new IllegalArgumentException("Use /practice stop before changing match settings.");
+      throw new IllegalArgumentException("Use /practice Stop Before Changing Match Settings.");
     View view = new View(p);
     for (int i = 0; i < 54; i++)
       view.inventory.setItem(i, item(Material.GRAY_STAINED_GLASS_PANE, " "));
@@ -175,9 +175,9 @@ final class SettingsMenu implements Listener {
         item(
             Material.NETHER_STAR,
             "INSYN PRACTICE SETTINGS",
-            "Configure bot combat behavior, reaction times,",
-            "movement, tactics, and match rules in-game.",
-            "No config.yml editing required!"));
+            "Configure Bot Combat Behavior, Reaction Times,",
+            "Movement, Tactics, And Match Rules In-Game.",
+            "No Config.yml Editing Required!"));
 
     BOT_SETTINGS.forEach(
         (slot, def) -> {
@@ -196,7 +196,7 @@ final class SettingsMenu implements Listener {
                   "",
                   isCustom ? "[Custom Override Active]" : "[Using Difficulty Default]",
                   "",
-                  "Left-click: Next | Right-click: Previous"));
+                  "Left-Click: Next | Right-Click: Previous"));
         });
 
     FLAGS.forEach(
@@ -208,8 +208,8 @@ final class SettingsMenu implements Listener {
                   on ? Material.LIME_DYE : Material.GRAY_DYE,
                   title(key) + ": " + (on ? "ON" : "OFF"),
                   flagDescription(key),
-                  "Click to toggle",
-                  "Saved for your sessions"));
+                  "Click To Toggle",
+                  "Saved For Your Sessions"));
         });
 
     NUMBERS.forEach(
@@ -219,53 +219,53 @@ final class SettingsMenu implements Listener {
                 item(
                     slot == 28 ? Material.CLOCK : slot == 29 ? Material.COMPASS : Material.COOKED_BEEF,
                     title(key) + ": " + prefs.number(id, key) + (key.equals("saturation") ? "" : "s"),
-                    "Left: increase | Right: decrease",
+                    "Left: Increase | Right: Decrease",
                     key.equals("saturation")
-                        ? "Starting saturation for BOTH fighters"
-                        : "Seconds; applies next session")));
+                        ? "Starting Saturation For Both Fighters"
+                        : "Seconds; Applies Next Session")));
 
     view.inventory.setItem(
         33,
         item(
             Material.REDSTONE,
             "Damage Diagnostics",
-            "Detailed hit and knockback diagnostics in chat",
-            "Click to toggle (/practice damage)"));
+            "Detailed Hit And Knockback Diagnostics In Chat",
+            "Click To Toggle (/practice damage)"));
 
     view.inventory.setItem(
         34,
         item(
             Material.BOOK,
-            "Match rules",
-            "Mode and best-of: choose in practice menu",
-            "Native damage and cooldowns stay 1:1",
-            "Movement never ends a round",
-            "Only lethal hits score; /practice stop exits"));
+            "Match Rules",
+            "Mode And Best-Of: Choose In Practice Menu",
+            "Native Damage And Cooldowns Stay 1:1",
+            "Movement Never Ends A Round",
+            "Only Lethal Hits Score; /practice Stop Exits"));
 
-    view.inventory.setItem(45, item(Material.ARROW, "Back to practice menu", "Click to return to kit selection"));
+    view.inventory.setItem(45, item(Material.ARROW, "Back To Practice Menu", "Click To Return To Kit Selection"));
     view.inventory.setItem(
         49,
         item(
             Material.BLAZE_POWDER,
             "Reset Bot Tuning to Defaults",
-            "Restores all 7 combat settings above to",
-            "their default values from difficulty tier.",
-            "Click to reset"));
+            "Restores All 7 Combat Settings Above To",
+            "Their Default Values From Difficulty Tier.",
+            "Click To Reset"));
     view.inventory.setItem(53, item(Material.BARRIER, "Close"));
     p.openInventory(view.inventory);
   }
 
   private static String flagDescription(String key) {
     return switch (key) {
-      case "healing" -> "Bot potion and food consumption";
-      case "utilities" -> "Offensive cobwebs, ender pearls and bows";
-      case "criticals" -> "Bot jump-resets to land critical hits";
-      case "shields" -> "Bot off-hand shield usage";
-      case "strafing" -> "Circling and dodging movement";
-      case "counters" -> "Bot switches to axe when you block with shield";
-      case "hud" -> "Real-time health and round BossBar";
-      case "animations" -> "Pulsing borders and UI effects";
-      default -> "Click to toggle";
+      case "healing" -> "Bot Potion And Food Consumption";
+      case "utilities" -> "Offensive Cobwebs, Ender Pearls And Bows";
+      case "criticals" -> "Bot Jump-Resets To Land Critical Hits";
+      case "shields" -> "Bot Off-Hand Shield Usage";
+      case "strafing" -> "Circling And Dodging Movement";
+      case "counters" -> "Bot Switches To Axe When You Block With Shield";
+      case "hud" -> "Real-Time Health And Round BossBar";
+      case "animations" -> "Pulsing Borders And UI Effects";
+      default -> "Click To Toggle";
     };
   }
 
@@ -324,7 +324,7 @@ final class SettingsMenu implements Listener {
       if (slot == 49) {
         prefs.resetBotSettings(id);
         p.playSound(p.getLocation(), Sound.BLOCK_ANVIL_USE, 0.4f, 1.2f);
-        p.sendMessage(TextUI.legacy(Component.text("Reset bot combat settings to difficulty defaults.")));
+        p.sendMessage(TextUI.legacy(Component.text("Reset Bot Combat Settings To Difficulty Defaults.")));
         open(p);
         return;
       }
@@ -359,7 +359,7 @@ final class SettingsMenu implements Listener {
       } else return;
       open(p);
     } catch (IOException failure) {
-      p.sendMessage(TextUI.legacy(Component.text("Settings could not be saved; previous value retained.")));
+      p.sendMessage(TextUI.legacy(Component.text("Settings Could Not Be Saved; Previous Value Retained.")));
     }
   }
 

@@ -25,13 +25,13 @@ public final class BotAdapters {
         Class<?> clazz = Class.forName(adapterClassName);
         return (BotAdapter) clazz.getConstructor().newInstance();
       } catch (ReflectiveOperationException e) {
-        throw new IllegalStateException("Failed to initialize NMS adapter: " + adapterClassName, e);
+        throw new IllegalStateException("Failed To Initialize NMS Adapter: " + adapterClassName, e);
       }
     }
 
     throw new UnsupportedOperationException(
-        "Unsupported Minecraft version: " + version + " (" + bukkitVersion + "). "
-            + "Supported versions: 1.20.6 to 1.21.11");
+        "Unsupported Minecraft Version: " + version + " (" + bukkitVersion + "). "
+            + "Supported Versions: 1.20.6 To 1.21.11");
   }
 
   private static String getAdapterClassName(String version) {
@@ -48,8 +48,8 @@ public final class BotAdapters {
         int patch = Integer.parseInt(version.substring("1.21.".length()));
         if (patch > 4)
           Bukkit.getLogger().warning(
-              "[InsynDuelBot] The 1.21.2+ adapter is only built and tested against 1.21.4; "
-                  + version + " is unverified.");
+              "[InsynDuelBot] The 1.21.2+ Adapter Is Only Built And Tested Against 1.21.4; "
+                  + version + " Is Unverified.");
         if (patch >= 2 && patch <= 11) {
           return "dev.insanmiy.practiceplugin.nms.v1_21_R3.Adapter_1_21_R3";
         }

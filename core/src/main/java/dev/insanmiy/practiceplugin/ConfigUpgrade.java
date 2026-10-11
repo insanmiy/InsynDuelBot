@@ -63,8 +63,8 @@ final class ConfigUpgrade {
       plugin
           .getLogger()
           .info(
-              "Installed PvP tier difficulties. Old config backed up; custom kits and settings"
-                  + " preserved.");
+              "Installed PvP Tier Difficulties. Old Config Backed Up; Custom Kits And Settings"
+                  + " Preserved.");
     }
   }
 

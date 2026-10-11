@@ -4,10 +4,10 @@ version: '${version}'
 main: dev.insanmiy.practiceplugin.PracticePlugin
 api-version: '${minecraftVersion}'
 author: insanmiy
-description: PvP duels against a custom bot.
+description: PvP Duels Against A Custom Bot.
 commands:
   practice:
-    description: PvP bot practice
+    description: PvP Bot Practice
     aliases: [p, prac]
     usage: /practice <menu|settings|start|stop|pause|resume|rematch|hud|damage|stats|kits|difficulties|kit [editor|info|create|import|edit|save|copy|rename|delete]|status|arena|reload>
     permission: practice.use
@@ -17,6 +17,6 @@ permissions:
   practice.admin:
     default: op
   practice.kits:
-    description: Create custom kits (up to 50) and edit your own kits
+    description: Create Custom Kits (Up To 50) And Edit Your Own Kits
     default: true
 

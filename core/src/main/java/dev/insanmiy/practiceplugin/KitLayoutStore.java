@@ -75,7 +75,7 @@ final class KitLayoutStore {
       }
     } catch (IOException e) {
       if (plugin != null) {
-        plugin.getLogger().log(Level.WARNING, "Failed to load kit layouts from " + file, e);
+        plugin.getLogger().log(Level.WARNING, "Failed To Load Kit Layouts From " + file, e);
       }
     }
   }
@@ -102,7 +102,7 @@ final class KitLayoutStore {
         YamlFiles.write(file, yaml);
       } catch (IOException e) {
         if (plugin != null) {
-          plugin.getLogger().log(Level.WARNING, "Failed to persist kit layout to " + file, e);
+          plugin.getLogger().log(Level.WARNING, "Failed To Persist Kit Layout To " + file, e);
         }
       }
     }

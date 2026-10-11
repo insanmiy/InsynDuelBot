@@ -73,8 +73,8 @@ public final class CombatStats {
   public String summary(long ticks) {
     return String.format(
         java.util.Locale.ROOT,
-        "%d hits | %.1f/%.1f damage dealt/taken | %.0f%% contact accuracy | %d best combo | %d"
-            + " apples | %d projectiles | %.1fs",
+        "%d Hits | %.1f/%.1f Damage Dealt/Taken | %.0f%% Contact Accuracy | %d Best Combo | %d"
+            + " Apples | %d Projectiles | %.1fs",
         hits,
         dealt,
         taken,

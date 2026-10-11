@@ -20,10 +20,10 @@ final class DamageDiagnostics {
     swings.clear();
     owner.sendMessage(TextUI.legacy(
         Component.text(
-            "Damage readout "
-                + (enabled ? "ON" : "OFF")
-                + ". Raw = hit before defenses; final = HP damage after armor/shield/absorption. 2"
-                + " HP = 1 heart.")));
+            "Damage Readout "
+                + (enabled ? "On" : "Off")
+                + ". Raw = Hit Before Defenses; Final = HP Damage After Armor/Shield/Absorption. 2"
+                + " HP = 1 Heart.")));
   }
 
   void capture(Player attacker, Player target) {
@@ -57,19 +57,19 @@ final class DamageDiagnostics {
         known
             ? String.format(
                 Locale.ROOT,
-                "%s | attribute %.2f | charge %.0f%%",
+                "%s | Attribute %.2f | Charge %.0f%%",
                 swing.weapon(),
                 swing.base(),
                 swing.charge() * 100)
-            : "secondary hit";
+            : "Secondary Hit";
 
     String result;
     if (event == session.finishingBlow) {
-      result = "round-ending hit";
+      result = "Round Ending Hit";
     } else if (event.isCancelled()) {
-      result = "cancelled: no HP damage";
+      result = "Cancelled: No HP Damage";
     } else {
-      result = "applied";
+      result = "Applied";
     }
 
     String attackerName = attacker.equals(session.owner) ? "You" : "Bot";
@@ -81,7 +81,7 @@ final class DamageDiagnostics {
     String message =
         String.format(
             Locale.ROOT,
-            "%s -> %s | %s | raw %.2f -> final %.2f HP | armor %.1f / toughness %.1f | critical %s | %s",
+            "%s -> %s | %s | Raw %.2f -> Final %.2f HP | Armor %.1f / Toughness %.1f | Critical %s | %s",
             attackerName,
             targetName,
             input,

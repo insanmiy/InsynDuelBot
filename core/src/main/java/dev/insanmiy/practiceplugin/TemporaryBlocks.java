@@ -31,7 +31,7 @@ final class TemporaryBlocks {
       try {
         read(key, data.getConfigurationSection(key));
       } catch (RuntimeException e) {
-        plugin.getLogger().warning("Skipping bad journal entry " + key + ": " + e);
+        plugin.getLogger().warning("Skipping Bad Journal Entry " + key + ": " + e);
       }
     }
   }

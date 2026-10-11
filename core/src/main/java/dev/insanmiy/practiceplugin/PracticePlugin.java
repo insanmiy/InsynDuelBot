@@ -105,13 +105,13 @@ public final class PracticePlugin extends JavaPlugin implements Listener {
       String name = base.substring(0, Math.min(base.length(), 16 - suffix.length())) + suffix;
       if (Bukkit.getPlayerExact(name) == null) return name;
     }
-    throw new IllegalArgumentException("No free bot names.");
+    throw new IllegalArgumentException("No Free Bot Names.");
   }
 
   static String validArenaName(String name) {
     String normalized = name.toLowerCase(Locale.ROOT);
     if (!normalized.matches("[a-z0-9_-]{1,32}"))
-      throw new IllegalArgumentException("Arena names: 1-32 letters, digits, - or _.");
+      throw new IllegalArgumentException("Arena Names: 1 To 32 Letters, Digits, Hyphen Or Underscore.");
     return normalized;
   }
 
@@ -141,9 +141,9 @@ public final class PracticePlugin extends JavaPlugin implements Listener {
       }
     }
     throw new IllegalArgumentException(
-        "No free, non-overlapping arena. "
+        "No Free, Non-Overlapping Arena. "
             + String.join("; ", errors)
-            + " Admins: /practice arena setplayer <name> and setbot <name>.");
+            + " Admins: /practice Arena Setplayer <name> And Setbot <name>.");
   }
 
   ProgressStore progress() {
@@ -164,23 +164,23 @@ public final class PracticePlugin extends JavaPlugin implements Listener {
 
   List<String> startProblems(Player p) {
     List<String> problems = new ArrayList<>();
-    if (sessions.containsKey(p.getUniqueId())) problems.add("Your practice is already active");
+    if (sessions.containsKey(p.getUniqueId())) problems.add("Your Practice Is Already Active");
     try {
       availableArena();
     } catch (IllegalArgumentException e) {
       problems.add(e.getMessage());
     }
-    if (p.getGameMode() != GameMode.SURVIVAL) problems.add("Switch to Survival");
-    if (p.isInsideVehicle()) problems.add("Dismount first");
-    if (p.isDead()) problems.add("Respawn first");
-    if (p.isInvulnerable()) problems.add("Disable invulnerability");
+    if (p.getGameMode() != GameMode.SURVIVAL) problems.add("Switch To Survival");
+    if (p.isInsideVehicle()) problems.add("Dismount First");
+    if (p.isDead()) problems.add("Respawn First");
+    if (p.isInvulnerable()) problems.add("Disable Invulnerability");
     if (!p.getActivePotionEffects().isEmpty() || p.getAbsorptionAmount() > 0)
-      problems.add("Clear potion effects / absorption");
+      problems.add("Clear Potion Effects / Absorption");
     if (Arrays.stream(p.getInventory().getContents())
             .anyMatch(i -> i != null && !i.getType().isAir())
         || !p.getItemOnCursor().getType().isAir())
-      problems.add("Empty inventory, armor and offhand");
-    if (recovery.pending(p)) problems.add("Recovery pending; start will retry it");
+      problems.add("Empty Inventory, Armor And Offhand");
+    if (recovery.pending(p)) problems.add("Recovery Pending; Start Will Retry It");
     return problems;
   }
 
@@ -213,21 +213,21 @@ public final class PracticePlugin extends JavaPlugin implements Listener {
     String serverVersion = Bukkit.getBukkitVersion().split("-")[0];
     try {
       BotAdapters.getAdapter();
-      getLogger().info("Successfully loaded NMS adapter for Minecraft " + serverVersion);
+      getLogger().info("Successfully Loaded NMS Adapter For Minecraft " + serverVersion);
       if (serverVersion.equals("1.20.6")) {
         try {
           for (var pack : getServer().getDatapackManager().getPacks()) {
             if (pack.getName().equalsIgnoreCase("update_1_21") && !pack.isEnabled()) {
               pack.setEnabled(true);
-              getLogger().info("Enabled update_1_21 datapack for Wind Charges.");
+              getLogger().info("Enabled Update_1_21 Datapack For Wind Charges.");
             }
           }
         } catch (Throwable t) {
-          getLogger().warning("Could not auto-enable update_1_21 datapack: " + t.getMessage());
+          getLogger().warning("Could Not Auto-Enable Update_1_21 Datapack: " + t.getMessage());
         }
       }
     } catch (UnsupportedOperationException | IllegalStateException e) {
-      getLogger().severe("Failed to initialize version adapter: " + e.getMessage());
+      getLogger().severe("Failed To Initialize Version Adapter: " + e.getMessage());
       getServer().getPluginManager().disablePlugin(this);
       return;
     }
@@ -242,7 +242,7 @@ public final class PracticePlugin extends JavaPlugin implements Listener {
       KitFiles.initialize(this);
       reloadConfig();
     } catch (java.io.IOException e) {
-      getLogger().log(java.util.logging.Level.SEVERE, "Could not upgrade configuration safely", e);
+      getLogger().log(java.util.logging.Level.SEVERE, "Could Not Upgrade Configuration Safely", e);
       getServer().getPluginManager().disablePlugin(this);
       return;
     }
@@ -256,7 +256,7 @@ public final class PracticePlugin extends JavaPlugin implements Listener {
               try {
                 blocks.flush();
               } catch (java.io.IOException e) {
-                getLogger().log(java.util.logging.Level.SEVERE, "Could not save block journal", e);
+                getLogger().log(java.util.logging.Level.SEVERE, "Could Not Save Block Journal", e);
               }
             },
             20,
@@ -291,8 +291,8 @@ public final class PracticePlugin extends JavaPlugin implements Listener {
                 try {
                   session.tick();
                 } catch (Exception | LinkageError e) {
-                  getLogger().log(java.util.logging.Level.SEVERE, "Practice session failed", e);
-                  stop(session, "Session stopped after an internal error.");
+                  getLogger().log(java.util.logging.Level.SEVERE, "Practice Session Failed", e);
+                  stop(session, "Session Stopped After An Internal Error.");
                 }
               }
             },
@@ -302,7 +302,7 @@ public final class PracticePlugin extends JavaPlugin implements Listener {
 
   @Override
   public void onDisable() {
-    for (PracticeSession session : List.copyOf(sessions.values())) stop(session, "Plugin stopped.");
+    for (PracticeSession session : List.copyOf(sessions.values())) stop(session, "Plugin Stopped.");
     clearUtilities();
     if (settingsMenu != null) settingsMenu.closeAll();
     if (menu != null) menu.closeAll();
@@ -312,7 +312,7 @@ public final class PracticePlugin extends JavaPlugin implements Listener {
       try {
         blocks.flush();
       } catch (java.io.IOException e) {
-        getLogger().log(java.util.logging.Level.SEVERE, "Could not save block journal", e);
+        getLogger().log(java.util.logging.Level.SEVERE, "Could Not Save Block Journal", e);
       }
     }
   }
@@ -353,7 +353,7 @@ public final class PracticePlugin extends JavaPlugin implements Listener {
       old.close();
     } catch (Exception e) {
       getLogger()
-          .log(java.util.logging.Level.SEVERE, "Cleanup failed; recovery record retained", e);
+          .log(java.util.logging.Level.SEVERE, "Cleanup Failed; Recovery Record Retained", e);
     } finally {
       old.owner.sendMessage(TextUI.legacy(Component.text(message)));
       sessions.remove(old.owner.getUniqueId(), old);
@@ -374,7 +374,7 @@ public final class PracticePlugin extends JavaPlugin implements Listener {
         try {
           kits.put(key, Kit.read(key, Objects.requireNonNull(root.getConfigurationSection(key))));
         } catch (Exception e) {
-          getLogger().warning("Kit '" + key + "' disabled: " + e.getMessage());
+          getLogger().warning("Kit '" + key + "' Disabled: " + e.getMessage());
         }
     ConfigurationSection custom =
         YamlConfiguration.loadConfiguration(new File(getDataFolder(), "customkits.yml"));
@@ -382,7 +382,7 @@ public final class PracticePlugin extends JavaPlugin implements Listener {
       try {
         kits.put(key, Kit.read(key, Objects.requireNonNull(custom.getConfigurationSection(key))));
       } catch (Exception e) {
-        getLogger().warning("Custom kit '" + key + "' disabled: " + e.getMessage());
+        getLogger().warning("Custom Kit '" + key + "' Disabled: " + e.getMessage());
       }
     }
     root = getConfig().getConfigurationSection("difficulties");
@@ -392,12 +392,12 @@ public final class PracticePlugin extends JavaPlugin implements Listener {
           difficulties.put(
               key, Difficulty.read(key, Objects.requireNonNull(root.getConfigurationSection(key))));
         } catch (Exception e) {
-          getLogger().warning("Difficulty '" + key + "' disabled: " + e.getMessage());
+          getLogger().warning("Difficulty '" + key + "' Disabled: " + e.getMessage());
         }
     String name = getConfig().getString("bot-name", "DuelBot");
     if (!name.matches("[A-Za-z0-9_]{1,16}")) {
       getConfig().set("bot-name", "DuelBot");
-      getLogger().warning("Invalid bot-name; using DuelBot");
+      getLogger().warning("Invalid Bot-Name. Using DuelBot");
     }
     for (String key :
         List.of("countdown-seconds", "between-round-seconds", "round-timeout-seconds")) {
@@ -431,20 +431,20 @@ public final class PracticePlugin extends JavaPlugin implements Listener {
     } catch (IllegalArgumentException e) {
       p.sendMessage(TextUI.legacy(Component.text(e.getMessage())));
     } catch (Exception | LinkageError e) {
-      getLogger().log(java.util.logging.Level.SEVERE, "Practice start failed", e);
-      p.sendMessage(TextUI.legacy(Component.text("Practice could not start. Check the server log.")));
+      getLogger().log(java.util.logging.Level.SEVERE, "Practice Start Failed", e);
+      p.sendMessage(TextUI.legacy(Component.text("Practice Could Not Start. Check The Server Log.")));
     }
   }
 
   private void start(Player p, Selection choice) throws java.io.IOException {
     if (sessions.containsKey(p.getUniqueId()))
       throw new IllegalArgumentException(
-          "Your practice is already active. Use /practice stop first.");
+          "Your Practice Is Already Active. Use /practice Stop First.");
     p.closeInventory();
     if (recovery.pending(p)) {
       recovery.restore(p);
       if (recovery.pending(p))
-        throw new IllegalArgumentException("An interrupted session must finish recovery first.");
+        throw new IllegalArgumentException("An Interrupted Session Must Finish Recovery First.");
     }
     if (p.getGameMode() != GameMode.SURVIVAL
         || !p.getActivePotionEffects().isEmpty()
@@ -452,18 +452,18 @@ public final class PracticePlugin extends JavaPlugin implements Listener {
         || p.isInsideVehicle()
         || p.isDead())
       throw new IllegalArgumentException(
-          "Enter Survival, dismount, and clear active effects/absorption first.");
+          "Enter Survival, Dismount, And Clear Active Effects/Absorption First.");
     if (Arrays.stream(p.getInventory().getContents())
             .anyMatch(i -> i != null && !i.getType().isAir())
         || !p.getItemOnCursor().getType().isAir())
-      throw new IllegalArgumentException("Empty inventory, armor, off-hand, and cursor first.");
+      throw new IllegalArgumentException("Empty Inventory, Armor, Off-Hand, And Cursor First.");
     if (p.isInvulnerable())
-      throw new IllegalArgumentException("Disable invulnerability before practicing.");
+      throw new IllegalArgumentException("Disable Invulnerability Before Practicing.");
     Kit kit = kits.get(choice.kit());
     Difficulty difficulty = difficulties.get(choice.difficulty());
     if (kit == null || difficulty == null)
       throw new IllegalArgumentException(
-          "Unknown kit/difficulty. Use /practice kits or /practice difficulties.");
+          "Unknown Kit/Difficulty. Use /practice Kits Or /practice Difficulties.");
     Map.Entry<String, Arena> assigned = availableArena();
     PracticeSession session =
         new PracticeSession(
@@ -476,10 +476,10 @@ public final class PracticePlugin extends JavaPlugin implements Listener {
       if (!dev.insanmiy.practiceplugin.bot.BotAdapters.getAdapter().criticalsEnabled(p))
         p.sendMessage(TextUI.legacy(
             Component.text(
-                "Warning: this world's Paper configuration disables player critical hits. The bot"
-                    + " respects that setting.")));
+                "Warning: This World's Paper Configuration Disables Player Critical Hits. The Bot"
+                    + " Respects That Setting.")));
     } catch (Exception | LinkageError e) {
-      stop(session, "Could not start the bot.");
+      stop(session, "Could Not Start The Bot.");
       throw e;
     }
     lastSelections.put(p.getUniqueId(), choice);
@@ -493,21 +493,21 @@ public final class PracticePlugin extends JavaPlugin implements Listener {
                 + difficulty.name()
                 + " / "
                 + choice.mode().id()
-                + ". Both receive "
+                + ". Both Receive "
                 + kit.summary()
-                + ". Use /practice stop to finish.")));
+                + ". Use /practice Stop To Finish.")));
   }
 
   private PracticeSession ownSession(CommandSender sender) {
     PracticeSession session = sender instanceof Player p ? sessions.get(p.getUniqueId()) : null;
-    if (session == null) throw new IllegalArgumentException("No active practice.");
+    if (session == null) throw new IllegalArgumentException("No Active Practice.");
     if (!(sender instanceof Player p) || !p.equals(session.owner))
-      throw new IllegalArgumentException("This is not your practice session.");
+      throw new IllegalArgumentException("This Is Not Your Practice Session.");
     return session;
   }
 
   private static Player player(CommandSender sender) {
-    if (!(sender instanceof Player p)) throw new IllegalArgumentException("Players only.");
+    if (!(sender instanceof Player p)) throw new IllegalArgumentException("Players Only.");
     return p;
   }
 
@@ -520,12 +520,12 @@ public final class PracticePlugin extends JavaPlugin implements Listener {
     Location player = getConfig().getLocation(path + ".player"),
         bot = getConfig().getLocation(path + ".bot");
     if (player == null || bot == null)
-      throw new IllegalArgumentException("Set both spawns: /practice arena setplayer and setbot.");
+      throw new IllegalArgumentException("Set Both Spawns: /practice Arena Setplayer And Setbot.");
     double radius = getConfig().getDouble(path + ".radius", getConfig().getDouble("arena.radius", 32));
     double maxRadius = getConfig().getDouble("arena.max-radius", 0.0);
     if (maxRadius > 0 && radius > maxRadius)
       throw new IllegalArgumentException(
-          "Arena radius (" + radius + ") exceeds configured max-radius (" + maxRadius + ").");
+          "Arena Radius (" + radius + ") Exceeds Configured Max Radius (" + maxRadius + ").");
     Arena arena = new Arena(player, bot, radius);
     if (arena.error() != null) throw new IllegalArgumentException(arena.error());
     return arena;
@@ -544,7 +544,7 @@ public final class PracticePlugin extends JavaPlugin implements Listener {
         case "menu" -> {
           Player p = player(sender);
           if (session != null)
-            throw new IllegalArgumentException("Use /practice stop before selecting another kit.");
+            throw new IllegalArgumentException("Use /practice Stop Before Selecting Another Kit.");
           menu.open(p, defaults(p), 0);
         }
         case "start" -> {
@@ -562,12 +562,12 @@ public final class PracticePlugin extends JavaPlugin implements Listener {
           Player p = player(sender);
           Selection previous = lastSelections.get(p.getUniqueId());
           if (previous == null)
-            throw new IllegalArgumentException("Start a practice session first.");
+            throw new IllegalArgumentException("Start A Practice Session First.");
           start(p, previous);
         }
         case "pause" -> {
           if (ownSession(sender).endingRound)
-            throw new IllegalArgumentException("Wait for the round result.");
+            throw new IllegalArgumentException("Wait For The Round Result.");
           ownSession(sender).setPaused(true);
         }
         case "resume" -> ownSession(sender).setPaused(false);
@@ -583,7 +583,7 @@ public final class PracticePlugin extends JavaPlugin implements Listener {
           if (session != null && session.owner.equals(p))
             sender.sendMessage(TextUI.legacy(
                 Component.text(
-                    "Current (not saved yet): " + session.total.summary(session.totalFightTicks))));
+                    "Current (Not Saved Yet): " + session.total.summary(session.totalFightTicks))));
         }
         case "kits" ->
             kits.values()
@@ -596,18 +596,18 @@ public final class PracticePlugin extends JavaPlugin implements Listener {
                         sender.sendMessage(TextUI.legacy(
                             Component.text(
                                 d.name()
-                                    + ": reaction "
+                                    + ": Reaction "
                                     + d.decisionTicks()
-                                    + "t, perception "
+                                    + "t, Perception "
                                     + d.perceptionTicks()
-                                    + "t, aim error "
+                                    + "t, Aim Error "
                                     + d.aimError()
-                                    + " degrees; vanilla damage"))));
+                                    + " Degrees; Vanilla Damage"))));
         case "kit" -> {
           if (args.length > 1 && args[1].equalsIgnoreCase("info")) {
-            if (args.length < 3) throw new IllegalArgumentException("/practice kit info <name>");
+            if (args.length < 3) throw new IllegalArgumentException("/practice Kit Info <Name>");
             Kit kit = kits.get(args[2].toLowerCase(Locale.ROOT));
-            if (kit == null) throw new IllegalArgumentException("Unknown kit.");
+            if (kit == null) throw new IllegalArgumentException("Unknown Kit.");
             sender.sendMessage(TextUI.legacy(Component.text(kit.name() + ": " + kit.summary())));
           } else kitEditor.command(player(sender), args);
         }
@@ -619,26 +619,26 @@ public final class PracticePlugin extends JavaPlugin implements Listener {
             target = other == null ? null : sessions.get(other.getUniqueId());
           }
           if (target == null)
-            throw new IllegalArgumentException("No active practice for that player.");
-          stop(target, "Practice stopped.");
+            throw new IllegalArgumentException("No Active Practice For That Player.");
+          stop(target, "Practice Stopped.");
         }
         case "status" -> {
           sender.sendMessage(TextUI.legacy(
-              Component.text("Active sessions: " + sessions.size() + " | Arenas: " + arenaNames())));
+              Component.text("Active Sessions: " + sessions.size() + " | Arenas: " + arenaNames())));
           sender.sendMessage(TextUI.legacy(
               Component.text(
                   "Kits: "
                       + kits.keySet()
-                      + " | default: "
+                      + " | Default: "
                       + getConfig().getString("session.default-kit")
                       + " / "
                       + getConfig().getString("session.default-difficulty"))));
           sender.sendMessage(TextUI.legacy(
               Component.text(
                   session == null
-                      ? "No active match."
+                      ? "No Active Match."
                       : session.owner.getName()
-                          + " • round "
+                          + " • Round "
                           + session.match.round()
                           + " • "
                           + session.match.playerWins()
@@ -646,7 +646,7 @@ public final class PracticePlugin extends JavaPlugin implements Listener {
                           + session.match.botWins())));
           try {
             arena();
-            sender.sendMessage(TextUI.legacy(Component.text("Arena ready.")));
+            sender.sendMessage(TextUI.legacy(Component.text("Arena Ready.")));
           } catch (IllegalArgumentException e) {
             sender.sendMessage(TextUI.legacy(Component.text(e.getMessage())));
           }
@@ -654,35 +654,35 @@ public final class PracticePlugin extends JavaPlugin implements Listener {
         case "reload" -> {
           admin(sender);
           if (!sessions.isEmpty())
-            throw new IllegalArgumentException("Stop all matches before reloading settings.");
+            throw new IllegalArgumentException("Stop All Matches Before Reloading Settings.");
           reloadConfig();
           loadSettings();
-          sender.sendMessage(TextUI.legacy(Component.text("Practice settings reloaded.")));
+          sender.sendMessage(TextUI.legacy(Component.text("Practice Settings Reloaded.")));
         }
         case "arena" -> {
           admin(sender);
           if (args.length < 2)
-            throw new IllegalArgumentException("/practice arena <setplayer|setbot|setradius|info> [name]");
+            throw new IllegalArgumentException("/practice Arena <Setplayer|Setbot|Setradius|Info> [Name]");
           if (args[1].equalsIgnoreCase("setradius")) {
             if (args.length < 3)
-              throw new IllegalArgumentException("/practice arena setradius <radius> [name]");
+              throw new IllegalArgumentException("/practice Arena Setradius <Radius> [Name]");
             double r;
             try {
               r = Double.parseDouble(args[2]);
             } catch (NumberFormatException e) {
-              throw new IllegalArgumentException("Radius must be a number.");
+              throw new IllegalArgumentException("Radius Must Be A Number.");
             }
             if (!Double.isFinite(r) || r < 1)
-              throw new IllegalArgumentException("Radius must be at least 1 block.");
+              throw new IllegalArgumentException("Radius Must Be At Least 1 Block.");
             double maxR = getConfig().getDouble("arena.max-radius", 0.0);
             if (maxR > 0 && r > maxR)
               throw new IllegalArgumentException(
-                  "Radius (" + r + ") exceeds configured max-radius (" + maxR + ").");
+                  "Radius (" + r + ") Exceeds Configured Max Radius (" + maxR + ").");
             String targetArena = args.length > 3 ? validArenaName(args[3]) : "default";
             getConfig().set(arenaPath(targetArena) + ".radius", r);
             saveConfig();
             sender.sendMessage(
-                TextUI.legacy(Component.text("Saved radius " + r + " for arena '" + targetArena + "'.")));
+                TextUI.legacy(Component.text("Saved Radius " + r + " For Arena '" + targetArena + "'.")));
             break;
           }
           String arenaName = args.length > 2 ? validArenaName(args[2]) : "default";
@@ -698,45 +698,45 @@ public final class PracticePlugin extends JavaPlugin implements Listener {
                         + a.radius())));
           } else {
             if (sessions.values().stream().anyMatch(active -> active.arenaName.equals(arenaName)))
-              throw new IllegalArgumentException("That arena is occupied.");
-            if (!(sender instanceof Player p)) throw new IllegalArgumentException("Players only.");
+              throw new IllegalArgumentException("That Arena Is Occupied.");
+            if (!(sender instanceof Player p)) throw new IllegalArgumentException("Players Only.");
             String point =
                 switch (args[1].toLowerCase(Locale.ROOT)) {
                   case "setplayer" -> "player";
                   case "setbot" -> "bot";
-                  default -> throw new IllegalArgumentException("Unknown arena command.");
+                  default -> throw new IllegalArgumentException("Unknown Arena Command.");
                 };
             if (!Arena.safe(p.getLocation()))
-              throw new IllegalArgumentException("Stand on solid ground with clear headroom.");
+              throw new IllegalArgumentException("Stand On Solid Ground With Clear Headroom.");
             getConfig().set(arenaPath(arenaName) + "." + point, p.getLocation());
             saveConfig();
-            sender.sendMessage(TextUI.legacy(Component.text("Saved " + point + " spawn.")));
+            sender.sendMessage(TextUI.legacy(Component.text("Saved " + point + " Spawn.")));
           }
         }
         default ->
             sender.sendMessage(TextUI.legacy(
                 Component.text(
-                    "/practice menu | settings | start [kit] [difficulty]"
-                        + " [endless|match|duel] [best-of] | stop | pause | resume | rematch"
-                        + " | hud | damage | stats | kits | difficulties | kit editor | kit"
-                        + " <info|create|import|edit|save|copy|rename|delete> <name> | status | arena"
-                        + " <setplayer|setbot|setradius|info> [name] | reload")));
+                    "/practice Menu | Settings | Start [Kit] [Difficulty]"
+                        + " [Endless|Match|Duel] [Best Of] | Stop | Pause | Resume | Rematch"
+                        + " | Hud | Damage | Stats | Kits | Difficulties | Kit Editor | Kit"
+                        + " <Info|Create|Import|Edit|Save|Copy|Rename|Delete> <Name> | Status | Arena"
+                        + " <Setplayer|Setbot|Setradius|Info> [Name] | Reload")));
       }
     } catch (NumberFormatException e) {
-      sender.sendMessage(TextUI.legacy(Component.text("Expected a number but got: " + e.getMessage())));
+      sender.sendMessage(TextUI.legacy(Component.text("Expected A Number But Got: " + e.getMessage())));
     } catch (IllegalArgumentException e) {
       sender.sendMessage(TextUI.legacy(Component.text(e.getMessage())));
     } catch (Exception | LinkageError e) {
-      getLogger().log(java.util.logging.Level.SEVERE, "Practice command failed", e);
+      getLogger().log(java.util.logging.Level.SEVERE, "Practice Command Failed", e);
       sender.sendMessage(TextUI.legacy(
-          Component.text("Practice could not complete that action. Check the server log.")));
+          Component.text("Practice Could Not Complete That Action. Check The Server Log.")));
     }
     return true;
   }
 
   private static void admin(CommandSender sender) {
     if (!sender.hasPermission("practice.admin"))
-      throw new IllegalArgumentException("Requires practice.admin.");
+      throw new IllegalArgumentException("Requires Practice Admin Permission.");
   }
 
   @Override
@@ -818,7 +818,7 @@ public final class PracticePlugin extends JavaPlugin implements Listener {
     UUID uid = e.getPlayer().getUniqueId();
     lastSelections.remove(uid);
     if (menu != null) menu.cleanup(uid);
-    if (participant(e.getPlayer())) stop(session, "Player disconnected.");
+    if (participant(e.getPlayer())) stop(session, "Player Disconnected.");
   }
 
   @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
@@ -1435,7 +1435,7 @@ public final class PracticePlugin extends JavaPlugin implements Listener {
         e.setKeepLevel(true);
         session.endingRound = true;
         active.owner.sendMessage(TextUI.legacy(
-            Component.text((playerWon ? "Bot" : "You") + " took a lethal hit.")));
+            Component.text((playerWon ? "Bot" : "You") + " Took A Lethal Hit.")));
         getServer()
             .getScheduler()
             .runTask(
@@ -1453,7 +1453,7 @@ public final class PracticePlugin extends JavaPlugin implements Listener {
       }
       getServer()
           .getScheduler()
-          .runTask(this, () -> stop(session, "Unexpected player death; practice aborted."));
+          .runTask(this, () -> stop(session, "Unexpected Player Death; Practice Aborted."));
     }
   }
 }

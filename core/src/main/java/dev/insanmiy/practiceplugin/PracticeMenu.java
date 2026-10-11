@@ -211,7 +211,7 @@ final class PracticeMenu implements Listener {
                             TextUI.lore(meta) == null ? new ArrayList<>() : new ArrayList<>(TextUI.lore(meta));
                         lore.add(
                             text(
-                                "Preview Only - Identical For Both Fighters",
+                                "Preview Only: Identical For Both Fighters",
                                 NamedTextColor.DARK_AQUA));
                         TextUI.lore(meta, lore);
                       });
@@ -225,7 +225,7 @@ final class PracticeMenu implements Listener {
               "Exact Inventory Layout",
               NamedTextColor.AQUA,
               false,
-              "Slots 0-35: Kit Inventory",
+              "Slots 0 To 35: Kit Inventory",
               "Bottom: Armor And Offhand"));
       inventory.setItem(
           42,
@@ -234,7 +234,7 @@ final class PracticeMenu implements Listener {
               "Food Regeneration",
               NamedTextColor.GOLD,
               false,
-              selected.regeneration() ? "Enabled - Vanilla Saturation Healing" : "Disabled For This Kit"));
+              selected.regeneration() ? "Enabled: Vanilla Saturation Healing" : "Disabled For This Kit"));
       inventory.setItem(
           43, icon(Material.RED_DYE, selected.health() + " HP Each", NamedTextColor.RED, false));
     }

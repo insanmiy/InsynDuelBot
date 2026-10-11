@@ -10,13 +10,13 @@ public record Arena(Location playerSpawn, Location botSpawn, double radius) {
 
   public String error() {
     if (playerSpawn.getWorld() == null || !playerSpawn.getWorld().equals(botSpawn.getWorld()))
-      return "Spawns must be in the same loaded world.";
+      return "Spawns Must Be In The Same Loaded World.";
     double distance = playerSpawn.distance(botSpawn);
-    if (distance < 4 || distance > Math.max(12.0, radius * 2.0 - 4.0)) return "Spawns must be at least 4 blocks apart and inside the arena.";
+    if (distance < 4 || distance > Math.max(12.0, radius * 2.0 - 4.0)) return "Spawns Must Be At Least 4 Blocks Apart And Inside The Arena.";
     if (!Double.isFinite(radius) || radius < 1)
-      return "Arena radius must be at least 1 block.";
+      return "Arena Radius Must Be At Least 1 Block.";
     if (!safe(playerSpawn) || !safe(botSpawn))
-      return "Spawns need solid floors and two clear blocks of headroom.";
+      return "Spawns Need Solid Floors And Two Clear Blocks Of Headroom.";
     return null;
   }
 

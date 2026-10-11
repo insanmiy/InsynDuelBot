@@ -127,7 +127,7 @@ public final class PracticeSession {
     try {
       if (arena.error() != null) throw new IllegalStateException(arena.error());
       if (!owner.teleport(arena.playerSpawn()))
-        throw new IllegalStateException("Player teleport cancelled");
+        throw new IllegalStateException("Player Teleport Cancelled");
       bot.reset(arena.botSpawn());
 
       for (Attribute attribute :
@@ -162,7 +162,7 @@ public final class PracticeSession {
         stripModifiers(p, false);
         double currentMaxHealth = Attributes.getValue(p, Attributes.MAX_HEALTH, kit.health());
         if (Math.abs(currentMaxHealth - kit.health()) > .001)
-          throw new IllegalStateException("An external health modifier prevents equal kit health");
+          throw new IllegalStateException("An External Health Modifier Prevents Equal Kit Health");
         p.setHealth(kit.health());
         p.setAbsorptionAmount(0);
         p.setFoodLevel(20);
@@ -214,7 +214,7 @@ public final class PracticeSession {
     if (closing) return;
     int timeout = plugin.getConfig().getInt("session.round-timeout-seconds", 0);
     if (timeout > 0 && fighting() && tick - fightStart >= timeout * 20L) {
-      owner.sendMessage(TextUI.legacy(Component.text("Round timed out; resetting.")));
+      owner.sendMessage(TextUI.legacy(Component.text("Round Timed Out; Resetting.")));
       fightStart = tick;
       resetRound();
     }
@@ -222,7 +222,7 @@ public final class PracticeSession {
       if (match.phase() == Match.Phase.COUNTDOWN) resetRound();
       else if (match.phase() == Match.Phase.FIGHT) {
         fightStart = tick;
-        owner.sendMessage(TextUI.legacy(Component.text("Fight! /practice stop to finish.")));
+        owner.sendMessage(TextUI.legacy(Component.text("Fight! /practice Stop To Finish.")));
       }
     }
 
@@ -233,7 +233,7 @@ public final class PracticeSession {
                   + Math.round(bot.player().getHealth())
                   + "/"
                   + kit.health()
-                  + " HP | apples "
+                  + " HP | Apples "
                   + countApples(bot.player()))));
       bar.setProgress((float) Math.max(0, Math.min(1, bot.player().getHealth() / kit.health())));
       TextUI.actionBar(owner,
@@ -252,7 +252,7 @@ public final class PracticeSession {
                       ? "Finished"
                       : fighting()
                           ? "Combo " + round.combo(tick)
-                          : "Ready in " + ((match.remaining() + 19) / 20))
+                          : "Ready In " + ((match.remaining() + 19) / 20))
                   + " | Sat "
                   + String.format(java.util.Locale.ROOT, "%.1f", owner.getSaturation())));
     }
@@ -288,7 +288,7 @@ public final class PracticeSession {
     if (safe != null) relocateBot(safe);
     else
       owner.sendMessage(TextUI.legacy(
-          Component.text("Practice is still active. The bot is waiting for safe ground nearby.")));
+          Component.text("Practice Is Still Active. The Bot Is Waiting For Safe Ground Nearby.")));
   }
 
   private void relocateBot(Location destination) {
@@ -305,7 +305,7 @@ public final class PracticeSession {
 
   void setPaused(boolean paused) {
     if (match.paused() == paused)
-      throw new IllegalArgumentException(paused ? "Already paused." : "Not paused.");
+      throw new IllegalArgumentException(paused ? "Already Paused." : "Not Paused.");
     if (paused) {
       plugin.clearUtilities(this);
       for (Player p : new Player[] {owner, bot.player()}) {
@@ -326,7 +326,7 @@ public final class PracticeSession {
     }
     match.setPaused(paused);
     TextUI.actionBar(owner,
-        Component.text(paused ? "Practice paused. /practice resume" : "Practice resumed."));
+        Component.text(paused ? "Practice Paused. /practice Resume" : "Practice Resumed."));
   }
 
   private record PausedState(
@@ -353,7 +353,7 @@ public final class PracticeSession {
       bar.removePlayer(owner);
       TextUI.actionBar(owner, Component.empty());
     }
-    owner.sendMessage(TextUI.legacy(Component.text("Practice HUD " + (hud ? "enabled." : "hidden."))));
+    owner.sendMessage(TextUI.legacy(Component.text("Practice HUD " + (hud ? "Enabled." : "Hidden."))));
   }
 
   void win(boolean player) {
@@ -362,8 +362,8 @@ public final class PracticeSession {
     else roundsLost++;
     owner.sendMessage(TextUI.legacy(
         Component.text(
-            (player ? "You won" : "Bot won")
-                + " round "
+            (player ? "You Won" : "Bot Won")
+                + " Round "
                 + match.round()
                 + ". "
                 + round.summary(tick - fightStart))));
@@ -376,21 +376,21 @@ public final class PracticeSession {
       String score = match.playerWins() + "-" + match.botWins();
       String result;
       if (duel || mode == PracticeMode.MATCH) {
-        String kind = duel ? "duel" : "match";
-        result = (playerWonSeries ? "You won the " : "Bot won the ") + kind + (duel ? "!" : " " + score + "!");
+        String kind = duel ? "Duel" : "Match";
+        result = (playerWonSeries ? "You Won The " : "Bot Won The ") + kind + (duel ? "!" : " " + score + "!");
         owner.sendMessage(TextUI.legacy(Component.text(
-            (duel ? "Duel" : "Match") + " finished! " + result)));
+            (duel ? "Duel" : "Match") + " Finished! " + result)));
         owner.showTitle(Title.title(
             Component.text(
                 (duel ? "" : "MATCH ") + (playerWonSeries ? "VICTORY!" : "DEFEAT!"),
                 playerWonSeries ? NamedTextColor.GREEN : NamedTextColor.RED),
             duel
                 ? Component.text(result, NamedTextColor.GRAY)
-                : Component.text("Final score: " + score, NamedTextColor.GOLD)));
+                : Component.text("Final Score: " + score, NamedTextColor.GOLD)));
         Sound sound = playerWonSeries ? Sound.UI_TOAST_CHALLENGE_COMPLETE : Sound.ENTITY_WITHER_DEATH;
         owner.playSound(owner.getLocation(), sound, 0.8f, 1.0f);
       } else {
-        result = "Series finished: " + score + ".";
+        result = "Series Finished: " + score + ".";
         owner.sendMessage(TextUI.legacy(Component.text(result)));
       }
       String finalResult = result;
