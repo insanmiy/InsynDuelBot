@@ -20,6 +20,7 @@ import net.minecraft.world.InteractionHand;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.Vec3;
 import org.bukkit.*;
+import org.bukkit.block.Block;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.Damageable;
@@ -41,6 +42,9 @@ final class UtilityBrain {
   private final WebCadence webs = new WebCadence();
   private int lastHit = -1000;
   private BlockPos mining;
+  private BlockPos targetMiningBlock;
+  private int targetMiningSince;
+  private boolean targetMiningStopSent;
   private int miningSince;
   private boolean miningStopSent;
   private int preparingSplash = -1, splashUntil, pendingPotion = -1;
@@ -56,6 +60,8 @@ final class UtilityBrain {
   private Vector cachedEscape;
   private boolean repairWorking;
   private int repairSeekingSince = -1, nextRepairSeek, nextArmorSwap;
+  private int nextPitEscape, nextWindCharge, nextBlockPlace, pitStuckTicks;
+  private Location lastPitCheckLoc;
 
   private record PreparedAction(
       int slot, ItemStack item, Runnable action, java.util.function.BooleanSupplier valid) {}
@@ -75,6 +81,7 @@ final class UtilityBrain {
     webs.reset();
     lastHit = -1000;
     abortMining();
+    abortTargetMining();
     preparingSplash = -1;
     pendingPotion = -1;
     splashUntil = 0;
@@ -89,6 +96,8 @@ final class UtilityBrain {
     nextEscapeCheck = 0;
     repairWorking = false;
     repairSeekingSince = -1;
+    nextPitEscape = nextWindCharge = nextBlockPlace = pitStuckTicks = 0;
+    lastPitCheckLoc = null;
     nextRepairSeek = nextArmorSwap = 0;
   }
 
@@ -233,6 +242,14 @@ final class UtilityBrain {
     if (potUp(target, difficulty, tick)) return true;
 
     if (repair(tick, distance, fraction)) return true;
+    if (escapePit(target, difficulty, tick)) {
+      repair.stop(tick);
+      return true;
+    }
+    if (digTowardsTarget(target, difficulty, tick)) {
+      repair.stop(tick);
+      return true;
+    }
     if (tick >= nextPearl
         && !self.hasCooldown(Material.ENDER_PEARL)
         && distance > 10
@@ -1100,5 +1117,394 @@ final class UtilityBrain {
       NmsBot.synchronizeEquipment(self);
       nextTotem = tick + 2;
     }
+  }
+
+  private boolean isPitTrapped(org.bukkit.World world, Location loc) {
+    int bx = loc.getBlockX();
+    int by = loc.getBlockY();
+    int bz = loc.getBlockZ();
+
+    int blocked = 0;
+    int[][] cardinal = {{1, 0}, {-1, 0}, {0, 1}, {0, -1}};
+    for (int[] c : cardinal) {
+      if (world.getBlockAt(bx + c[0], by, bz + c[1]).getType().isSolid()
+          || world.getBlockAt(bx + c[0], by + 1, bz + c[1]).getType().isSolid()) {
+        blocked++;
+      }
+    }
+    return blocked >= 3;
+  }
+
+  private boolean escapePit(Player target, Difficulty difficulty, int tick) {
+    if (target == null) return false;
+    Player self = player();
+    Location here = self.getLocation();
+    Location targetLoc = target.getLocation();
+    double yDiff = targetLoc.getY() - here.getY();
+    double horizontalDist = Math.hypot(targetLoc.getX() - here.getX(), targetLoc.getZ() - here.getZ());
+
+    // Update physical stuck tracking
+    if (lastPitCheckLoc == null || here.distanceSquared(lastPitCheckLoc) < 0.04) {
+      pitStuckTicks++;
+    } else {
+      pitStuckTicks = 0;
+    }
+    lastPitCheckLoc = here.clone();
+
+    // 1 or 2 blocks up (or downhill) is standard terrain navigation, NEVER an escape situation
+    if (yDiff < 2.8) {
+      return false;
+    }
+
+    boolean hasWalkablePath = TacticalPathfinder.hasWalkablePath(self.getWorld(), here, targetLoc);
+    // If a walkable path exists, prioritize normal walking/jumping unless physically stuck for >= 50 ticks
+    if (hasWalkablePath && pitStuckTicks < 50) {
+      return false;
+    }
+
+    boolean pitEnclosed = isPitTrapped(self.getWorld(), here);
+
+    // Bot needs vertical escape only when:
+    // 1) Fully enclosed in a pit/trench (3+ solid walls)
+    // 2) Or target is on a sheer high ledge directly above (horizontalDist <= 4.5 && yDiff >= 2.8) with no path
+    // 3) Or bot has been completely stuck for >= 40 ticks with no path
+    boolean needVerticalEscape = pitEnclosed || (horizontalDist <= 4.5 && !hasWalkablePath) || (pitStuckTicks >= 40);
+    if (!needVerticalEscape) {
+      return false;
+    }
+
+    // 1. Wind Charge: Propels bot 8-10 blocks upward
+    // Only use if clear headroom overhead AND either enclosed in pit or close to ledge (horizontalDist <= 5.0)
+    Material windMat = Material.getMaterial("WIND_CHARGE");
+    if (windMat != null && tick >= nextWindCharge && (pitEnclosed || horizontalDist <= 5.0)) {
+      int headX = here.getBlockX();
+      int headY = here.getBlockY() + 2;
+      int headZ = here.getBlockZ();
+      boolean clearCeiling = !self.getWorld().getBlockAt(headX, headY, headZ).getType().isSolid()
+          && !self.getWorld().getBlockAt(headX, headY + 1, headZ).getType().isSolid()
+          && !self.getWorld().getBlockAt(headX, headY + 2, headZ).getType().isSolid();
+
+      if (clearCeiling) {
+        int windSlot = find(i -> i.getType() == windMat);
+        if (windSlot >= 0 && (handle.onGround() || handle.isInWater())) {
+          Vector toTarget = targetLoc.toVector().subtract(here.toVector()).setY(0);
+          float yaw = toTarget.lengthSquared() > 0.01
+              ? (float) Math.toDegrees(Math.atan2(-toTarget.getX(), toTarget.getZ()))
+              : handle.getYRot();
+          handle.setYRot(yaw);
+          handle.setXRot(88.0f);
+          BotLook.publish(handle);
+          prepare(
+              windSlot,
+              tick,
+              () -> {
+                handle.setYRot(yaw);
+                handle.setXRot(88.0f);
+                BotLook.publish(handle);
+                handle.jumpFromGround();
+                nativeUse();
+                handle.zza = 1.0f;
+                handle.setSprinting(true);
+                nextWindCharge = tick + 70;
+              },
+              () -> true);
+          return true;
+        }
+      }
+    }
+
+    // 2. Ender Pearl: High-arc lob out of the pit to high ground (only if distant or target is far above or in pit)
+    if (!self.hasCooldown(Material.ENDER_PEARL) && tick >= nextPearl && (horizontalDist >= 6.0 || yDiff >= 4.0 || pitEnclosed)) {
+      int pearlSlot = find(i -> i.getType() == Material.ENDER_PEARL);
+      if (pearlSlot >= 0 && targetLoc.getY() > target.getWorld().getMinHeight() + 2) {
+        Vector toTarget = targetLoc.toVector().subtract(here.toVector());
+        float yaw = (float) Math.toDegrees(Math.atan2(-toTarget.getX(), toTarget.getZ()));
+        float pitch = -52.0f;
+        handle.setYRot(yaw);
+        handle.setXRot(pitch);
+        BotLook.publish(handle);
+        prepare(
+            pearlSlot,
+            tick,
+            () -> {
+              handle.setYRot(yaw);
+              handle.setXRot(pitch);
+              BotLook.publish(handle);
+              nativeUse();
+              nextPearl = tick + 60;
+            },
+            () -> true);
+        return true;
+      }
+    }
+
+    // 3. Towering with solid blocks or cobwebs under feet (only when close or in pit)
+    if ((horizontalDist <= 4.0 || pitEnclosed) && tick >= nextBlockPlace) {
+      int blockSlot = find(i -> i != null && (i.getType() == Material.COBWEB || (i.getType().isBlock() && i.getType().isSolid())));
+      if (blockSlot >= 0) {
+        if (handle.onGround()) {
+          handle.jumpFromGround();
+          handle.setXRot(90.0f);
+          BotLook.publish(handle);
+          nextBlockPlace = tick + 1;
+          return true;
+        } else if (here.getY() - Math.floor(here.getY()) >= 0.75 && handle.getDeltaMovement().y > -0.2) {
+          int selectSlot = select(blockSlot);
+          handle.setXRot(90.0f);
+          BotLook.publish(handle);
+          BlockPos feetPos = new BlockPos(here.getBlockX(), here.getBlockY() - 1, here.getBlockZ());
+          handle.gameMode.useItemOn(
+              handle,
+              ((net.minecraft.server.level.ServerLevel) handle.level()),
+              handle.getMainHandItem(),
+              InteractionHand.MAIN_HAND,
+              new BlockHitResult(
+                  new Vec3(feetPos.getX() + 0.5, feetPos.getY() + 1.0, feetPos.getZ() + 0.5),
+                  Direction.UP,
+                  feetPos,
+                  false));
+          handle.swing(InteractionHand.MAIN_HAND);
+          nextBlockPlace = tick + 8;
+          return true;
+        }
+      }
+    }
+
+    // 4. Emergency unstuck only if completely stationary for > 7 seconds with no path
+    if (pitStuckTicks > 140 && tick >= nextPitEscape) {
+      pitStuckTicks = 0;
+      nextPitEscape = tick + 100;
+      Location safe = targetLoc.clone().add(-1.5, 0, -1.5);
+      if (dev.insanmiy.practiceplugin.config.Arena.safe(safe)) {
+        handle.getBukkitEntity().teleport(safe);
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  private void abortTargetMining() {
+    if (targetMiningBlock != null)
+      handle.gameMode.handleBlockBreakAction(
+          targetMiningBlock,
+          ServerboundPlayerActionPacket.Action.ABORT_DESTROY_BLOCK,
+          Direction.UP,
+          handle.level().getMaxBuildHeight(),
+          0);
+    targetMiningBlock = null;
+    targetMiningStopSent = false;
+  }
+
+  private boolean isRockBlock(Material material) {
+    String name = material.name();
+    return name.contains("STONE") || name.contains("COBBLE") || name.contains("DEEPSLATE")
+        || name.contains("GRANITE") || name.contains("DIORITE") || name.contains("ANDESITE")
+        || name.contains("BRICK") || name.contains("ORE") || name.contains("OBSIDIAN")
+        || name.contains("NETHERRACK") || name.contains("TERRACOTTA") || name.contains("CONCRETE")
+        || name.contains("BLACKSTONE") || name.contains("BASALT") || name.contains("SANDSTONE");
+  }
+
+  private int bestMiningTool(Material blockType) {
+    String typeName = blockType.name();
+    boolean isRock = isRockBlock(blockType);
+
+    boolean isDirt = typeName.contains("DIRT") || typeName.contains("GRASS_BLOCK")
+        || typeName.contains("GRAVEL") || typeName.contains("SAND")
+        || typeName.contains("CLAY") || typeName.contains("SOUL_")
+        || typeName.contains("MUD") || typeName.contains("SNOW");
+
+    boolean isWood = typeName.contains("LOG") || typeName.contains("WOOD")
+        || typeName.contains("PLANKS") || typeName.contains("DOOR")
+        || typeName.contains("FENCE") || typeName.contains("CHEST");
+
+    String[] pickaxes = {
+      "NETHERITE_PICKAXE", "DIAMOND_PICKAXE", "IRON_PICKAXE", "STONE_PICKAXE", "GOLDEN_PICKAXE", "WOODEN_PICKAXE"
+    };
+    String[] shovels = {
+      "NETHERITE_SHOVEL", "DIAMOND_SHOVEL", "IRON_SHOVEL", "STONE_SHOVEL", "GOLDEN_SHOVEL", "WOODEN_SHOVEL"
+    };
+    String[] axes = {
+      "NETHERITE_AXE", "DIAMOND_AXE", "IRON_AXE", "STONE_AXE", "GOLDEN_AXE", "WOODEN_AXE"
+    };
+
+    if (isRock) {
+      for (String pick : pickaxes) {
+        int slot = find(i -> i.getType().name().equals(pick));
+        if (slot >= 0) return slot;
+      }
+      return -1;
+    }
+
+    if (isDirt) {
+      for (String shovel : shovels) {
+        int slot = find(i -> i.getType().name().equals(shovel));
+        if (slot >= 0) return slot;
+      }
+      for (String pick : pickaxes) {
+        int slot = find(i -> i.getType().name().equals(pick));
+        if (slot >= 0) return slot;
+      }
+    }
+
+    if (isWood) {
+      for (String axe : axes) {
+        int slot = find(i -> i.getType().name().equals(axe));
+        if (slot >= 0) return slot;
+      }
+      for (String pick : pickaxes) {
+        int slot = find(i -> i.getType().name().equals(pick));
+        if (slot >= 0) return slot;
+      }
+    }
+
+    for (String pick : pickaxes) {
+      int slot = find(i -> i.getType().name().equals(pick));
+      if (slot >= 0) return slot;
+    }
+    for (String axe : axes) {
+      int slot = find(i -> i.getType().name().equals(axe));
+      if (slot >= 0) return slot;
+    }
+    for (String shovel : shovels) {
+      int slot = find(i -> i.getType().name().equals(shovel));
+      if (slot >= 0) return slot;
+    }
+    return find(i -> i.getType().name().endsWith("_SWORD"));
+  }
+
+  private Block findObstructingBlock(Player self, Player target) {
+    Location eye = self.getEyeLocation();
+    Location targetEye = target.getEyeLocation();
+    Vector dir = targetEye.toVector().subtract(eye.toVector());
+    double dist = dir.length();
+    if (dist < 0.1) return null;
+    dir.normalize();
+
+    World world = self.getWorld();
+    for (double d = 0.35; d <= Math.min(4.5, dist); d += 0.2) {
+      Location point = eye.clone().add(dir.clone().multiply(d));
+      Block b = world.getBlockAt(point);
+      if (b.getType().isSolid() && !b.isPassable()) {
+        return b;
+      }
+    }
+
+    if (target.getLocation().getY() < self.getLocation().getY() - 1.0) {
+      Block underFeet = self.getLocation().clone().subtract(0, 0.5, 0).getBlock();
+      if (underFeet.getType().isSolid()) return underFeet;
+
+      Vector forward = self.getLocation().getDirection().setY(0);
+      if (forward.lengthSquared() > 0.01) {
+        Block forwardUnder = self.getLocation().add(forward.normalize().multiply(0.8)).subtract(0, 0.5, 0).getBlock();
+        if (forwardUnder.getType().isSolid()) return forwardUnder;
+      }
+    }
+
+    return null;
+  }
+
+  private boolean digTowardsTarget(Player target, Difficulty difficulty, int tick) {
+    if (target == null) return false;
+    Player self = player();
+    Location here = self.getLocation();
+    Location targetLoc = target.getLocation();
+
+    double dist3D = here.distance(targetLoc);
+    if (dist3D > 20.0) {
+      abortTargetMining();
+      return false;
+    }
+
+    if (self.hasLineOfSight(target) && dist3D <= 3.2 && Math.abs(targetLoc.getY() - here.getY()) <= 1.2) {
+      abortTargetMining();
+      return false;
+    }
+
+    boolean playerBelow = targetLoc.getY() < here.getY() - 1.2;
+    double hDist = Math.hypot(targetLoc.getX() - here.getX(), targetLoc.getZ() - here.getZ());
+
+    if (playerBelow && hDist > 1.8 && !TacticalPathfinder.hasWalkablePath(self.getWorld(), here, targetLoc)) {
+      Location abovePlayer = new Location(self.getWorld(), targetLoc.getX(), here.getY(), targetLoc.getZ());
+      Vector toAbove = abovePlayer.toVector().subtract(here.toVector()).setY(0);
+      if (toAbove.lengthSquared() > 0.01) {
+        float walkYaw = (float) Math.toDegrees(Math.atan2(-toAbove.getX(), toAbove.getZ()));
+        BotLook.towards(handle, walkYaw, 0, 180f);
+        handle.zza = 1.0f;
+        handle.setSprinting(true);
+        if (handle.horizontalCollision && handle.onGround()) {
+          handle.jumpFromGround();
+        }
+      }
+      return false;
+    }
+
+    Block targetBlock = findObstructingBlock(self, target);
+    if (targetBlock == null || !targetBlock.getType().isSolid() || targetBlock.getType() == Material.BEDROCK || targetBlock.getType() == Material.BARRIER) {
+      abortTargetMining();
+      return false;
+    }
+
+    int tool = bestMiningTool(targetBlock.getType());
+    if (tool < 0) {
+      if (isRockBlock(targetBlock.getType())) {
+        abortTargetMining();
+        return false;
+      }
+      tool = find(i -> i != null && !i.getType().isAir());
+    }
+
+    if (tool < 0) {
+      abortTargetMining();
+      return false;
+    }
+
+    int selected = select(tool);
+    handTiming.equip(handIdentity(selected), tick);
+
+    Vector blockVec = targetBlock.getLocation().add(0.5, 0.5, 0.5).toVector().subtract(self.getEyeLocation().toVector());
+    Location lookLoc = self.getEyeLocation().setDirection(blockVec);
+    handle.setYRot(lookLoc.getYaw());
+    handle.setXRot(lookLoc.getPitch());
+    handle.setYHeadRot(handle.getYRot());
+    BotLook.publish(handle);
+
+    if (!handTiming.ready(tick)) {
+      handle.zza = handle.xxa = 0;
+      handle.setSprinting(false);
+      return true;
+    }
+
+    BlockPos pos = new BlockPos(targetBlock.getX(), targetBlock.getY(), targetBlock.getZ());
+    if (!pos.equals(targetMiningBlock)) {
+      abortTargetMining();
+      targetMiningBlock = pos;
+      targetMiningSince = tick;
+      targetMiningStopSent = false;
+      handle.gameMode.handleBlockBreakAction(
+          pos,
+          ServerboundPlayerActionPacket.Action.START_DESTROY_BLOCK,
+          Direction.UP,
+          handle.level().getMaxBuildHeight(),
+          0);
+    } else if (!targetMiningStopSent && tick - targetMiningSince >= miningTicks(pos)) {
+      handle.gameMode.handleBlockBreakAction(
+          pos,
+          ServerboundPlayerActionPacket.Action.STOP_DESTROY_BLOCK,
+          Direction.UP,
+          handle.level().getMaxBuildHeight(),
+          0);
+      handle.gameMode.destroyBlock(pos);
+      targetMiningStopSent = true;
+      targetMiningBlock = null;
+    } else if (targetMiningStopSent && tick - targetMiningSince > miningTicks(pos) + 20) {
+      abortTargetMining();
+    }
+
+    handle.swing(InteractionHand.MAIN_HAND);
+    handle.zza = 0;
+    handle.xxa = 0;
+    handle.setSprinting(false);
+    return true;
   }
 }

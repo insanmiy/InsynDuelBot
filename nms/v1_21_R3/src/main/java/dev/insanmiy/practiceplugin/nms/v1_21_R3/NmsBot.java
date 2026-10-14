@@ -57,6 +57,10 @@ public final class NmsBot implements BotPlatform {
   private Location previous;
   private Vec3 pendingVelocity;
   private Integer pendingTeleport;
+  private TacticalPathfinder.Path currentPath;
+  private int waypointIndex;
+  private int lastPathTick;
+  private Location lastPathTarget;
 
   public NmsBot(Player owner, Location spawn, String name, Consumer<UUID> register) {
     server = ((CraftServer) Bukkit.getServer()).getServer();
@@ -185,6 +189,10 @@ public final class NmsBot implements BotPlatform {
     previous = location.clone();
     previousDecisionTick = ticks;
     shieldUntil = 0;
+    currentPath = null;
+    waypointIndex = 0;
+    lastPathTick = 0;
+    lastPathTarget = null;
   }
 
   @Override
@@ -318,13 +326,18 @@ public final class NmsBot implements BotPlatform {
     combatLook(target, perceived, d);
     // Randomize strafe or reverse if stuck
     if (ticks % 40 < d.decisionTicks()) strafe = random.nextBoolean() ? 1 : -1;
-    if (previous != null && here.distanceSquared(previous) < .015 && Math.abs(handle.zza) > .1)
+    if (previous != null && here.distanceSquared(previous) < .015 && (Math.abs(handle.zza) > .1 || Math.abs(handle.xxa) > .1))
       stuck += ticks - previousDecisionTick;
     else stuck = 0;
     previous = here;
     previousDecisionTick = ticks;
-    if (stuck >= 20) strafe *= -1;
-    if (handle.horizontalCollision && handle.onGround()) handle.jumpFromGround();
+    if (stuck >= 15 && handle.horizontalCollision && handle.onGround()) {
+      handle.jumpFromGround();
+    }
+    if (stuck >= 25) {
+      strafe *= -1;
+      currentPath = null;
+    }
 
     // Switch to axe against shields
     int sword = weapon("_SWORD"), axe = weapon("_AXE");
@@ -342,9 +355,115 @@ public final class NmsBot implements BotPlatform {
       swingClock.reset(ticks);
     }
     // Update movement inputs
-    handle.zza = distance > 1.1 ? 1.0f : Math.clamp((float) (0.35f + d.sprintResetChance() * 0.45f), 0.25f, 0.9f);
-    handle.xxa = distance < 5 ? (float) d.strafeStrength() * strafe : 0;
-    handle.setSprinting(ticks >= resetSprintUntil && (distance > 1.0 || d.sprintResetChance() >= 0.7));
+    double horizontalDist = Math.hypot(direction.getX(), direction.getZ());
+    double verticalDiff = perceived.location().getY() - here.getY();
+    boolean closeCombat = horizontalDist <= 3.2 && Math.abs(verticalDiff) <= 1.2 && player().hasLineOfSight(target);
+
+    if (closeCombat) {
+      currentPath = null;
+      waypointIndex = 0;
+      handle.zza = distance > 1.1 ? 1.0f : Math.clamp((float) (0.35f + d.sprintResetChance() * 0.45f), 0.25f, 0.9f);
+      handle.xxa = distance < 5 ? (float) d.strafeStrength() * strafe : 0;
+      handle.setSprinting(ticks >= resetSprintUntil && (distance > 1.0 || d.sprintResetChance() >= 0.7));
+    } else {
+      if (currentPath == null
+          || ticks - lastPathTick > 12
+          || lastPathTarget == null
+          || lastPathTarget.distanceSquared(target.getLocation()) > 3.0
+          || waypointIndex >= currentPath.size()) {
+        lastPathTick = ticks;
+        lastPathTarget = target.getLocation().clone();
+        currentPath = TacticalPathfinder.findPath(player().getWorld(), here, target.getLocation(), 1200);
+        waypointIndex = 0;
+      }
+
+      if (currentPath != null && !currentPath.isEmpty() && waypointIndex < currentPath.size()) {
+        TacticalPathfinder.Waypoint wp = currentPath.get(waypointIndex);
+        double wx = wp.x() + 0.5 - here.getX();
+        double wy = wp.y() - here.getY();
+        double wz = wp.z() + 0.5 - here.getZ();
+        double wDistSq = wx * wx + wz * wz;
+
+        if (wDistSq < 0.40 && Math.abs(wy) < 1.0) {
+          waypointIndex++;
+          if (waypointIndex < currentPath.size()) {
+            wp = currentPath.get(waypointIndex);
+            wx = wp.x() + 0.5 - here.getX();
+            wy = wp.y() - here.getY();
+            wz = wp.z() + 0.5 - here.getZ();
+            wDistSq = wx * wx + wz * wz;
+          }
+        }
+
+        // Cut corners if line of sight to next waypoint is clear
+        if (waypointIndex + 1 < currentPath.size()) {
+          TacticalPathfinder.Waypoint nextWp = currentPath.get(waypointIndex + 1);
+          Vector toNext = new Vector(nextWp.x() + 0.5 - here.getX(), 0, nextWp.z() + 0.5 - here.getZ());
+          double nextDist = toNext.length();
+          if (nextDist > 0.1 && Math.abs(nextWp.y() - here.getY()) <= 1.2
+              && TacticalMovement.clearPath(here, toNext.clone().normalize(), nextDist)) {
+            waypointIndex++;
+            wp = nextWp;
+            wx = wp.x() + 0.5 - here.getX();
+            wy = wp.y() - here.getY();
+            wz = wp.z() + 0.5 - here.getZ();
+            wDistSq = wx * wx + wz * wz;
+          }
+        }
+
+        float wpYaw = (float) Math.toDegrees(Math.atan2(-wx, wz));
+        boolean seeTarget = player().hasLineOfSight(target);
+        float aimYaw = (distance < 7.0 && seeTarget)
+            ? player().getEyeLocation().setDirection(perceived.location().clone().add(0, target.getHeight() * .65, 0).toVector().subtract(player().getEyeLocation().toVector())).getYaw()
+            : wpYaw;
+        float aimPitch = (float) (wy > 0.4 ? -25 : (wy < -0.4 ? 20 : (Math.sin(ticks * .075) * d.aimError())));
+        BotLook.towards(handle, aimYaw, aimPitch, 180f);
+
+        double curYawRad = Math.toRadians(handle.getYRot());
+        double sin = Math.sin(curYawRad), cos = Math.cos(curYawRad);
+        double hDist = Math.sqrt(wDistSq);
+        if (hDist > 0.05) {
+          double nx = wx / hDist;
+          double nz = wz / hDist;
+          handle.zza = (float) (-nx * sin + nz * cos);
+          handle.xxa = (float) (nx * cos + nz * sin);
+          handle.setSprinting(handle.zza > 0.2f);
+        } else {
+          handle.zza = 0.6f;
+          handle.xxa = 0;
+        }
+
+        if ((wp.action() == TacticalPathfinder.ActionType.JUMP_UP || wy > 0.35 || (handle.horizontalCollision && handle.onGround()))
+            && handle.onGround()) {
+          handle.jumpFromGround();
+          handle.setSprinting(true);
+          handle.zza = 1.0f;
+        }
+      } else {
+        // No path found (wall / pit / obstruction)
+        if (verticalDiff < -1.5 && horizontalDist > 1.8) {
+          Vector toAbove = new Vector(target.getLocation().getX() - here.getX(), 0, target.getLocation().getZ() - here.getZ());
+          if (toAbove.lengthSquared() > 0.01) {
+            float walkYaw = (float) Math.toDegrees(Math.atan2(-toAbove.getX(), toAbove.getZ()));
+            BotLook.towards(handle, walkYaw, 25f, 180f);
+            handle.zza = 1.0f;
+            handle.xxa = 0;
+            handle.setSprinting(true);
+            if (handle.horizontalCollision && handle.onGround()) {
+              handle.jumpFromGround();
+            }
+          }
+        } else {
+          combatLook(target, perceived, d);
+          handle.zza = 0.7f;
+          handle.xxa = 0;
+          if (handle.horizontalCollision && handle.onGround()) {
+            handle.jumpFromGround();
+          }
+        }
+      }
+      return;
+    }
     if (ticks < shieldUntil && !player().hasCooldown(Material.SHIELD)) {
       handle.zza *= .2f;
       handle.xxa *= .2f;
@@ -478,6 +597,7 @@ public final class NmsBot implements BotPlatform {
   // Avoid falling into hazards
   private void avoidHazards() {
     if ((!handle.onGround() && !handle.isInWater()) || (handle.zza == 0 && handle.xxa == 0)) return;
+    if (currentPath != null && !currentPath.isEmpty() && waypointIndex < currentPath.size()) return;
     double yaw = Math.toRadians(handle.getYRot());
     double sin = Math.sin(yaw), cos = Math.cos(yaw);
     double moveX = -sin * handle.zza + cos * handle.xxa;

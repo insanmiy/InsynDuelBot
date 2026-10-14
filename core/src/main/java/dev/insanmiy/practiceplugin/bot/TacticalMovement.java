@@ -4,6 +4,8 @@ import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.World;
 import org.bukkit.block.Block;
+import org.bukkit.block.data.type.Slab;
+import org.bukkit.block.data.type.Stairs;
 import org.bukkit.util.Vector;
 
 public final class TacticalMovement {
@@ -53,9 +55,12 @@ public final class TacticalMovement {
 
     // Check if there is an obstacle at feet level
     if (!clear(edgeBlock)) {
-      // Check if this obstacle is a safe 1-block step-up that can be jumped onto
+      // Check if this obstacle is a safe 1-block step-up that can be jumped onto (or slab/stair)
       Material edgeType = edgeBlock.getType();
-      if (edgeType.isSolid() && !hazardous(edgeType)) {
+      boolean solidStep = edgeType.isSolid()
+          || edgeBlock.getBlockData() instanceof Slab
+          || edgeBlock.getBlockData() instanceof Stairs;
+      if (solidStep && !hazardous(edgeType)) {
         Block stepFeet = world.getBlockAt(blockX, Location.locToBlock(currentY + 1.0), blockZ);
         Block stepHead = world.getBlockAt(blockX, Location.locToBlock(currentY + 2.0), blockZ);
         Block jumpHeadroom = world.getBlockAt(blockX, Location.locToBlock(fromY + 2.0), blockZ);
@@ -75,8 +80,11 @@ public final class TacticalMovement {
     Block floorBlock = world.getBlockAt(blockX, Location.locToBlock(currentY - 0.15), blockZ);
     Material floorType = floorBlock.getType();
     if (hazardous(floorType)) return null;
+    boolean solidFloor = floorType.isSolid()
+        || floorBlock.getBlockData() instanceof Slab
+        || floorBlock.getBlockData() instanceof Stairs;
     if (dev.insanmiy.practiceplugin.model.TraversalRules.supported(
-        floorType.isSolid(), false, water(edgeBlock.getType()), water(floorType))) {
+        solidFloor, false, water(edgeBlock.getType()), water(floorType))) {
       return currentY;
     }
 
@@ -88,8 +96,11 @@ public final class TacticalMovement {
       Block landing = world.getBlockAt(blockX, Location.locToBlock(currentY - drop - 0.15), blockZ);
       Material landingType = landing.getType();
       if (hazardous(landingType)) return null;
+      boolean solidLanding = landingType.isSolid()
+          || landing.getBlockData() instanceof Slab
+          || landing.getBlockData() instanceof Stairs;
       if (dev.insanmiy.practiceplugin.model.TraversalRules.supported(
-          landingType.isSolid(), false, water(dropAir.getType()), water(landingType))) {
+          solidLanding, false, water(dropAir.getType()), water(landingType))) {
         return currentY - drop;
       }
     }
@@ -98,12 +109,12 @@ public final class TacticalMovement {
     return null;
   }
 
-  private static boolean clear(Block block) {
+  public static boolean clear(Block block) {
     Material type = block.getType();
     return (water(type) || block.isPassable()) && !hazardous(type);
   }
 
-  private static boolean hazardous(Material material) {
+  public static boolean hazardous(Material material) {
     return material == Material.COBWEB
         || material == Material.LAVA
         || material == Material.FIRE
@@ -116,7 +127,7 @@ public final class TacticalMovement {
         || material == Material.CACTUS;
   }
 
-  private static boolean water(Material material) {
+  public static boolean water(Material material) {
     return material == Material.WATER
         || material == Material.SEAGRASS
         || material == Material.TALL_SEAGRASS
