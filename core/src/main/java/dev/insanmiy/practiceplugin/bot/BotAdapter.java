@@ -30,6 +30,8 @@ public interface BotAdapter {
   // Repair gear with mending experience
   int mend(Player player, int amount);
 
-  // Launch a wind charge projectile from a player
-  org.bukkit.entity.WindCharge launchWindCharge(Player player);
+  // Launch a projectile from a player (1.21+)
+  default org.bukkit.entity.WindCharge launchWindCharge(Player player) {
+    return null;
+  }
 }

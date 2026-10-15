@@ -18,6 +18,18 @@ public final class EditorRules {
   }
 
   public static boolean equipmentFits(int slot, String material) {
-    return slot >= 0 && slot <= 40;
+    if (slot < 0 || slot > 40 || material == null) return false;
+    String name = material.toUpperCase(java.util.Locale.ROOT);
+    return switch (slot) {
+      case 36 -> name.endsWith("_BOOTS");
+      case 37 -> name.endsWith("_LEGGINGS");
+      case 38 -> name.endsWith("_CHESTPLATE") || name.equals("ELYTRA");
+      case 39 -> name.endsWith("_HELMET")
+          || name.equals("CARVED_PUMPKIN")
+          || name.endsWith("_HEAD")
+          || name.endsWith("_SKULL")
+          || name.equals("TURTLE_HELMET");
+      default -> true;
+    };
   }
 }

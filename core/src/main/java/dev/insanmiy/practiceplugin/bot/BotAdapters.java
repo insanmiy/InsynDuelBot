@@ -46,10 +46,6 @@ public final class BotAdapters {
     if (version.startsWith("1.21.")) {
       try {
         int patch = Integer.parseInt(version.substring("1.21.".length()));
-        if (patch > 4)
-          Bukkit.getLogger().warning(
-              "[InsynDuelBot] The 1.21.2+ Adapter Is Only Built And Tested Against 1.21.4; "
-                  + version + " Is Unverified.");
         if (patch >= 2 && patch <= 11) {
           return "dev.insanmiy.practiceplugin.nms.v1_21_R3.Adapter_1_21_R3";
         }
@@ -63,3 +59,4 @@ public final class BotAdapters {
 
   private BotAdapters() {}
 }
+

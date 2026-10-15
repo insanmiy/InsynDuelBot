@@ -124,7 +124,11 @@ public final class Kit {
 
   public static Kit read(String name, ConfigurationSection c) {
     List<?> rawArmor = c.getList("armor", List.of());
-    List<ItemStack> armor = rawArmor.stream().map(Kit::parseItem).toList();
+    List<ItemStack> armor =
+        rawArmor.stream()
+            .map(Kit::parseItem)
+            .map(a -> !isVersionSupported(a.getType()) ? new ItemStack(Material.AIR) : a)
+            .toList();
     if (armor.size() != 4)
       throw new IllegalArgumentException("Armor Requires Boots, Leggings, Chestplate, Helmet.");
     for (int i = 0; i < 4; i++) {
@@ -138,6 +142,9 @@ public final class Kit {
       if (slot < 0 || slot > 35)
         throw new IllegalArgumentException("Inventory Slots Must Be 0..35.");
       ItemStack item = parseItem(slots.get(key));
+      if (!isVersionSupported(item.getType())) {
+        continue;
+      }
       Material type = item.getType();
       if (melee(type)) enchant(item, c.getConfigurationSection("weapon-enchantments"));
       if (type == Material.BOW || type == Material.CROSSBOW)
@@ -145,6 +152,9 @@ public final class Kit {
       items.put(slot, item);
     }
     ItemStack offhand = parseItem(c.get("offhand", "AIR"));
+    if (!isVersionSupported(offhand.getType())) {
+      offhand = new ItemStack(Material.AIR);
+    }
     armor.forEach(Kit::allowed);
     items.values().forEach(Kit::allowed);
     allowed(offhand);
@@ -158,12 +168,53 @@ public final class Kit {
         foodRegeneration(c));
   }
 
+  public static boolean isVersionAtLeast1_21() {
+    try {
+      String version = Bukkit.getBukkitVersion().split("-")[0];
+      String[] parts = version.split("\\.");
+      int major = Integer.parseInt(parts[0]);
+      int minor = Integer.parseInt(parts[1]);
+      return major > 1 || (major == 1 && minor >= 21);
+    } catch (Exception e) {
+      return false;
+    }
+  }
+
+  public static boolean isVersionSupported(Material type) {
+    if (type == null || type.isAir()) return true;
+    if (!isVersionAtLeast1_21()) {
+      String n = type.name();
+      if (n.equals("WIND_CHARGE")
+          || n.equals("MACE")
+          || n.startsWith("OMINOUS_")
+          || n.equals("BREEZE_ROD")
+          || n.equals("HEAVY_CORE")
+          || n.startsWith("TRIAL_")
+          || n.equals("FLOW_ARMOR_TRIM_SMITHING_TEMPLATE")
+          || n.equals("BOLT_ARMOR_TRIM_SMITHING_TEMPLATE")
+          || n.equals("FLOW_POTTERY_SHERD")
+          || n.equals("GUSTER_POTTERY_SHERD")
+          || n.equals("SCRAPE_POTTERY_SHERD")
+          || n.equals("FLOW_BANNER_PATTERN")
+          || n.equals("GUSTER_BANNER_PATTERN")
+          || n.endsWith("_VAULT")
+          || n.equals("VAULT")) {
+        return false;
+      }
+    }
+    return true;
+  }
+
   public static boolean melee(Material type) {
     return type.name().endsWith("_SWORD") || type.name().endsWith("_AXE");
   }
 
   public static boolean supported(Material type) {
-    return !type.isLegacy() && !type.isAir() && type.isItem();
+    return !type.isLegacy() && !type.isAir() && type.isItem() && allowed(type);
+  }
+
+  public static boolean supported(Material type, World world) {
+    return supported(type) && (world == null || type.isEnabledByFeature(world));
   }
 
   public static boolean tool(Material type) {
@@ -181,14 +232,21 @@ public final class Kit {
         || n.endsWith("_HELMET");
   }
 
-  private static void allowed(ItemStack item) {
-    String n = item.getType().name();
-    if (n.endsWith("_SPAWN_EGG")
-        || n.contains("COMMAND_BLOCK")
-        || n.startsWith("STRUCTURE_")
-        || Set.of("BEDROCK", "BARRIER", "DEBUG_STICK", "JIGSAW", "LIGHT", "SPAWNER", "KNOWLEDGE_BOOK")
-            .contains(n))
-      throw new IllegalArgumentException("Item Not Allowed In Kits: " + n);
+  public static boolean allowed(Material type) {
+    if (type == null) return false;
+    if (!isVersionSupported(type)) return false;
+    String n = type.name();
+    return !n.endsWith("_SPAWN_EGG")
+        && !n.contains("COMMAND_BLOCK")
+        && !n.startsWith("STRUCTURE_")
+        && !Set.of("BEDROCK", "BARRIER", "DEBUG_STICK", "JIGSAW", "LIGHT", "SPAWNER", "KNOWLEDGE_BOOK")
+            .contains(n);
+  }
+
+  public static void allowed(ItemStack item) {
+    if (item == null || item.getType().isAir()) return;
+    if (!allowed(item.getType()))
+      throw new IllegalArgumentException("Item Not Allowed In Kits: " + item.getType().name());
   }
 
   public static boolean ammunition(Material type) {
@@ -237,10 +295,16 @@ public final class Kit {
     String[] parts = String.valueOf(raw).split(":", -1);
     if (parts.length > 2) throw new IllegalArgumentException("Expected Material:Amount.");
     Material type = Material.matchMaterial(parts[0]);
-    if (type == null || !type.isItem() && type != Material.AIR)
+    if (type == null) {
+      if (!isVersionAtLeast1_21()) {
+        return new ItemStack(Material.AIR);
+      }
+      throw new IllegalArgumentException("Unknown Item: " + raw);
+    }
+    if (!type.isItem() && type != Material.AIR)
       throw new IllegalArgumentException("Unknown Item: " + raw);
     int count = parts.length == 2 ? Integer.parseInt(parts[1]) : 1;
-    if (count < 1 || type != Material.AIR && count > type.getMaxStackSize())
+    if (count < 1 || (type != Material.AIR && count > type.getMaxStackSize()))
       throw new IllegalArgumentException("Invalid Amount For " + type);
     return new ItemStack(type, count);
   }
@@ -270,13 +334,20 @@ public final class Kit {
     c.set(
         "armor",
         Arrays.stream(player.getInventory().getArmorContents())
-            .map(i -> i == null ? new ItemStack(Material.AIR) : i.clone())
+            .map(i -> i == null || !allowed(i.getType()) ? new ItemStack(Material.AIR) : i.clone())
             .toList());
     for (int slot = 0; slot < 36; slot++) {
       ItemStack item = player.getInventory().getItem(slot);
-      if (item != null && !item.getType().isAir()) c.set("items." + slot, item.clone());
+      if (item != null && !item.getType().isAir() && allowed(item.getType())) {
+        c.set("items." + slot, item.clone());
+      }
     }
-    c.set("offhand", player.getInventory().getItemInOffHand().clone());
+    ItemStack offhand = player.getInventory().getItemInOffHand();
+    if (offhand != null && !offhand.getType().isAir() && allowed(offhand.getType())) {
+      c.set("offhand", offhand.clone());
+    } else {
+      c.set("offhand", new ItemStack(Material.AIR));
+    }
   }
 
   public void equip(Player player, NamespacedKey key) {

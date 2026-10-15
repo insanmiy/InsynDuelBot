@@ -60,7 +60,7 @@ final class UtilityBrain {
   private Vector cachedEscape;
   private boolean repairWorking;
   private int repairSeekingSince = -1, nextRepairSeek, nextArmorSwap;
-  private int nextPitEscape, nextWindCharge, nextBlockPlace, pitStuckTicks;
+  private int nextPitEscape, nextBlockPlace, pitStuckTicks;
   private Location lastPitCheckLoc;
 
   private record PreparedAction(
@@ -96,7 +96,7 @@ final class UtilityBrain {
     nextEscapeCheck = 0;
     repairWorking = false;
     repairSeekingSince = -1;
-    nextPitEscape = nextWindCharge = nextBlockPlace = pitStuckTicks = 0;
+    nextPitEscape = nextBlockPlace = pitStuckTicks = 0;
     lastPitCheckLoc = null;
     nextRepairSeek = nextArmorSwap = 0;
   }
@@ -1173,47 +1173,7 @@ final class UtilityBrain {
       return false;
     }
 
-    // 1. Wind Charge: Propels bot 8-10 blocks upward
-    // Only use if clear headroom overhead AND either enclosed in pit or close to ledge (horizontalDist <= 5.0)
-    Material windMat = Material.getMaterial("WIND_CHARGE");
-    if (windMat != null && tick >= nextWindCharge && (pitEnclosed || horizontalDist <= 5.0)) {
-      int headX = here.getBlockX();
-      int headY = here.getBlockY() + 2;
-      int headZ = here.getBlockZ();
-      boolean clearCeiling = !self.getWorld().getBlockAt(headX, headY, headZ).getType().isSolid()
-          && !self.getWorld().getBlockAt(headX, headY + 1, headZ).getType().isSolid()
-          && !self.getWorld().getBlockAt(headX, headY + 2, headZ).getType().isSolid();
-
-      if (clearCeiling) {
-        int windSlot = find(i -> i.getType() == windMat);
-        if (windSlot >= 0 && (handle.onGround() || handle.isInWater())) {
-          Vector toTarget = targetLoc.toVector().subtract(here.toVector()).setY(0);
-          float yaw = toTarget.lengthSquared() > 0.01
-              ? (float) Math.toDegrees(Math.atan2(-toTarget.getX(), toTarget.getZ()))
-              : handle.getYRot();
-          handle.setYRot(yaw);
-          handle.setXRot(88.0f);
-          BotLook.publish(handle);
-          prepare(
-              windSlot,
-              tick,
-              () -> {
-                handle.setYRot(yaw);
-                handle.setXRot(88.0f);
-                BotLook.publish(handle);
-                handle.jumpFromGround();
-                nativeUse();
-                handle.zza = 1.0f;
-                handle.setSprinting(true);
-                nextWindCharge = tick + 70;
-              },
-              () -> true);
-          return true;
-        }
-      }
-    }
-
-    // 2. Ender Pearl: High-arc lob out of the pit to high ground (only if distant or target is far above or in pit)
+    // 1. Ender Pearl: High-arc lob out of the pit to high ground (only if distant or target is far above or in pit)
     if (!self.hasCooldown(Material.ENDER_PEARL) && tick >= nextPearl && (horizontalDist >= 6.0 || yDiff >= 4.0 || pitEnclosed)) {
       int pearlSlot = find(i -> i.getType() == Material.ENDER_PEARL);
       if (pearlSlot >= 0 && targetLoc.getY() > target.getWorld().getMinHeight() + 2) {
@@ -1238,7 +1198,7 @@ final class UtilityBrain {
       }
     }
 
-    // 3. Towering with solid blocks or cobwebs under feet (only when close or in pit)
+    // 2. Towering with solid blocks or cobwebs under feet (only when close or in pit)
     if ((horizontalDist <= 4.0 || pitEnclosed) && tick >= nextBlockPlace) {
       int blockSlot = find(i -> i != null && (i.getType() == Material.COBWEB || (i.getType().isBlock() && i.getType().isSolid())));
       if (blockSlot >= 0) {

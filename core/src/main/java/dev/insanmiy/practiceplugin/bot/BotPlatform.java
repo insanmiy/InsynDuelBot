@@ -4,11 +4,12 @@ import dev.insanmiy.practiceplugin.config.*;
 import org.bukkit.Location;
 import org.bukkit.entity.Player;
 
+
 public interface BotPlatform extends AutoCloseable {
   Player player();
 
   void tick(Player opponent, Difficulty difficulty, Arena arena, boolean fighting);
-
+  
   void reset(Location location);
 
   default void relocate(Location location) {

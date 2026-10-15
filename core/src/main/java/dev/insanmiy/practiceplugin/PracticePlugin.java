@@ -214,18 +214,6 @@ public final class PracticePlugin extends JavaPlugin implements Listener {
     try {
       BotAdapters.getAdapter();
       getLogger().info("Successfully Loaded NMS Adapter For Minecraft " + serverVersion);
-      if (serverVersion.equals("1.20.6")) {
-        try {
-          for (var pack : getServer().getDatapackManager().getPacks()) {
-            if (pack.getName().equalsIgnoreCase("update_1_21") && !pack.isEnabled()) {
-              pack.setEnabled(true);
-              getLogger().info("Enabled Update_1_21 Datapack For Wind Charges.");
-            }
-          }
-        } catch (Throwable t) {
-          getLogger().warning("Could Not Auto-Enable Update_1_21 Datapack: " + t.getMessage());
-        }
-      }
     } catch (UnsupportedOperationException | IllegalStateException e) {
       getLogger().severe("Failed To Initialize Version Adapter: " + e.getMessage());
       getServer().getPluginManager().disablePlugin(this);
@@ -1334,16 +1322,19 @@ public final class PracticePlugin extends JavaPlugin implements Listener {
     PracticeSession session = sessionFor(player);
     if (session == null || !participant(player)) return;
 
-    if ((e.getAction() == Action.RIGHT_CLICK_AIR || e.getAction() == Action.RIGHT_CLICK_BLOCK)
+    if (Kit.isVersionAtLeast1_21()
+        && (e.getAction() == Action.RIGHT_CLICK_AIR || e.getAction() == Action.RIGHT_CLICK_BLOCK)
         && e.getItem() != null
         && e.getItem().getType() == Material.WIND_CHARGE) {
       if (session.fighting()) {
         if (!player.hasCooldown(Material.WIND_CHARGE)) {
-          player.setCooldown(Material.WIND_CHARGE, 10);
-          player.getWorld().playSound(player.getLocation(), Sound.ENTITY_WIND_CHARGE_THROW, 0.5f, 1.0f);
           try {
             WindCharge charge = BotAdapters.getAdapter().launchWindCharge(player);
             if (charge != null) {
+              player.setCooldown(Material.WIND_CHARGE, 10);
+              try {
+                player.getWorld().playSound(player.getLocation(), Sound.ENTITY_WIND_CHARGE_THROW, 0.5f, 1.0f);
+              } catch (Throwable ignored) {}
               if (e.getHand() == org.bukkit.inventory.EquipmentSlot.OFF_HAND) player.swingOffHand(); else player.swingMainHand();
               charge
                   .getPersistentDataContainer()
@@ -1355,8 +1346,7 @@ public final class PracticePlugin extends JavaPlugin implements Listener {
               session.total.utility();
               if (player.getGameMode() != GameMode.CREATIVE) { e.getItem().subtract(1); player.updateInventory(); }
             }
-          } catch (Throwable t) {
-            getLogger().warning("Could not launch WindCharge: " + t.getMessage());
+          } catch (Throwable ignored) {
           }
         }
       }

@@ -38,7 +38,7 @@ final class KitEditor implements Listener {
   }
 
   private static final class Draft {
-    String name, revision;
+    String name, revision, description;
     final ItemStack[] items = new ItemStack[41];
     double health = 20;
     boolean regeneration = true;
@@ -49,6 +49,7 @@ final class KitEditor implements Listener {
 
     Draft(String name) {
       this.name = name;
+      this.description = "Custom Kit: " + name;
     }
   }
 
@@ -134,6 +135,9 @@ final class KitEditor implements Listener {
       case "import" -> importKit(player, name);
       case "edit" -> edit(player, name);
       case "save" -> {
+        var saved = store.read();
+        if (saved.contains(name) || plugin.kits().containsKey(name))
+          throw new IllegalArgumentException("Name Already Used. Choose A New Name Or Edit The Existing Kit.");
         var candidate = new YamlConfiguration();
         Kit.capture(player, candidate);
         save(player, name, candidate, null);
@@ -163,7 +167,7 @@ final class KitEditor implements Listener {
       }
       default ->
           throw new IllegalArgumentException(
-              "Use Editor, Create, Import, Edit, Save, Copy, Rename, Delete Or Info.");
+              "Use Editor, Create, Import, Edit, Save, Copy, Rename Or Delete.");
     }
   }
 
@@ -201,6 +205,7 @@ final class KitEditor implements Listener {
       kit.previewItems().forEach((slot, item) -> draft.items[slot] = item);
       draft.health = kit.health();
       draft.regeneration = kit.regeneration();
+      draft.description = kit.description();
     } else draft.items[0] = new ItemStack(Material.DIAMOND_SWORD);
     show(player, Screen.EDIT, draft, 0);
     player.sendMessage(TextUI.legacy(
@@ -210,6 +215,8 @@ final class KitEditor implements Listener {
 
   private Draft existing(Player player, String name) throws IOException {
     var section = store.read().getConfigurationSection(name);
+    if (section == null)
+      throw new IllegalArgumentException("Custom Kit '" + name + "' Does Not Exist.");
     if (!CustomKitStore.editable(
         section, player.getUniqueId(), player.hasPermission("practice.admin")))
       throw new IllegalArgumentException(
@@ -217,6 +224,7 @@ final class KitEditor implements Listener {
     Kit kit = Kit.read(name, section);
     Draft draft = new Draft(name);
     draft.revision = CustomKitStore.revision(section);
+    draft.description = kit.description();
     kit.previewItems().forEach((slot, item) -> draft.items[slot] = item);
     draft.health = kit.health();
     draft.regeneration = kit.regeneration();
@@ -224,8 +232,14 @@ final class KitEditor implements Listener {
   }
 
   private static void importInventory(Player player, Draft draft) {
-    for (int i = 0; i < draft.items.length; i++)
-      put(draft, i, player.getInventory().getItem(i));
+    for (int i = 0; i < draft.items.length; i++) {
+      ItemStack item = player.getInventory().getItem(i);
+      if (empty(item)) {
+        draft.items[i] = null;
+      } else if (Kit.supported(item.getType(), player.getWorld()) && fits(draft.selected, item.getType())) {
+        put(draft, i, item);
+      }
+    }
   }
 
   private void importKit(Player player, String name) throws IOException {
@@ -234,6 +248,7 @@ final class KitEditor implements Listener {
     if (plugin.kits().containsKey(name) || store.read().contains(name))
       throw new IllegalArgumentException("Name Already Used. Choose A New Name.");
     Draft draft = new Draft(name);
+    draft.description = "Saved By " + player.getName();
     importInventory(player, draft);
     show(player, Screen.EDIT, draft, 0);
     player.sendMessage(TextUI.legacy(
@@ -355,6 +370,15 @@ final class KitEditor implements Listener {
   }
 
   private void show(Player player, Screen screen, Draft draft, int requested) {
+    if (screen == Screen.ITEM && empty(draft.items[draft.selected])) {
+      palette(player, draft);
+      return;
+    }
+    if (screen == Screen.ENCHANT && empty(draft.items[draft.selected])) {
+      palette(player, draft);
+      return;
+    }
+
     int page = Math.max(0, requested);
     View view = new View(player, screen, draft, page);
     Inventory inv = view.inventory;
@@ -390,8 +414,8 @@ final class KitEditor implements Listener {
           button(
               Material.CHEST, "Choose / Replace Selected Item", "Opens Categorized Item Picker"));
       inv.setItem(45, button(Material.ARROW, "Discard Changes / Back"));
-      inv.setItem(46, button(Material.REDSTONE, "Health -2 / " + draft.health + " HP"));
-      inv.setItem(47, button(Material.GLOWSTONE_DUST, "Health +2 / " + draft.health + " HP"));
+      inv.setItem(46, button(Material.REDSTONE, "Health -2 / " + (int) draft.health + " HP"));
+      inv.setItem(47, button(Material.GLOWSTONE_DUST, "Health +2 / " + (int) draft.health + " HP"));
       inv.setItem(48, button(Material.COOKED_BEEF, "Natural Regeneration: " + draft.regeneration));
       inv.setItem(
           49,
@@ -413,10 +437,6 @@ final class KitEditor implements Listener {
       inv.setItem(53, button(Material.BARRIER, "Delete Saved Kit", "Confirmation Required"));
     } else if (screen == Screen.ITEM) {
       ItemStack item = draft.items[draft.selected];
-      if (empty(item)) {
-        palette(player, draft);
-        return;
-      }
       inv.setItem(
           4,
           button(
@@ -484,7 +504,7 @@ final class KitEditor implements Listener {
       inv.setItem(50, button(Material.LIME_DYE, "Amount +1", "Shift: +16"));
       inv.setItem(53, button(Material.ARROW, "Back To Loadout"));
     } else if (screen == Screen.PALETTE) {
-      if (draft.paletteCategory == 3)
+      if (draft.paletteCategory == 3 && fits(draft.selected, Material.SPLASH_POTION))
         for (Material material :
             List.of(Material.SPLASH_POTION, Material.POTION, Material.LINGERING_POTION,
                 Material.TIPPED_ARROW))
@@ -497,7 +517,7 @@ final class KitEditor implements Listener {
             view.palette.add(potion);
           }
       for (Material type : Material.values())
-        if (Kit.supported(type)
+        if (Kit.supported(type, player.getWorld())
             && inCategory(type, draft.paletteCategory)
             && fits(draft.selected, type)) {
           ItemStack item = new ItemStack(type);
@@ -547,16 +567,11 @@ final class KitEditor implements Listener {
       inv.setItem(53, button(Material.BARRIER, "Back To Editor"));
     } else if (screen == Screen.ENCHANT) {
       ItemStack item = draft.items[draft.selected];
-      if (empty(item)) {
-        palette(player, draft);
-        return;
-      }
-      if (!empty(item))
-        org.bukkit.Registry.ENCHANTMENT
-            .forEach(
-                e -> {
-                  if (e.canEnchantItem(item)) view.enchants.add(e);
-                });
+      org.bukkit.Registry.ENCHANTMENT
+          .forEach(
+              e -> {
+                if (e.canEnchantItem(item)) view.enchants.add(e);
+              });
       view.enchants.sort(Comparator.comparing(e -> e.getKey().getKey()));
       for (int i = 0; i < Math.min(45, view.enchants.size()); i++) {
         Enchantment e = view.enchants.get(i);
@@ -697,7 +712,7 @@ final class KitEditor implements Listener {
 
   private static YamlConfiguration serialize(Draft draft) {
     var yaml = new YamlConfiguration();
-    yaml.set("description", "Custom Kit: " + draft.name);
+    yaml.set("description", draft.description != null ? draft.description : "Custom Kit: " + draft.name);
     yaml.set("health", draft.health);
     yaml.set("natural-regeneration", draft.regeneration);
     yaml.createSection("items");
@@ -718,7 +733,7 @@ final class KitEditor implements Listener {
     event.setCancelled(true);
     if (!(event.getWhoClicked() instanceof Player player)
         || !view.owner.equals(player.getUniqueId())) return;
-    if (!Set.of(ClickType.LEFT, ClickType.RIGHT, ClickType.SHIFT_LEFT, ClickType.SHIFT_RIGHT)
+    if (!Set.of(ClickType.LEFT, ClickType.RIGHT, ClickType.SHIFT_LEFT, ClickType.SHIFT_RIGHT, ClickType.CREATIVE)
         .contains(event.getClick())) return;
     int slot = event.getRawSlot();
     boolean right = event.isRightClick(), shift = event.isShiftClick();
@@ -914,7 +929,8 @@ final class KitEditor implements Listener {
       return;
     }
     if (view.screen == Screen.ENCHANT) {
-      if (slot < view.enchants.size()) {
+      int maxEnchants = Math.min(45, view.enchants.size());
+      if (slot < maxEnchants) {
         Enchantment enchant = view.enchants.get(slot);
         ItemStack item = draft.items[draft.selected];
         if (right) {
