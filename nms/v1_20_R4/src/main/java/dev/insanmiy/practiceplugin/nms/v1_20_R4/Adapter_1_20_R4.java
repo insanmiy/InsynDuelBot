@@ -43,15 +43,20 @@ public final class Adapter_1_20_R4 implements BotAdapter {
   @Override
   public org.bukkit.entity.WindCharge launchWindCharge(Player player) {
     try {
-      return player.launchProjectile(org.bukkit.entity.WindCharge.class);
-    } catch (Throwable ignored) {
       var sp = ((org.bukkit.craftbukkit.entity.CraftPlayer) player).getHandle();
       var level = (net.minecraft.server.level.ServerLevel) sp.level();
+      var forward = sp.getForward();
+      var eyePos = sp.getEyePosition().add(forward.scale(0.8));
+      if (!level.getBlockState(net.minecraft.core.BlockPos.containing(eyePos)).canBeReplaced()) {
+        eyePos = sp.getEyePosition().add(forward.scale(0.05));
+      }
       var wc = new net.minecraft.world.entity.projectile.windcharge.WindCharge(
-          sp, level, sp.getX(), sp.getEyeY() - 0.1, sp.getZ());
+          sp, level, eyePos.x(), eyePos.y(), eyePos.z());
       wc.shootFromRotation(sp, sp.getXRot(), sp.getYRot(), 0.0F, 1.5F, 1.0F);
       level.addFreshEntity(wc);
       return (org.bukkit.entity.WindCharge) wc.getBukkitEntity();
+    } catch (Throwable t) {
+      return player.launchProjectile(org.bukkit.entity.WindCharge.class);
     }
   }
 }

@@ -1344,6 +1344,7 @@ public final class PracticePlugin extends JavaPlugin implements Listener {
           try {
             WindCharge charge = BotAdapters.getAdapter().launchWindCharge(player);
             if (charge != null) {
+              if (e.getHand() == org.bukkit.inventory.EquipmentSlot.OFF_HAND) player.swingOffHand(); else player.swingMainHand();
               charge
                   .getPersistentDataContainer()
                   .set(gearKey, org.bukkit.persistence.PersistentDataType.BYTE, (byte) 1);
@@ -1352,7 +1353,7 @@ public final class PracticePlugin extends JavaPlugin implements Listener {
               session.projectiles.add(charge);
               session.round.utility();
               session.total.utility();
-              if (player.getGameMode() != GameMode.CREATIVE) e.getItem().subtract(1);
+              if (player.getGameMode() != GameMode.CREATIVE) { e.getItem().subtract(1); player.updateInventory(); }
             }
           } catch (Throwable t) {
             getLogger().warning("Could not launch WindCharge: " + t.getMessage());
