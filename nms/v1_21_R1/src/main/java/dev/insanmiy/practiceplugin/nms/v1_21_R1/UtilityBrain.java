@@ -62,6 +62,8 @@ final class UtilityBrain {
   private int repairSeekingSince = -1, nextRepairSeek, nextArmorSwap;
   private int nextPitEscape, nextWindCharge, nextBlockPlace, pitStuckTicks;
   private Location lastPitCheckLoc;
+  private int digStuckTicks;
+  private Location lastDigCheckLoc;
 
   private record PreparedAction(
       int slot, ItemStack item, Runnable action, java.util.function.BooleanSupplier valid) {}
@@ -98,6 +100,8 @@ final class UtilityBrain {
     repairSeekingSince = -1;
     nextPitEscape = nextWindCharge = nextBlockPlace = pitStuckTicks = 0;
     lastPitCheckLoc = null;
+    digStuckTicks = 0;
+    lastDigCheckLoc = null;
     nextRepairSeek = nextArmorSwap = 0;
   }
 
@@ -1374,30 +1378,42 @@ final class UtilityBrain {
   }
 
   private Block findObstructingBlock(Player self, Player target) {
-    Location eye = self.getEyeLocation();
-    Location targetEye = target.getEyeLocation();
-    Vector dir = targetEye.toVector().subtract(eye.toVector());
-    double dist = dir.length();
-    if (dist < 0.1) return null;
+    Location here = self.getLocation();
+    Location targetLoc = target.getLocation();
+    Vector dir = targetLoc.toVector().subtract(here.toVector()).setY(0);
+    if (dir.lengthSquared() < 0.001) {
+      return null;
+    }
     dir.normalize();
 
     World world = self.getWorld();
-    for (double d = 0.35; d <= Math.min(4.5, dist); d += 0.2) {
-      Location point = eye.clone().add(dir.clone().multiply(d));
-      Block b = world.getBlockAt(point);
-      if (b.getType().isSolid() && !b.isPassable()) {
-        return b;
-      }
+    Location stepFeet = here.clone().add(dir.clone().multiply(0.8));
+    Location stepHead = stepFeet.clone().add(0, 1.0, 0);
+
+    Block headBlock = world.getBlockAt(stepHead);
+    if (headBlock.getType().isSolid() == true && headBlock.isPassable() == false) {
+      return headBlock;
     }
 
-    if (target.getLocation().getY() < self.getLocation().getY() - 1.0) {
-      Block underFeet = self.getLocation().clone().subtract(0, 0.5, 0).getBlock();
-      if (underFeet.getType().isSolid()) return underFeet;
+    Block feetBlock = world.getBlockAt(stepFeet);
+    if (feetBlock.getType().isSolid() == true && feetBlock.isPassable() == false) {
+      return feetBlock;
+    }
 
-      Vector forward = self.getLocation().getDirection().setY(0);
-      if (forward.lengthSquared() > 0.01) {
-        Block forwardUnder = self.getLocation().add(forward.normalize().multiply(0.8)).subtract(0, 0.5, 0).getBlock();
-        if (forwardUnder.getType().isSolid()) return forwardUnder;
+    // Check If Opponent Is Boxed In And In Close Range
+    if (here.distance(targetLoc) <= 4.0) {
+      Vector toBot = here.toVector().subtract(targetLoc.toVector()).setY(0);
+      if (toBot.lengthSquared() > 0.001) {
+        toBot.normalize();
+        Block wallHead = target.getWorld().getBlockAt(targetLoc.clone().add(0, 1.0, 0).add(toBot.clone().multiply(0.8)));
+        if (wallHead.getType().isSolid() == true && wallHead.isPassable() == false) {
+          return wallHead;
+        }
+
+        Block wallFeet = target.getWorld().getBlockAt(targetLoc.clone().add(toBot.clone().multiply(0.8)));
+        if (wallFeet.getType().isSolid() == true && wallFeet.isPassable() == false) {
+          return wallFeet;
+        }
       }
     }
 
@@ -1405,53 +1421,66 @@ final class UtilityBrain {
   }
 
   private boolean digTowardsTarget(Player target, Difficulty difficulty, int tick) {
-    if (target == null) return false;
+    if (target == null) {
+      return false;
+    }
+
     Player self = player();
     Location here = self.getLocation();
     Location targetLoc = target.getLocation();
 
     double dist3D = here.distance(targetLoc);
-    if (dist3D > 20.0) {
+    if (dist3D > 5.0) {
       abortTargetMining();
       return false;
     }
 
-    if (self.hasLineOfSight(target) && dist3D <= 3.2 && Math.abs(targetLoc.getY() - here.getY()) <= 1.2) {
+    // Never Dig If Bot Is Above Target Or Target Is Walkable
+    if (targetLoc.getY() < here.getY() - 0.5) {
       abortTargetMining();
       return false;
     }
 
-    boolean playerBelow = targetLoc.getY() < here.getY() - 1.2;
-    double hDist = Math.hypot(targetLoc.getX() - here.getX(), targetLoc.getZ() - here.getZ());
+    if (TacticalPathfinder.hasWalkablePath(self.getWorld(), here, targetLoc) == true) {
+      abortTargetMining();
+      return false;
+    }
 
-    if (playerBelow && hDist > 1.8 && !TacticalPathfinder.hasWalkablePath(self.getWorld(), here, targetLoc)) {
-      Location abovePlayer = new Location(self.getWorld(), targetLoc.getX(), here.getY(), targetLoc.getZ());
-      Vector toAbove = abovePlayer.toVector().subtract(here.toVector()).setY(0);
-      if (toAbove.lengthSquared() > 0.01) {
-        float walkYaw = (float) Math.toDegrees(Math.atan2(-toAbove.getX(), toAbove.getZ()));
-        BotLook.towards(handle, walkYaw, 0, 180f);
-        handle.zza = 1.0f;
-        handle.setSprinting(true);
-        if (handle.horizontalCollision && handle.onGround()) {
-          handle.jumpFromGround();
-        }
-      }
+    if (self.hasLineOfSight(target) == true && dist3D <= 3.2 && Math.abs(targetLoc.getY() - here.getY()) <= 1.2) {
+      abortTargetMining();
+      return false;
+    }
+
+    // Track Physical Movement To Verify If Actually Stuck
+    if (lastDigCheckLoc == null || here.distanceSquared(lastDigCheckLoc) < 0.04) {
+      digStuckTicks++;
+    }
+
+    else {
+      digStuckTicks = 0;
+    }
+    lastDigCheckLoc = here.clone();
+
+    boolean selfTrapped = isPitTrapped(self.getWorld(), here);
+    boolean targetBoxed = isPitTrapped(target.getWorld(), targetLoc);
+    if (selfTrapped == false && targetBoxed == false && digStuckTicks < 30) {
+      abortTargetMining();
       return false;
     }
 
     Block targetBlock = findObstructingBlock(self, target);
-    if (targetBlock == null || !targetBlock.getType().isSolid() || targetBlock.getType() == Material.BEDROCK || targetBlock.getType() == Material.BARRIER) {
+    if (targetBlock == null || targetBlock.getType().isSolid() == false || targetBlock.getType() == Material.BEDROCK || targetBlock.getType() == Material.BARRIER) {
       abortTargetMining();
       return false;
     }
 
     int tool = bestMiningTool(targetBlock.getType());
     if (tool < 0) {
-      if (isRockBlock(targetBlock.getType())) {
+      if (isRockBlock(targetBlock.getType()) == true) {
         abortTargetMining();
         return false;
       }
-      tool = find(i -> i != null && !i.getType().isAir());
+      tool = find(i -> i != null && i.getType().isAir() == false);
     }
 
     if (tool < 0) {
@@ -1469,14 +1498,14 @@ final class UtilityBrain {
     handle.setYHeadRot(handle.getYRot());
     BotLook.publish(handle);
 
-    if (!handTiming.ready(tick)) {
+    if (handTiming.ready(tick) == false) {
       handle.zza = handle.xxa = 0;
       handle.setSprinting(false);
       return true;
     }
 
     BlockPos pos = new BlockPos(targetBlock.getX(), targetBlock.getY(), targetBlock.getZ());
-    if (!pos.equals(targetMiningBlock)) {
+    if (pos.equals(targetMiningBlock) == false) {
       abortTargetMining();
       targetMiningBlock = pos;
       targetMiningSince = tick;
@@ -1487,7 +1516,9 @@ final class UtilityBrain {
           Direction.UP,
           handle.level().getMaxBuildHeight(),
           0);
-    } else if (!targetMiningStopSent && tick - targetMiningSince >= miningTicks(pos)) {
+    }
+
+    else if (targetMiningStopSent == false && tick - targetMiningSince >= miningTicks(pos)) {
       handle.gameMode.handleBlockBreakAction(
           pos,
           ServerboundPlayerActionPacket.Action.STOP_DESTROY_BLOCK,
@@ -1497,7 +1528,9 @@ final class UtilityBrain {
       handle.gameMode.destroyBlock(pos);
       targetMiningStopSent = true;
       targetMiningBlock = null;
-    } else if (targetMiningStopSent && tick - targetMiningSince > miningTicks(pos) + 20) {
+    }
+
+    else if (targetMiningStopSent == true && tick - targetMiningSince > miningTicks(pos) + 20) {
       abortTargetMining();
     }
 

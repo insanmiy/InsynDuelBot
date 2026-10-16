@@ -15,6 +15,8 @@ public record Arena(Location playerSpawn, Location botSpawn, double radius) {
     if (distance < 4 || distance > Math.max(12.0, radius * 2.0 - 4.0)) return "Spawns Must Be At Least 4 Blocks Apart And Inside The Arena.";
     if (!Double.isFinite(radius) || radius < 1)
       return "Arena Radius Must Be At Least 1 Block.";
+    if (radius > 1000.0)
+      return "Arena Radius Cannot Exceed 1000 Blocks.";
     if (!safe(playerSpawn) || !safe(botSpawn))
       return "Spawns Need Solid Floors And Two Clear Blocks Of Headroom.";
     return null;

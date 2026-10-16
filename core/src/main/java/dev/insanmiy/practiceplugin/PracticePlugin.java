@@ -49,15 +49,15 @@ public final class PracticePlugin extends JavaPlugin implements Listener {
       throw new IllegalStateException("Could Not Save Session Cleanup", e);
     }
     World world = session.arena.playerSpawn().getWorld();
-    if (world != null){
+    if (world != null) {
       Location center = session.arena.playerSpawn();
-      double r = Math.max(16.0, session.arena.radius());
+      double r = Math.min(128.0, Math.max(16.0, session.arena.radius()));
       for (Entity entity : world.getNearbyEntities(center, r, r, r)) {
         if ((entity instanceof Item
                 || entity instanceof Projectile
                 || entity instanceof ExperienceOrb
                 || entity instanceof AreaEffectCloud)
-            && session.arena.contains(entity.getLocation())){
+            && session.arena.contains(entity.getLocation())) {
           entity.remove();
         }
       }
@@ -700,9 +700,13 @@ public final class PracticePlugin extends JavaPlugin implements Listener {
               if (!Double.isFinite(r) || r < 1)
                 throw new IllegalArgumentException("Radius Must Be At Least 1 Block.");
               double maxR = getConfig().getDouble("arena.max-radius", 0.0);
-              if (maxR > 0 && r > maxR)
+              if (maxR <= 0.0) {
+                maxR = 500.0;
+              }
+              if (r > maxR) {
                 throw new IllegalArgumentException(
                     "Radius (" + r + ") Exceeds Configured Max Radius (" + maxR + ").");
+              }
               String targetArena = args.length > 3 ? validArenaName(args[3]) : "default";
               getConfig().set(arenaPath(targetArena) + ".radius", r);
               saveConfig();
