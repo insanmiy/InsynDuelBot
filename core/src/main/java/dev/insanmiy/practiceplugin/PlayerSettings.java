@@ -30,7 +30,7 @@ final class PlayerSettings {
     boolean fallback =
         key.equals("animations")
             ? defaults.get().getBoolean("menu-animations", true)
-            : key.equals("hud") ? defaults.get().getBoolean("hud", false) : true;
+            : !key.equals("hud") || defaults.get().getBoolean("hud", false);
     return data.getBoolean(id + "." + key, fallback);
   }
 
@@ -42,9 +42,10 @@ final class PlayerSettings {
           case "saturation" -> defaults.get().getInt("session.starting-saturation", 20);
           default -> 0;
         };
-    return Math.max(
+    return Math.clamp(
+        data.getInt(id + "." + key, fallback),
         key.equals("saturation") ? 0 : 1,
-        Math.min(key.equals("saturation") ? 20 : 600, data.getInt(id + "." + key, fallback)));
+        key.equals("saturation") ? 20 : 600);
   }
 
   int botSetting(UUID id, String key) {

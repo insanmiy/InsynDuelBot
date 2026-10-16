@@ -13,6 +13,7 @@ import org.bukkit.entity.Player;
 import org.bukkit.event.*;
 import org.bukkit.event.inventory.*;
 import org.bukkit.inventory.*;
+import org.jetbrains.annotations.NotNull;
 
 final class PracticeMenu implements Listener {
   private enum Screen {
@@ -82,7 +83,7 @@ final class PracticeMenu implements Listener {
     }
 
     @Override
-    public Inventory getInventory() {
+    public @NotNull Inventory getInventory() {
       return inventory;
     }
 
@@ -95,8 +96,8 @@ final class PracticeMenu implements Listener {
     }
   }
 
-  void open(Player player, Selection choice, int page) {
-    show(player, drafts.getOrDefault(player.getUniqueId(), choice), Screen.KITS, "all", page);
+  void open(Player player, Selection choice) {
+    show(player, drafts.getOrDefault(player.getUniqueId(), choice), Screen.KITS, "all", 0);
   }
 
   private Set<String> favorites(Player player) {
@@ -276,7 +277,7 @@ final class PracticeMenu implements Listener {
                   kit != null ? (kit.count(Material.GOLDEN_APPLE) + " Apples | " + kit.count(Material.SPLASH_POTION) + " Potions") : "",
                   kit != null ? (kit.count(Material.COBWEB) + " Webs | " + kit.count(Material.EXPERIENCE_BOTTLE) + " XP Bottles") : "",
                   "",
-                  choice.kit().equals(name) ? "\u00bb Selected \u00ab" : "Left Click: Select",
+                  choice.kit().equals(name) ? "» Selected «" : "Left Click: Select",
                   "Right Click: Preview | Shift Click: Favorite");
         } else if (screen == Screen.DIFFICULTIES) {
           var d = plugin.difficulties().get(name);
@@ -297,7 +298,7 @@ final class PracticeMenu implements Listener {
             lore.add("Heal Urgency: " + Math.round(d.healThreshold() * 100) + "% HP");
           }
           lore.add("");
-          lore.add(choice.difficulty().equals(name) ? "\u00bb Selected \u00ab" : "Click To Select");
+          lore.add(choice.difficulty().equals(name) ? "» Selected «" : "Click To Select");
           card =
               icon(
                   mat,
@@ -504,11 +505,11 @@ final class PracticeMenu implements Listener {
             }
             StringBuilder line = new StringBuilder();
             for (String word : raw.split(" ")) {
-              if (line.length() > 0 && line.length() + word.length() + 1 > 38) {
+              if (!line.isEmpty() && line.length() + word.length() + 1 > 38) {
                 lines.add(text(line.toString(), NamedTextColor.GRAY));
                 line.setLength(0);
               }
-              if (line.length() > 0) {
+              if (!line.isEmpty()) {
                 line.append(' ');
               }
               line.append(word);
@@ -559,7 +560,7 @@ final class PracticeMenu implements Listener {
                   Bukkit.dispatchCommand(player, "practice kit editor");
                   return;
                 }
-                if (view.screen == Screen.KITS && slot >= 1 && slot <= 7) {
+                if (view.screen == Screen.KITS && slot <= 7) {
                   show(player, choice, Screen.KITS, CATEGORIES.get(slot - 1), 0);
                   return;
                 }
@@ -643,9 +644,7 @@ final class PracticeMenu implements Listener {
                       show(player, choice, view.screen, view.category, view.page + 1);
                     }
                   }
-                  case 45 -> {
-                    show(player, choice, Screen.KITS, "all", 0);
-                  }
+                  case 45 -> show(player, choice, Screen.KITS, "all", 0);
                   case 46 -> {
                     if (view.screen == Screen.DIFFICULTIES) {
                       show(player, choice, Screen.KITS, view.category, 0);
@@ -682,9 +681,7 @@ final class PracticeMenu implements Listener {
                       show(player, choice, Screen.PREVIEW, view.category, view.page);
                     }
                   }
-                  case 51 -> {
-                    plugin.openSettings(player);
-                  }
+                  case 51 -> plugin.openSettings(player);
                   case 52 -> {
                     if (view.screen == Screen.STATS) {
                       show(player, choice, Screen.KITS, view.category, 0);
@@ -692,9 +689,7 @@ final class PracticeMenu implements Listener {
                       show(player, choice, Screen.STATS, view.category, 0);
                     }
                   }
-                  case 53 -> {
-                    player.closeInventory();
-                  }
+                  case 53 -> player.closeInventory();
                   default -> {}
                 }
               } catch (IllegalArgumentException e) {

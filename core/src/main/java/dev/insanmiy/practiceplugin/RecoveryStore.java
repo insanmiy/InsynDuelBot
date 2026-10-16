@@ -31,13 +31,6 @@ public final class RecoveryStore {
                 .equals(YamlFiles.load(file).getString("uuid"));
   }
 
-  public boolean pending() {
-    File[] players =
-        new File(plugin.getDataFolder(), "recovery")
-            .listFiles((directory, name) -> name.endsWith(".yml"));
-    return file.exists() || players != null && players.length > 0;
-  }
-
   public void capture(Player p) throws IOException {
     if (pending(p)) throw new IOException("An Earlier Recovery For This Player Is Pending.");
     File file = playerFile(p);

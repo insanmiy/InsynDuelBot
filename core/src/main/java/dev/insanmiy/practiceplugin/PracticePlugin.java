@@ -18,6 +18,7 @@ import org.bukkit.event.entity.*;
 import org.bukkit.event.inventory.*;
 import org.bukkit.event.player.*;
 import org.bukkit.plugin.java.JavaPlugin;
+import org.jetbrains.annotations.NotNull;
 
 public final class PracticePlugin extends JavaPlugin implements Listener {
   private final Set<UUID> bots = new HashSet<>();
@@ -174,19 +175,6 @@ public final class PracticePlugin extends JavaPlugin implements Listener {
     return Collections.unmodifiableMap(difficulties);
   }
 
-  List<String> startProblems(Player p) {
-    List<String> problems = new ArrayList<>();
-    if (sessions.containsKey(p.getUniqueId())) problems.add("Your Practice Is Already Active");
-    try {
-      availableArena();
-    } catch (IllegalArgumentException e) {
-      problems.add(e.getMessage());
-    }
-    if (p.isDead()) problems.add("Respawn First");
-    if (recovery.pending(p)) problems.add("Recovery Pending; Start Will Retry It");
-    return problems;
-  }
-
   Selection defaults(Player p) {
     Selection draft = menu != null ? menu.draft(p.getUniqueId()) : null;
     if (draft != null && kits.containsKey(draft.kit()) && difficulties.containsKey(draft.difficulty())) {
@@ -268,8 +256,9 @@ public final class PracticePlugin extends JavaPlugin implements Listener {
     getServer().getPluginManager().registerEvents(settingsMenu, this);
     getServer().getPluginManager().registerEvents(this, this);
     getServer().getScheduler().runTaskTimer(this, new MenuAnimation(this), 6, 6);
-    Objects.requireNonNull(getCommand("practice")).setExecutor(this);
-    getCommand("practice").setTabCompleter(this);
+    PluginCommand practiceCmd = Objects.requireNonNull(getCommand("practice"));
+    practiceCmd.setExecutor(this);
+    practiceCmd.setTabCompleter(this);
     Bukkit.getOnlinePlayers().forEach(recovery::restore);
     getServer()
         .getScheduler()
@@ -495,10 +484,9 @@ public final class PracticePlugin extends JavaPlugin implements Listener {
   }
 
   private PracticeSession ownSession(CommandSender sender) {
-    PracticeSession session = sender instanceof Player p ? sessions.get(p.getUniqueId()) : null;
+    if (!(sender instanceof Player p)) throw new IllegalArgumentException("Players Only.");
+    PracticeSession session = sessions.get(p.getUniqueId());
     if (session == null) throw new IllegalArgumentException("No Active Practice.");
-    if (!(sender instanceof Player p) || !p.equals(session.owner))
-      throw new IllegalArgumentException("This Is Not Your Practice Session.");
     return session;
   }
 
@@ -528,7 +516,11 @@ public final class PracticePlugin extends JavaPlugin implements Listener {
   }
 
   @Override
-  public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
+  public boolean onCommand(
+      @NotNull CommandSender sender,
+      @NotNull Command command,
+      @NotNull String label,
+      @NotNull String[] args) {
     try {
       PracticeSession session = sender instanceof Player p ? sessions.get(p.getUniqueId()) : null;
       String sub =
@@ -541,7 +533,7 @@ public final class PracticePlugin extends JavaPlugin implements Listener {
           Player p = player(sender);
           if (session != null)
             throw new IllegalArgumentException("Use /practice Stop Before Selecting Another Kit.");
-          menu.open(p, defaults(p), 0);
+          menu.open(p, defaults(p));
         }
         case "start" -> {
           Player p = player(sender);
@@ -641,8 +633,8 @@ public final class PracticePlugin extends JavaPlugin implements Listener {
                           + ":"
                           + session.match.botWins())));
           try {
-            arena();
-            sender.sendMessage(TextUI.legacy(Component.text("Arena Ready.")));
+            Arena a = arena();
+            sender.sendMessage(TextUI.legacy(Component.text("Arena Ready (" + (int) a.radius() + "m radius).")));
           } catch (IllegalArgumentException e) {
             sender.sendMessage(TextUI.legacy(Component.text(e.getMessage())));
           }
@@ -660,92 +652,88 @@ public final class PracticePlugin extends JavaPlugin implements Listener {
           if (args.length < 2)
             throw new IllegalArgumentException("/practice arena <list|setplayer|setbot|setradius|info|delete|tp> [name]");
           String arenaSub = args[1].toLowerCase(Locale.ROOT);
-          if (arenaSub.equals("list")) {
-            sender.sendMessage(TextUI.legacy(Component.text("--- Practice Arenas ---")));
-            for (String name : arenaNames()) {
-              String status;
-              try {
-                Arena a = arena(name);
-                boolean busy = sessions.values().stream().anyMatch(s -> s.arenaName.equals(name));
-                status = busy ? "§c[In Use]" : "§a[Ready]";
-              } catch (IllegalArgumentException e) {
-                status = "§e[Incomplete: " + e.getMessage() + "]";
+          switch (arenaSub) {
+            case "list" -> {
+              sender.sendMessage(TextUI.legacy(Component.text("--- Practice Arenas ---")));
+              for (String name : arenaNames()) {
+                String status;
+                try {
+                  Arena a = arena(name);
+                  boolean busy = sessions.values().stream().anyMatch(s -> s.arenaName.equals(name));
+                  status = busy ? "§c[In Use]" : "§a[Ready (" + (int) a.radius() + "m)]";
+                } catch (IllegalArgumentException e) {
+                  status = "§e[Incomplete: " + e.getMessage() + "]";
+                }
+                sender.sendMessage(TextUI.legacy(Component.text("- " + name + ": " + status)));
               }
-              sender.sendMessage(TextUI.legacy(Component.text("- " + name + ": " + status)));
             }
-            break;
-          }
-          if (arenaSub.equals("delete")) {
-            if (args.length < 3) throw new IllegalArgumentException("/practice arena delete <name>");
-            String toDelete = validArenaName(args[2]);
-            if (sessions.values().stream().anyMatch(s -> s.arenaName.equals(toDelete)))
-              throw new IllegalArgumentException("Cannot delete an occupied arena.");
-            if (toDelete.equals("default")) {
-              getConfig().set("arena.player", null);
-              getConfig().set("arena.bot", null);
-            } else {
-              getConfig().set("arenas." + toDelete, null);
+            case "delete" -> {
+              if (args.length < 3) throw new IllegalArgumentException("/practice arena delete <name>");
+              String toDelete = validArenaName(args[2]);
+              if (sessions.values().stream().anyMatch(s -> s.arenaName.equals(toDelete)))
+                throw new IllegalArgumentException("Cannot delete an occupied arena.");
+              if (toDelete.equals("default")) {
+                getConfig().set("arena.player", null);
+                getConfig().set("arena.bot", null);
+              } else {
+                getConfig().set("arenas." + toDelete, null);
+              }
+              saveConfig();
+              sender.sendMessage(TextUI.legacy(Component.text("Deleted arena '" + toDelete + "'.")));
             }
-            saveConfig();
-            sender.sendMessage(TextUI.legacy(Component.text("Deleted arena '" + toDelete + "'.")));
-            break;
-          }
-          if (arenaSub.equals("tp")) {
-            if (!(sender instanceof Player p)) throw new IllegalArgumentException("Players Only.");
-            String target = args.length > 2 ? validArenaName(args[2]) : "default";
-            Arena a = arena(target);
-            p.teleport(a.playerSpawn());
-            sender.sendMessage(TextUI.legacy(Component.text("Teleported to arena '" + target + "'.")));
-            break;
-          }
-          if (arenaSub.equals("setradius")) {
-            if (args.length < 3)
-              throw new IllegalArgumentException("/practice arena setradius <radius> [name]");
-            double r;
-            try {
-              r = Double.parseDouble(args[2]);
-            } catch (NumberFormatException e) {
-              throw new IllegalArgumentException("Radius Must Be A Number.");
+            case "tp" -> {
+              if (!(sender instanceof Player p)) throw new IllegalArgumentException("Players Only.");
+              String target = args.length > 2 ? validArenaName(args[2]) : "default";
+              Arena a = arena(target);
+              p.teleport(a.playerSpawn());
+              sender.sendMessage(TextUI.legacy(Component.text("Teleported to arena '" + target + "'.")));
             }
-            if (!Double.isFinite(r) || r < 1)
-              throw new IllegalArgumentException("Radius Must Be At Least 1 Block.");
-            double maxR = getConfig().getDouble("arena.max-radius", 0.0);
-            if (maxR > 0 && r > maxR)
-              throw new IllegalArgumentException(
-                  "Radius (" + r + ") Exceeds Configured Max Radius (" + maxR + ").");
-            String targetArena = args.length > 3 ? validArenaName(args[3]) : "default";
-            getConfig().set(arenaPath(targetArena) + ".radius", r);
-            saveConfig();
-            sender.sendMessage(
-                TextUI.legacy(Component.text("Saved Radius " + r + " For Arena '" + targetArena + "'.")));
-            break;
-          }
-          String arenaName = args.length > 2 ? validArenaName(args[2]) : "default";
-          if (arenaSub.equals("info")) {
-            Arena a = arena(arenaName);
-            sender.sendMessage(TextUI.legacy(
-                Component.text(
-                    "Player: "
-                        + a.playerSpawn()
-                        + " | Bot: "
-                        + a.botSpawn()
-                        + " | Radius: "
-                        + a.radius())));
-          } else {
-            if (sessions.values().stream().anyMatch(active -> active.arenaName.equals(arenaName)))
-              throw new IllegalArgumentException("That Arena Is Occupied.");
-            if (!(sender instanceof Player p)) throw new IllegalArgumentException("Players Only.");
-            String point =
-                switch (arenaSub) {
-                  case "setplayer" -> "player";
-                  case "setbot" -> "bot";
-                  default -> throw new IllegalArgumentException("Unknown Arena Command.");
-                };
-            if (!Arena.safe(p.getLocation()))
-              throw new IllegalArgumentException("Stand On Solid Ground With Clear Headroom.");
-            getConfig().set(arenaPath(arenaName) + "." + point, p.getLocation());
-            saveConfig();
-            sender.sendMessage(TextUI.legacy(Component.text("Saved " + point + " Spawn.")));
+            case "setradius" -> {
+              if (args.length < 3)
+                throw new IllegalArgumentException("/practice arena setradius <radius> [name]");
+              double r;
+              try {
+                r = Double.parseDouble(args[2]);
+              } catch (NumberFormatException e) {
+                throw new IllegalArgumentException("Radius Must Be A Number.");
+              }
+              if (!Double.isFinite(r) || r < 1)
+                throw new IllegalArgumentException("Radius Must Be At Least 1 Block.");
+              double maxR = getConfig().getDouble("arena.max-radius", 0.0);
+              if (maxR > 0 && r > maxR)
+                throw new IllegalArgumentException(
+                    "Radius (" + r + ") Exceeds Configured Max Radius (" + maxR + ").");
+              String targetArena = args.length > 3 ? validArenaName(args[3]) : "default";
+              getConfig().set(arenaPath(targetArena) + ".radius", r);
+              saveConfig();
+              sender.sendMessage(
+                  TextUI.legacy(Component.text("Saved Radius " + r + " For Arena '" + targetArena + "'.")));
+            }
+            case "info" -> {
+              String arenaName = args.length > 2 ? validArenaName(args[2]) : "default";
+              Arena a = arena(arenaName);
+              sender.sendMessage(TextUI.legacy(
+                  Component.text(
+                      "Player: "
+                          + a.playerSpawn()
+                          + " | Bot: "
+                          + a.botSpawn()
+                          + " | Radius: "
+                          + a.radius())));
+            }
+            case "setplayer", "setbot" -> {
+              String arenaName = args.length > 2 ? validArenaName(args[2]) : "default";
+              if (sessions.values().stream().anyMatch(active -> active.arenaName.equals(arenaName)))
+                throw new IllegalArgumentException("That Arena Is Occupied.");
+              if (!(sender instanceof Player p)) throw new IllegalArgumentException("Players Only.");
+              String point = arenaSub.equals("setplayer") ? "player" : "bot";
+              if (!Arena.safe(p.getLocation()))
+                throw new IllegalArgumentException("Stand On Solid Ground With Clear Headroom.");
+              getConfig().set(arenaPath(arenaName) + "." + point, p.getLocation());
+              saveConfig();
+              sender.sendMessage(TextUI.legacy(Component.text("Saved " + point + " Spawn.")));
+            }
+            default -> throw new IllegalArgumentException("/practice arena <list|setplayer|setbot|setradius|info|delete|tp> [name]");
           }
         }
         default ->
@@ -775,7 +763,11 @@ public final class PracticePlugin extends JavaPlugin implements Listener {
   }
 
   @Override
-  public List<String> onTabComplete(CommandSender s, Command c, String label, String[] a) {
+  public List<String> onTabComplete(
+      @NotNull CommandSender s,
+      @NotNull Command c,
+      @NotNull String label,
+      @NotNull String[] a) {
     a[0] = a[0].toLowerCase(Locale.ROOT);
     Collection<String> choices =
         switch (a.length) {
@@ -888,7 +880,7 @@ public final class PracticePlugin extends JavaPlugin implements Listener {
       return;
     }
     if (!(e.getEntity() instanceof Player damaged)) return;
-    double amount = Math.max(0, Math.min(e.getFinalDamage(), damaged.getHealth()));
+    double amount = Math.clamp(e.getFinalDamage(), 0.0, damaged.getHealth());
     if (e.getFinalDamage() >= damaged.getHealth()) victimSession.finishingBlow = e;
     if (damaged.equals(victimSession.owner)) {
       victimSession.round.hurt(amount);
@@ -955,7 +947,7 @@ public final class PracticePlugin extends JavaPlugin implements Listener {
         && !session.fighting()
         && !session.internalTeleport
         && !(e instanceof PlayerTeleportEvent)) {
-      if ((e.getTo() != null && (e.getFrom().getX() != e.getTo().getX() || e.getFrom().getY() != e.getTo().getY() || e.getFrom().getZ() != e.getTo().getZ()))) {
+      if (e.getFrom().getX() != e.getTo().getX() || e.getFrom().getY() != e.getTo().getY() || e.getFrom().getZ() != e.getTo().getZ()) {
         Location to = e.getFrom().clone();
         to.setYaw(e.getTo().getYaw());
         to.setPitch(e.getTo().getPitch());
@@ -976,15 +968,14 @@ public final class PracticePlugin extends JavaPlugin implements Listener {
         }
         return;
       }
-      PracticeSession active = session;
       getServer()
           .getScheduler()
           .runTask(
               this,
               () -> {
-                if (sessions.get(active.owner.getUniqueId()) == active
-                    && e.getPlayer().equals(active.owner))
-                  active.followTeleport(active.owner.getLocation());
+                if (sessions.get(session.owner.getUniqueId()) == session
+                    && e.getPlayer().equals(session.owner))
+                  session.followTeleport(session.owner.getLocation());
               });
     }
   }
@@ -1046,6 +1037,7 @@ public final class PracticePlugin extends JavaPlugin implements Listener {
     session.total.utility();
   }
 
+  @SuppressWarnings("UnstableApiUsage")
   @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
   public void projectileHit(ProjectileHitEvent e) {
     if (!practiceProjectile(e.getEntity())) return;
@@ -1122,13 +1114,12 @@ public final class PracticePlugin extends JavaPlugin implements Listener {
   public void potionBottle(PlayerItemConsumeEvent e) {
     PracticeSession session = sessionFor(e.getPlayer());
     if (session != null && DRINKABLES.contains(e.getItem().getType())) {
-      PracticeSession active = session;
       getServer()
           .getScheduler()
           .runTask(
               this,
               () -> {
-                if (sessions.get(active.owner.getUniqueId()) != active
+                if (sessions.get(session.owner.getUniqueId()) != session
                     || !participant(e.getPlayer())) return;
                 var inventory = e.getPlayer().getInventory();
                 for (int slot = 0; slot < 36; slot++) {
@@ -1367,6 +1358,7 @@ public final class PracticePlugin extends JavaPlugin implements Listener {
     e.blockList().removeIf(b -> inArena(b.getLocation()) || blocks.owns(b));
   }
 
+  @SuppressWarnings("UnstableApiUsage")
   @EventHandler(priority = EventPriority.HIGH)
   public void interact(PlayerInteractEvent e) {
     Player player = e.getPlayer();
@@ -1429,7 +1421,7 @@ public final class PracticePlugin extends JavaPlugin implements Listener {
     PracticeSession session = sessionFor(e.getWhoClicked());
     if (e.getWhoClicked() instanceof Player p
         && participant(p)
-        && (session.closing
+        && (session != null && session.closing
             || e.getView().getTopInventory().getType() != InventoryType.CRAFTING
             || e.getRawSlot() < 5
             || e.getAction() == InventoryAction.DROP_ALL_SLOT
@@ -1468,29 +1460,28 @@ public final class PracticePlugin extends JavaPlugin implements Listener {
       e.getDrops().clear();
       e.setDroppedExp(0);
       e.deathMessage(null);
-      if (session.fighting() && !session.endingRound) {
-        PracticeSession active = session;
-        active.captureLayout();
-        boolean playerWon = !e.getEntity().equals(active.owner);
+      if (session != null && session.fighting() && !session.endingRound) {
+        session.captureLayout();
+        boolean playerWon = !e.getEntity().equals(session.owner);
 
         boolean revived = ServerFeatures.revive(e);
         e.setKeepInventory(true);
         e.setKeepLevel(true);
         session.endingRound = true;
-        active.owner.sendMessage(TextUI.legacy(
+        session.owner.sendMessage(TextUI.legacy(
             Component.text((playerWon ? "Bot" : "You") + " Took A Lethal Hit.")));
         getServer()
             .getScheduler()
             .runTask(
                 this,
                 () -> {
-                  if (sessions.get(active.owner.getUniqueId()) != active) return;
+                  if (sessions.get(session.owner.getUniqueId()) != session) return;
                   if (!revived) {
-                    if (playerWon) active.replaceDeadBot();
-                    else active.owner.spigot().respawn();
+                    if (playerWon) session.replaceDeadBot();
+                    else session.owner.spigot().respawn();
                   }
-                  active.endingRound = false;
-                  active.win(playerWon);
+                  session.endingRound = false;
+                  session.win(playerWon);
                 });
         return;
       }

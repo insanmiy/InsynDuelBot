@@ -118,7 +118,7 @@ public final class PracticeSession {
     KitLayout current =
         plugin.layouts().getLayout(owner.getUniqueId(), difficulty.name(), kit.name());
     KitLayout captured = plugin.layouts().capture(owner, kit, plugin.slotKey(), current);
-    if (captured != null && !captured.slots().isEmpty()) {
+    if (!captured.slots().isEmpty()) {
       plugin.layouts().saveLayout(owner.getUniqueId(), difficulty.name(), kit.name(), captured);
     }
   }
@@ -225,7 +225,7 @@ public final class PracticeSession {
       int remaining = match.remaining();
       if (remaining > 0 && remaining % 20 == 0) {
         int seconds = remaining / 20;
-        if (seconds <= 5 && seconds >= 1) {
+        if (seconds <= 5) {
           NamedTextColor color =
               seconds <= 1
                   ? NamedTextColor.RED
@@ -269,7 +269,7 @@ public final class PracticeSession {
                   + kit.health()
                   + " HP | Apples "
                   + countApples(bot.player()))));
-      bar.setProgress((float) Math.max(0, Math.min(1, bot.player().getHealth() / kit.health())));
+      bar.setProgress((float) Math.clamp(bot.player().getHealth() / kit.health(), 0.0, 1.0));
       TextUI.actionBar(owner,
           Component.text(
               mode.id()

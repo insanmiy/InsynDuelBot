@@ -10,6 +10,7 @@ import org.bukkit.entity.Player;
 import org.bukkit.event.*;
 import org.bukkit.event.inventory.*;
 import org.bukkit.inventory.*;
+import org.jetbrains.annotations.NotNull;
 
 final class SettingsMenu implements Listener {
   private final PracticePlugin plugin;
@@ -138,7 +139,8 @@ final class SettingsMenu implements Listener {
       inventory = TextUI.inventory(this, 54, Component.text("INSYN / BOT & MATCH SETTINGS"));
     }
 
-    public Inventory getInventory() {
+    @Override
+    public @NotNull Inventory getInventory() {
       return inventory;
     }
 
@@ -167,7 +169,7 @@ final class SettingsMenu implements Listener {
       throw new IllegalArgumentException("Use /practice Stop Before Changing Match Settings.");
 
     boolean canReuse = false;
-    View view = null;
+    View view;
     if (p.getOpenInventory().getTopInventory().getHolder() instanceof View currentView
         && currentView.owner.equals(p.getUniqueId())) {
       canReuse = true;
@@ -373,7 +375,7 @@ final class SettingsMenu implements Listener {
         int max = key.equals("saturation") ? 20 : 60, min = key.equals("saturation") ? 0 : 1;
         int step = shift ? 5 : 1;
         int delta = right ? -step : step;
-        prefs.set(id, key, Math.max(min, Math.min(max, prefs.number(id, key) + delta)));
+        prefs.set(id, key, Math.clamp(prefs.number(id, key) + delta, min, max));
         p.playSound(p.getLocation(), Sound.UI_BUTTON_CLICK, 0.4f, 1.0f);
       } else return;
       open(p);

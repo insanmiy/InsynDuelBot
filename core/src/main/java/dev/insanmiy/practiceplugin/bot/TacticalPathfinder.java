@@ -5,8 +5,6 @@ import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.World;
 import org.bukkit.block.Block;
-import org.bukkit.block.data.type.Slab;
-import org.bukkit.block.data.type.Stairs;
 import org.bukkit.util.Vector;
 
 public final class TacticalPathfinder {
@@ -137,12 +135,15 @@ public final class TacticalPathfinder {
         expandDirection(world, current, dir[0], dir[1], false, dx, dy, dz, openSet, gScores);
       }
 
-      // Expand diagonal directions
+      // Expand diagonal directions: require both orthogonal neighbors to be passable at feet and head
       for (int[] dir : DIAGONALS) {
-        // Prevent corner-cutting through solid blocks
-        Block c1 = world.getBlockAt(current.x + dir[0], current.y, current.z);
-        Block c2 = world.getBlockAt(current.x, current.y, current.z + dir[1]);
-        if (isSolid(c1) && isSolid(c2)) continue;
+        Block c1Feet = TacticalMovement.getBlock(world, current.x + dir[0], current.y, current.z);
+        Block c1Head = TacticalMovement.getBlock(world, current.x + dir[0], current.y + 1, current.z);
+        Block c2Feet = TacticalMovement.getBlock(world, current.x, current.y, current.z + dir[1]);
+        Block c2Head = TacticalMovement.getBlock(world, current.x, current.y + 1, current.z + dir[1]);
+        if (!isPassable(c1Feet) || !isPassable(c1Head) || !isPassable(c2Feet) || !isPassable(c2Head)) {
+          continue;
+        }
         expandDirection(world, current, dir[0], dir[1], true, dx, dy, dz, openSet, gScores);
       }
     }
@@ -172,31 +173,33 @@ public final class TacticalPathfinder {
     int cy = current.y;
 
     // 1. Same level walk (cy)
-    if (isPassable(world.getBlockAt(nx, cy, nz))
-        && isPassable(world.getBlockAt(nx, cy + 1, nz))
-        && isFloor(world.getBlockAt(nx, cy - 1, nz))) {
+    if (isPassable(TacticalMovement.getBlock(world, nx, cy, nz))
+        && isPassable(TacticalMovement.getBlock(world, nx, cy + 1, nz))
+        && isFloor(TacticalMovement.getBlock(world, nx, cy - 1, nz))) {
       double cost = current.gScore + (isDiagonal ? 1.414 : 1.0);
       tryAddNode(current, nx, cy, nz, ActionType.WALK, cost, targetX, targetY, targetZ, openSet, gScores);
     }
 
     // 2. Step up 1 block (cy + 1)
-    Block stepFloor = world.getBlockAt(nx, cy, nz);
+    Block stepFloor = TacticalMovement.getBlock(world, nx, cy, nz);
     if (isSolid(stepFloor)
-        && isPassable(world.getBlockAt(nx, cy + 1, nz))
-        && isPassable(world.getBlockAt(nx, cy + 2, nz))
-        && isPassable(world.getBlockAt(current.x, cy + 2, current.z))) {
+        && TacticalMovement.getCollisionMaxY(stepFloor) <= 1.0
+        && isPassable(TacticalMovement.getBlock(world, nx, cy + 1, nz))
+        && isPassable(TacticalMovement.getBlock(world, nx, cy + 2, nz))
+        && isPassable(TacticalMovement.getBlock(world, current.x, cy + 2, current.z))) {
       double cost = current.gScore + (isDiagonal ? 1.75 : 1.35);
       tryAddNode(current, nx, cy + 1, nz, ActionType.JUMP_UP, cost, targetX, targetY, targetZ, openSet, gScores);
     }
 
     // 3. Safe drop down (cy - 1 to cy - 5)
-    if (isPassable(world.getBlockAt(nx, cy, nz))
-        && isPassable(world.getBlockAt(nx, cy + 1, nz))) {
+    if (isPassable(TacticalMovement.getBlock(world, nx, cy, nz))
+        && isPassable(TacticalMovement.getBlock(world, nx, cy + 1, nz))) {
       for (int drop = 1; drop <= 5; drop++) {
         int dropY = cy - drop;
-        if (!isPassable(world.getBlockAt(nx, dropY, nz))) break;
-        Block landingFloor = world.getBlockAt(nx, dropY - 1, nz);
-        if (TacticalMovement.water(landingFloor.getType())) {
+        Block dropBlock = TacticalMovement.getBlock(world, nx, dropY, nz);
+        if (!isPassable(dropBlock)) break;
+        Block landingFloor = TacticalMovement.getBlock(world, nx, dropY - 1, nz);
+        if (TacticalMovement.water(landingFloor)) {
           double cost = current.gScore + (isDiagonal ? 1.414 : 1.0) + 1.2;
           tryAddNode(current, nx, dropY, nz, ActionType.SWIM, cost, targetX, targetY, targetZ, openSet, gScores);
           break;
@@ -211,13 +214,15 @@ public final class TacticalPathfinder {
 
     // 4. Parkour jump across 1-block gap (only on cardinals)
     if (!isDiagonal) {
-      Block gapAir = world.getBlockAt(nx, cy - 1, nz);
-      if (!isFloor(gapAir) && isPassable(world.getBlockAt(nx, cy, nz)) && isPassable(world.getBlockAt(nx, cy + 1, nz))) {
+      Block gapAir = TacticalMovement.getBlock(world, nx, cy - 1, nz);
+      if (!isFloor(gapAir)
+          && isPassable(TacticalMovement.getBlock(world, nx, cy, nz))
+          && isPassable(TacticalMovement.getBlock(world, nx, cy + 1, nz))) {
         int landingX = current.x + dx * 2;
         int landingZ = current.z + dz * 2;
-        if (isFloor(world.getBlockAt(landingX, cy - 1, landingZ))
-            && isPassable(world.getBlockAt(landingX, cy, landingZ))
-            && isPassable(world.getBlockAt(landingX, cy + 1, landingZ))) {
+        if (isFloor(TacticalMovement.getBlock(world, landingX, cy - 1, landingZ))
+            && isPassable(TacticalMovement.getBlock(world, landingX, cy, landingZ))
+            && isPassable(TacticalMovement.getBlock(world, landingX, cy + 1, landingZ))) {
           double cost = current.gScore + 2.2;
           tryAddNode(current, landingX, cy, landingZ, ActionType.PARKOUR, cost, targetX, targetY, targetZ, openSet, gScores);
         }
@@ -248,50 +253,49 @@ public final class TacticalPathfinder {
   }
 
   private static double heuristic(int x, int y, int z, int tx, int ty, int tz) {
-    double dx = tx - x;
+    int dx = Math.abs(tx - x);
+    int dz = Math.abs(tz - z);
+    // Octile distance for 8-direction movement
+    double hDist = (dx + dz) + (1.414 - 2.0) * Math.min(dx, dz);
     double dy = ty - y;
-    double dz = tz - z;
-    // Extra weight if target is above us; lower weight if target is below because dropping down is easier
     double verticalMultiplier = dy > 0 ? 1.35 : 0.85;
-    return Math.sqrt(dx * dx + dz * dz) + Math.abs(dy) * verticalMultiplier;
+    return hDist + Math.abs(dy) * verticalMultiplier;
   }
 
   public static boolean isFloor(Block block) {
+    if (block == null) return false;
     Material type = block.getType();
     if (TacticalMovement.hazardous(type)) return false;
-    if (type.isSolid()) return true;
-    if (TacticalMovement.water(type)) return true;
-    if (block.getBlockData() instanceof Slab slab && slab.getType() == Slab.Type.BOTTOM) return true;
-    return false;
+    if (TacticalMovement.water(block)) return true;
+    return TacticalMovement.getCollisionMaxY(block) > 0.0;
   }
 
   public static boolean isSolid(Block block) {
+    if (block == null) return true;
     Material type = block.getType();
     if (TacticalMovement.hazardous(type)) return false;
-    return type.isSolid() || block.getBlockData() instanceof Slab || block.getBlockData() instanceof Stairs;
+    return TacticalMovement.getCollisionMaxY(block) > 0.0;
   }
 
   public static boolean isPassable(Block block) {
-    Material type = block.getType();
-    if (TacticalMovement.hazardous(type)) return false;
-    return block.isPassable() || TacticalMovement.water(type);
+    if (block == null) return false;
+    return TacticalMovement.clear(block);
   }
 
   public static int findStandingY(World world, int x, int y, int z) {
-    // Check around given y to find safe standing position
     for (int offset = 0; offset <= 4; offset++) {
       int testY = y + offset;
-      if (isFloor(world.getBlockAt(x, testY - 1, z))
-          && isPassable(world.getBlockAt(x, testY, z))
-          && isPassable(world.getBlockAt(x, testY + 1, z))) {
+      if (isFloor(TacticalMovement.getBlock(world, x, testY - 1, z))
+          && isPassable(TacticalMovement.getBlock(world, x, testY, z))
+          && isPassable(TacticalMovement.getBlock(world, x, testY + 1, z))) {
         return testY;
       }
     }
     for (int offset = 1; offset <= 8; offset++) {
       int testY = y - offset;
-      if (isFloor(world.getBlockAt(x, testY - 1, z))
-          && isPassable(world.getBlockAt(x, testY, z))
-          && isPassable(world.getBlockAt(x, testY + 1, z))) {
+      if (isFloor(TacticalMovement.getBlock(world, x, testY - 1, z))
+          && isPassable(TacticalMovement.getBlock(world, x, testY, z))
+          && isPassable(TacticalMovement.getBlock(world, x, testY + 1, z))) {
         return testY;
       }
     }
@@ -299,9 +303,9 @@ public final class TacticalPathfinder {
   }
 
   private static boolean canDirectStep(World world, int x1, int y1, int z1, int x2, int y2, int z2) {
-    return isPassable(world.getBlockAt(x2, y2, z2))
-        && isPassable(world.getBlockAt(x2, y2 + 1, z2))
-        && isFloor(world.getBlockAt(x2, y2 - 1, z2));
+    return isPassable(TacticalMovement.getBlock(world, x2, y2, z2))
+        && isPassable(TacticalMovement.getBlock(world, x2, y2 + 1, z2))
+        && isFloor(TacticalMovement.getBlock(world, x2, y2 - 1, z2));
   }
 
   private static Path buildPath(World world, Node endNode) {
