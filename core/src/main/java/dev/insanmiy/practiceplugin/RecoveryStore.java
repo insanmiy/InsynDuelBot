@@ -2,11 +2,13 @@ package dev.insanmiy.practiceplugin;
 
 import java.io.*;
 import java.nio.file.*;
+import java.util.*;
 import org.bukkit.*;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.persistence.PersistentDataType;
+import org.bukkit.potion.PotionEffect;
 
 public final class RecoveryStore {
   private final PracticePlugin plugin;
@@ -55,6 +57,27 @@ public final class RecoveryStore {
     c.set("xp-progress", p.getExp());
     c.set("xp-total", p.getTotalExperience());
     c.set("pearl-cooldown", p.getCooldown(Material.ENDER_PEARL));
+    c.set("gamemode", p.getGameMode().name());
+    c.set("absorption", p.getAbsorptionAmount());
+
+    List<Map<String, Object>> effectsList = new ArrayList<>();
+    for (PotionEffect effect : p.getActivePotionEffects()) {
+      effectsList.add(effect.serialize());
+    }
+    c.set("potion-effects", effectsList);
+
+    ItemStack[] contents = p.getInventory().getContents();
+    for (int i = 0; i < contents.length; i++) {
+      ItemStack item = contents[i];
+      if (item != null && !item.getType().isAir()) {
+        c.set("inventory." + i, Base64.getEncoder().encodeToString(item.serializeAsBytes()));
+      }
+    }
+    ItemStack cursor = p.getItemOnCursor();
+    if (cursor != null && !cursor.getType().isAir()) {
+      c.set("cursor", Base64.getEncoder().encodeToString(cursor.serializeAsBytes()));
+    }
+
     Path temporary = file.toPath().resolveSibling(file.getName() + ".tmp");
     c.save(temporary.toFile());
     try {
@@ -97,6 +120,45 @@ public final class RecoveryStore {
       p.setVelocity(new org.bukkit.util.Vector());
       p.setCooldown(Material.SHIELD, 0);
       p.setCooldown(Material.ENDER_PEARL, c.getInt("pearl-cooldown", 0));
+
+      if (c.contains("gamemode")) {
+        try {
+          p.setGameMode(GameMode.valueOf(c.getString("gamemode")));
+        } catch (Exception ignored) {}
+      }
+      if (c.contains("absorption")) {
+        p.setAbsorptionAmount(c.getDouble("absorption", 0.0));
+      }
+      if (c.contains("potion-effects")) {
+        for (Map<?, ?> map : c.getMapList("potion-effects")) {
+          try {
+            @SuppressWarnings("unchecked")
+            Map<String, Object> cast = (Map<String, Object>) map;
+            p.addPotionEffect(new PotionEffect(cast));
+          } catch (Exception ignored) {}
+        }
+      }
+
+      if (c.contains("inventory")) {
+        p.getInventory().clear();
+        var invSec = c.getConfigurationSection("inventory");
+        if (invSec != null) {
+          for (String key : invSec.getKeys(false)) {
+            try {
+              int slot = Integer.parseInt(key);
+              byte[] bytes = Base64.getDecoder().decode(invSec.getString(key));
+              p.getInventory().setItem(slot, ItemStack.deserializeBytes(bytes));
+            } catch (Exception ignored) {}
+          }
+        }
+      }
+      if (c.contains("cursor")) {
+        try {
+          byte[] bytes = Base64.getDecoder().decode(c.getString("cursor"));
+          p.setItemOnCursor(ItemStack.deserializeBytes(bytes));
+        } catch (Exception ignored) {}
+      }
+
       if (!p.teleport(location)) throw new IOException("Return Teleport Was Cancelled");
       p.saveData();
       Files.delete(file.toPath());

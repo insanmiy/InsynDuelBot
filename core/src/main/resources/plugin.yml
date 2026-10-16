@@ -13,10 +13,14 @@ commands:
     permission: practice.use
 permissions:
   practice.use:
+    description: Allows opening practice menus, starting bot duels, and configuring player settings
+    default: true
+  practice.kits:
+    description: Create and edit custom kits (up to 50) in the kit editor
     default: true
   practice.admin:
+    description: Full administrative control over practice bot arenas, player matches, and plugin reload
     default: op
-  practice.kits:
-    description: Create Custom Kits (Up To 50) And Edit Your Own Kits
-    default: true
-
+    children:
+      practice.use: true
+      practice.kits: true

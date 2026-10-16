@@ -44,7 +44,7 @@ session:
   round-timeout-seconds: 0
 
 # Name of the practice bot entity shown in game.
-bot-name: YourNameHere
+bot-name: PracticeBot
 
 # Display the real-time match BossBar showing bot health and round status.
 hud: false
@@ -73,6 +73,9 @@ menu-animations: true
 # - attacks-enabled:     Whether the bot actively attacks back (set false for peaceful / passive).
 difficulties:
   dummy:
+    display-name: "Target Dummy"
+    icon: TARGET
+    description: "Passive sandbox dummy that never attacks back."
     decision-ticks: 10
     perception-ticks: 10
     aim-error: 14.0
@@ -86,6 +89,9 @@ difficulties:
     attacks-enabled: false
 
   lt5:
+    display-name: "LT5 · Novice"
+    icon: WOODEN_SWORD
+    description: "Slow reactions and wide aim. Great for learning basic mechanics."
     decision-ticks: 10
     perception-ticks: 10
     aim-error: 14.0
@@ -98,6 +104,9 @@ difficulties:
     shield-ticks: 8
 
   ht5:
+    display-name: "HT5 · Beginner"
+    icon: STONE_SWORD
+    description: "Modest strafing and occasional blocks with basic combo resets."
     decision-ticks: 6
     perception-ticks: 6
     aim-error: 8.0
@@ -110,6 +119,9 @@ difficulties:
     shield-ticks: 7
 
   lt4:
+    display-name: "LT4 · Competent"
+    icon: IRON_SWORD
+    description: "Solid fundamentals: blocks ~45%, W-taps ~45%, counters shields."
     decision-ticks: 4
     perception-ticks: 3
     aim-error: 4.5
@@ -122,6 +134,9 @@ difficulties:
     shield-ticks: 7
 
   ht4:
+    display-name: "HT4 · Skilled"
+    icon: IRON_SWORD
+    description: "Quick reaction time, 75% W-tap combo resets, active shielding."
     decision-ticks: 3
     perception-ticks: 2
     aim-error: 2.5
@@ -134,6 +149,9 @@ difficulties:
     shield-ticks: 6
 
   lt3:
+    display-name: "LT3 · Advanced"
+    icon: DIAMOND_SWORD
+    description: "Sharp aim (2.0° error), heavy strafe dodging, fast shield counters."
     decision-ticks: 2
     perception-ticks: 2
     aim-error: 2.0
@@ -146,6 +164,9 @@ difficulties:
     shield-ticks: 6
 
   ht3:
+    display-name: "HT3 · Expert"
+    icon: DIAMOND_SWORD
+    description: "Relentless pressure: 1.0° aim, 95% W-taps, aggressive shield play."
     decision-ticks: 2
     perception-ticks: 1
     aim-error: 1.0
@@ -158,6 +179,9 @@ difficulties:
     shield-ticks: 5
 
   lt2:
+    display-name: "LT2 · Master"
+    icon: NETHERITE_SWORD
+    description: "1-tick decisions, pinpoint 0.5° aim, 100% W-taps, near-instant defense."
     decision-ticks: 1
     perception-ticks: 1
     aim-error: 0.5
@@ -170,6 +194,9 @@ difficulties:
     shield-ticks: 5
 
   ht2:
+    display-name: "HT2 · Grandmaster"
+    icon: NETHERITE_SWORD
+    description: "High-tier mastery: 0.2° aim error, maximum mobility, rapid punishment."
     decision-ticks: 1
     perception-ticks: 1
     aim-error: 0.2
@@ -182,6 +209,9 @@ difficulties:
     shield-ticks: 5
 
   lt1:
+    display-name: "LT1 · Elite"
+    icon: NETHERITE_SWORD
+    description: "Instant reaction (0ms perception), laser aim (0.1°), 98% shield rate."
     decision-ticks: 1
     perception-ticks: 0
     aim-error: 0.1
@@ -194,6 +224,9 @@ difficulties:
     shield-ticks: 5
 
   ht1:
+    display-name: "HT1 · Apex"
+    icon: NETHERITE_SWORD
+    description: "Flawless robotic precision: 0.0° aim, 0ms reaction, 100% defense."
     decision-ticks: 1
     perception-ticks: 0
     aim-error: 0.0

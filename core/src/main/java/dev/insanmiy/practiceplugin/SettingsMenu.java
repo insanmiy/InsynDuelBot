@@ -1,5 +1,6 @@
 package dev.insanmiy.practiceplugin;
 
+import dev.insanmiy.practiceplugin.config.Difficulty;
 import java.io.*;
 import java.util.*;
 import net.kyori.adventure.text.Component;
@@ -164,7 +165,17 @@ final class SettingsMenu implements Listener {
   void open(Player p) {
     if (plugin.sessionFor(p) != null)
       throw new IllegalArgumentException("Use /practice Stop Before Changing Match Settings.");
-    View view = new View(p);
+
+    boolean canReuse = false;
+    View view = null;
+    if (p.getOpenInventory().getTopInventory().getHolder() instanceof View currentView
+        && currentView.owner.equals(p.getUniqueId())) {
+      canReuse = true;
+      view = currentView;
+    } else {
+      view = new View(p);
+    }
+
     for (int i = 0; i < 54; i++)
       view.inventory.setItem(i, item(Material.GRAY_STAINED_GLASS_PANE, " "));
     PlayerSettings prefs = plugin.settings();
@@ -179,6 +190,7 @@ final class SettingsMenu implements Listener {
             "Movement, Tactics, And Match Rules In-Game.",
             "No Config.yml Editing Required!"));
 
+    View targetView = view;
     BOT_SETTINGS.forEach(
         (slot, def) -> {
           int currentLevel = prefs.botSetting(id, def.key());
@@ -187,7 +199,7 @@ final class SettingsMenu implements Listener {
                   ? "Default (From Difficulty)"
                   : def.levelNames()[currentLevel];
           boolean isCustom = currentLevel >= 0;
-          view.inventory.setItem(
+          targetView.inventory.setItem(
               slot,
               item(
                   def.icon(),
@@ -202,7 +214,7 @@ final class SettingsMenu implements Listener {
     FLAGS.forEach(
         (slot, key) -> {
           boolean on = prefs.flag(id, key);
-          view.inventory.setItem(
+          targetView.inventory.setItem(
               slot,
               item(
                   on ? Material.LIME_DYE : Material.GRAY_DYE,
@@ -214,12 +226,12 @@ final class SettingsMenu implements Listener {
 
     NUMBERS.forEach(
         (slot, key) ->
-            view.inventory.setItem(
+            targetView.inventory.setItem(
                 slot,
                 item(
                     slot == 28 ? Material.CLOCK : slot == 29 ? Material.COMPASS : Material.COOKED_BEEF,
                     title(key) + ": " + prefs.number(id, key) + (key.equals("saturation") ? "" : "s"),
-                    "Left: Increase | Right: Decrease",
+                    "Left: Increase | Right: Decrease (Shift: ±5)",
                     key.equals("saturation")
                         ? "Starting Saturation For Both Fighters"
                         : "Seconds; Applies Next Session")));
@@ -252,7 +264,10 @@ final class SettingsMenu implements Listener {
             "Their Default Values From Difficulty Tier.",
             "Click To Reset"));
     view.inventory.setItem(53, item(Material.BARRIER, "Close"));
-    p.openInventory(view.inventory);
+
+    if (!canReuse) {
+      p.openInventory(view.inventory);
+    }
   }
 
   private static String flagDescription(String key) {
@@ -270,7 +285,7 @@ final class SettingsMenu implements Listener {
   }
 
   private static String title(String text) {
-    return text.replace('_', ' ').replace('-', ' ');
+    return Difficulty.formatName(text);
   }
 
   private static ItemStack item(Material type, String name, String... lore) {
@@ -294,6 +309,7 @@ final class SettingsMenu implements Listener {
         || e.getRawSlot() >= 54) return;
     int slot = e.getRawSlot();
     boolean right = e.isRightClick();
+    boolean shift = e.isShiftClick();
     Bukkit.getScheduler()
         .runTask(
             plugin,
@@ -304,11 +320,11 @@ final class SettingsMenu implements Listener {
                 p.closeInventory();
                 return;
               }
-              apply(p, slot, right);
+              apply(p, slot, right, shift);
             });
   }
 
-  private void apply(Player p, int slot, boolean right) {
+  private void apply(Player p, int slot, boolean right, boolean shift) {
     PlayerSettings prefs = plugin.settings();
     UUID id = p.getUniqueId();
     try {
@@ -349,12 +365,15 @@ final class SettingsMenu implements Listener {
         p.playSound(p.getLocation(), Sound.UI_BUTTON_CLICK, 0.4f, 1.2f);
       } else if (FLAGS.containsKey(slot)) {
         String key = FLAGS.get(slot);
-        prefs.set(id, key, !prefs.flag(id, key));
-        p.playSound(p.getLocation(), Sound.UI_BUTTON_CLICK, 0.4f, 1.0f);
+        boolean next = !prefs.flag(id, key);
+        prefs.set(id, key, next);
+        p.playSound(p.getLocation(), Sound.BLOCK_NOTE_BLOCK_PLING, 0.4f, next ? 1.5f : 0.8f);
       } else if (NUMBERS.containsKey(slot)) {
         String key = NUMBERS.get(slot);
         int max = key.equals("saturation") ? 20 : 60, min = key.equals("saturation") ? 0 : 1;
-        prefs.set(id, key, Math.max(min, Math.min(max, prefs.number(id, key) + (right ? -1 : 1))));
+        int step = shift ? 5 : 1;
+        int delta = right ? -step : step;
+        prefs.set(id, key, Math.max(min, Math.min(max, prefs.number(id, key) + delta)));
         p.playSound(p.getLocation(), Sound.UI_BUTTON_CLICK, 0.4f, 1.0f);
       } else return;
       open(p);

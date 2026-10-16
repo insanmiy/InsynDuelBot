@@ -47,11 +47,11 @@ final class PracticeMenu implements Listener {
 
   private static final class View implements AnimatedMenu {
     final UUID owner;
-    final Selection choice;
-    final Screen screen;
-    final String category;
-    final int page;
-    final List<String> entries;
+    Selection choice;
+    Screen screen;
+    String category;
+    int page;
+    List<String> entries;
     final Inventory inventory;
 
     View(
@@ -61,21 +61,24 @@ final class PracticeMenu implements Listener {
         String category,
         int page,
         List<String> entries) {
-      owner = player.getUniqueId();
+      this.owner = player.getUniqueId();
       this.choice = choice;
       this.screen = screen;
       this.category = category;
       this.page = page;
       this.entries = entries;
-      String title =
-          switch (screen) {
-            case KITS -> "Practice / Select Kit";
-            case PREVIEW -> "Preview / " + pretty(choice.kit());
-            case DIFFICULTIES -> "Practice / Select Difficulty";
-            case MODES -> "Practice / Select Mode";
-            case STATS -> "Practice / Your Statistics";
-          };
-      inventory = TextUI.inventory(this, 54, text(title, NamedTextColor.DARK_AQUA));
+      String title = titleFor(screen, choice);
+      this.inventory = TextUI.inventory(this, 54, text(title, NamedTextColor.DARK_AQUA));
+    }
+
+    static String titleFor(Screen screen, Selection choice) {
+      return switch (screen) {
+        case KITS -> "Practice / Select Kit";
+        case PREVIEW -> "Preview / " + pretty(choice.kit());
+        case DIFFICULTIES -> "Practice / Select Difficulty";
+        case MODES -> "Practice / Select Mode";
+        case STATS -> "Practice / Your Statistics";
+      };
     }
 
     @Override
@@ -102,7 +105,7 @@ final class PracticeMenu implements Listener {
 
   private void show(
       Player player, Selection selection, Screen screen, String category, int requestedPage) {
-    if (plugin.kits().isEmpty() || plugin.difficulties().isEmpty()){
+    if (plugin.kits().isEmpty() || plugin.difficulties().isEmpty()) {
       throw new IllegalArgumentException("No Valid Kits Or Difficulties. Check Configuration.");
     }
     Selection choice =
@@ -133,8 +136,26 @@ final class PracticeMenu implements Listener {
                         .map(Kit::name)
                         .toList();
     int page = MenuPaging.clamp(requestedPage, entries.size());
-    View view = new View(player, choice, screen, category, page, entries);
+
+    boolean canReuse = false;
+    View view = null;
+    if (player.getOpenInventory().getTopInventory().getHolder() instanceof View currentView) {
+      if (currentView.owner.equals(player.getUniqueId())
+          && currentView.screen == screen
+          && (screen != Screen.PREVIEW || currentView.choice.kit().equals(choice.kit()))) {
+        canReuse = true;
+        currentView.choice = choice;
+        currentView.category = category;
+        currentView.page = page;
+        currentView.entries = entries;
+        view = currentView;
+      }
+    }
+    if (!canReuse) {
+      view = new View(player, choice, screen, category, page, entries);
+    }
     Inventory inventory = view.inventory;
+    inventory.clear();
 
     ItemStack divider = icon(Material.GRAY_STAINED_GLASS_PANE, " ", NamedTextColor.DARK_GRAY, false);
     for (int slot : new int[] {9, 17, 18, 26, 27, 35}) {
@@ -146,8 +167,7 @@ final class PracticeMenu implements Listener {
 
     Kit selected = plugin.kits().get(choice.kit());
 
-    if (screen == Screen.KITS){
-      // Custom Kit Editor on the left. Categories in the middle. Close on the right
+    if (screen == Screen.KITS) {
       inventory.setItem(
           0,
           icon(
@@ -172,7 +192,7 @@ final class PracticeMenu implements Listener {
 
       inventory.setItem(8, icon(Material.BARRIER, "Close Menu", NamedTextColor.RED, false));
 
-      if (entries.isEmpty()){
+      if (entries.isEmpty()) {
         inventory.setItem(
             22,
             icon(
@@ -183,8 +203,7 @@ final class PracticeMenu implements Listener {
                 "Shift Click A Kit To Favorite It",
                 "Click All To Browse Every Kit"));
       }
-    }
-    else {
+    } else {
       inventory.setItem(
           4,
           icon(
@@ -196,7 +215,7 @@ final class PracticeMenu implements Listener {
       inventory.setItem(8, icon(Material.BARRIER, "Close Menu", NamedTextColor.RED, false));
     }
 
-    if (screen == Screen.PREVIEW){
+    if (screen == Screen.PREVIEW) {
       for (int slot = 0; slot < 41; slot++) {
         inventory.setItem(slot, null);
       }
@@ -204,7 +223,7 @@ final class PracticeMenu implements Listener {
           .previewItems()
           .forEach(
               (slot, item) -> {
-                if (!item.getType().isAir()){
+                if (!item.getType().isAir()) {
                   dev.insanmiy.practiceplugin.ItemMetadata.edit(item,
                       meta -> {
                         List<Component> lore =
@@ -237,43 +256,38 @@ final class PracticeMenu implements Listener {
               selected.regeneration() ? "Enabled: Vanilla Saturation Healing" : "Disabled For This Kit"));
       inventory.setItem(
           43, icon(Material.RED_DYE, selected.health() + " HP Each", NamedTextColor.RED, false));
-    }
-    else {
+    } else {
       int from = page * MenuPaging.PAGE_SIZE;
       for (int index = 0; index < MenuPaging.PAGE_SIZE && from + index < entries.size(); index++) {
         String name = entries.get(from + index);
         ItemStack card;
-        if (screen == Screen.KITS){
+        if (screen == Screen.KITS) {
           Kit kit = plugin.kits().get(name);
+          Material mat = kit != null && kit.icon() != null && kit.icon() != Material.AIR ? kit.icon() : Material.IRON_SWORD;
           card =
               icon(
-                  kit.category().equals("potion")
-                      ? Material.SPLASH_POTION
-                      : kit.category().equals("web")
-                          ? Material.COBWEB
-                          : kit.category().equals("ranged") ? Material.BOW : kit.icon(),
+                  mat,
                   (starred.contains(name) ? "* " : "") + pretty(name),
                   choice.kit().equals(name) ? NamedTextColor.GREEN : NamedTextColor.AQUA,
                   choice.kit().equals(name),
-                  kit.description(),
+                  kit != null ? kit.description() : "",
                   "",
-                  kit.health() + " HP | Regen: " + (kit.regeneration() ? "Enabled" : "Disabled"),
-                  kit.count(Material.GOLDEN_APPLE) + " Apples | " + kit.count(Material.SPLASH_POTION) + " Potions",
-                  kit.count(Material.COBWEB) + " Webs | " + kit.count(Material.EXPERIENCE_BOTTLE) + " XP Bottles",
+                  kit != null ? (kit.health() + " HP | Regen: " + (kit.regeneration() ? "Enabled" : "Disabled")) : "",
+                  kit != null ? (kit.count(Material.GOLDEN_APPLE) + " Apples | " + kit.count(Material.SPLASH_POTION) + " Potions") : "",
+                  kit != null ? (kit.count(Material.COBWEB) + " Webs | " + kit.count(Material.EXPERIENCE_BOTTLE) + " XP Bottles") : "",
                   "",
-                  choice.kit().equals(name) ? "» Selected «" : "Left Click: Select",
+                  choice.kit().equals(name) ? "\u00bb Selected \u00ab" : "Left Click: Select",
                   "Right Click: Preview | Shift Click: Favorite");
-        }
-        else if (screen == Screen.DIFFICULTIES){
+        } else if (screen == Screen.DIFFICULTIES) {
           var d = plugin.difficulties().get(name);
           Material mat = d != null ? d.effectiveIcon() : Material.IRON_SWORD;
           String dispName = d != null ? d.prettyDisplayName() : pretty(name);
           List<String> lore = new ArrayList<>();
-          if (d != null && d.description() != null && !d.description().isBlank()){
+          if (d != null && d.description() != null && !d.description().isBlank()) {
             lore.add(d.description());
             lore.add("");
           }
-          if (d != null){
+          if (d != null) {
             lore.add("Decision Interval: " + d.decisionTicks() + " Ticks");
             lore.add("Perception Delay: " + d.perceptionTicks() + " Ticks");
             lore.add("Aim Error: " + String.format(Locale.ROOT, "%.1f", d.aimError()) + " Degrees");
@@ -283,7 +297,7 @@ final class PracticeMenu implements Listener {
             lore.add("Heal Urgency: " + Math.round(d.healThreshold() * 100) + "% HP");
           }
           lore.add("");
-          lore.add(choice.difficulty().equals(name) ? "» Selected «" : "Click To Select");
+          lore.add(choice.difficulty().equals(name) ? "\u00bb Selected \u00ab" : "Click To Select");
           card =
               icon(
                   mat,
@@ -291,8 +305,7 @@ final class PracticeMenu implements Listener {
                   choice.difficulty().equals(name) ? NamedTextColor.GREEN : NamedTextColor.GOLD,
                   choice.difficulty().equals(name),
                   lore.toArray(String[]::new));
-        }
-        else if (screen == Screen.MODES){
+        } else if (screen == Screen.MODES) {
           PracticeMode mode = PracticeMode.parse(name);
           Material modeIcon =
               switch (mode) {
@@ -313,8 +326,7 @@ final class PracticeMenu implements Listener {
                           ? "Single 1v1 Duel To Knockout"
                           : "Continuous Rounds With Score Tracking",
                   "Click To Select");
-        }
-        else {
+        } else {
           card =
               icon(
                   Material.BOOK,
@@ -330,8 +342,8 @@ final class PracticeMenu implements Listener {
       }
     }
 
-    if (screen != Screen.PREVIEW){
-      if (page > 0){
+    if (screen != Screen.PREVIEW) {
+      if (page > 0) {
         inventory.setItem(36, icon(Material.ARROW, "Previous Page", NamedTextColor.AQUA, false));
       }
       int totalPages = Math.max(1, MenuPaging.pages(entries.size()));
@@ -343,7 +355,7 @@ final class PracticeMenu implements Listener {
               NamedTextColor.YELLOW,
               false,
               entries.size() + " Total Entries"));
-      if (page + 1 < totalPages){
+      if (page + 1 < totalPages) {
         inventory.setItem(44, icon(Material.ARROW, "Next Page", NamedTextColor.AQUA, false));
       }
     }
@@ -403,18 +415,32 @@ final class PracticeMenu implements Listener {
             "Left Click: +2 Rounds",
             "Right Click: -2 Rounds"));
 
+    boolean arenaAvailable = plugin.hasConfiguredArena();
+    List<String> startLore = new ArrayList<>();
+    if (!arenaAvailable) {
+      startLore.add("No arena configured on this server.");
+      startLore.add("Ask an admin to configure spawns:");
+      startLore.add("/practice arena setplayer & setbot");
+    } else {
+      startLore.add("Kit: " + pretty(choice.kit()));
+      startLore.add("Difficulty: " + diffDisplayName);
+      startLore.add("Mode: " + pretty(currentMode.id()));
+      if (plugin.settings().hasBotOverrides(player.getUniqueId())) {
+        startLore.add("");
+        startLore.add("! Custom Bot Tuning Active");
+      }
+      startLore.add("");
+      startLore.add("Click To Launch Practice");
+    }
+
     inventory.setItem(
         49,
         icon(
-            Material.LIME_CONCRETE,
-            "Start Practice",
-            NamedTextColor.GREEN,
-            true,
-            "Kit: " + pretty(choice.kit()),
-            "Difficulty: " + diffDisplayName,
-            "Mode: " + pretty(currentMode.id()),
-            "",
-            "Click To Launch Practice"));
+            arenaAvailable ? Material.LIME_CONCRETE : Material.RED_CONCRETE,
+            arenaAvailable ? "Start Practice" : "No Arena Configured",
+            arenaAvailable ? NamedTextColor.GREEN : NamedTextColor.RED,
+            arenaAvailable,
+            startLore.toArray(String[]::new)));
 
     inventory.setItem(
         50,
@@ -451,7 +477,9 @@ final class PracticeMenu implements Listener {
 
     inventory.setItem(53, icon(Material.BARRIER, "Close Menu", NamedTextColor.RED, false));
 
-    player.openInventory(inventory);
+    if (!canReuse) {
+      player.openInventory(inventory);
+    }
   }
 
   private static String pretty(String value) {
@@ -470,17 +498,17 @@ final class PracticeMenu implements Listener {
           TextUI.name(meta, text(name, color));
           List<Component> lines = new ArrayList<>();
           for (String raw : lore) {
-            if (raw == null || raw.isBlank()){
+            if (raw == null || raw.isBlank()) {
               lines.add(Component.empty());
               continue;
             }
             StringBuilder line = new StringBuilder();
             for (String word : raw.split(" ")) {
-              if (line.length() > 0 && line.length() + word.length() + 1 > 38){
+              if (line.length() > 0 && line.length() + word.length() + 1 > 38) {
                 lines.add(text(line.toString(), NamedTextColor.GRAY));
                 line.setLength(0);
               }
-              if (line.length() > 0){
+              if (line.length() > 0) {
                 line.append(' ');
               }
               line.append(word);
@@ -497,16 +525,16 @@ final class PracticeMenu implements Listener {
 
   @EventHandler
   public void click(InventoryClickEvent event) {
-    if (!(event.getView().getTopInventory().getHolder() instanceof View view)){
+    if (!(event.getView().getTopInventory().getHolder() instanceof View view)) {
       return;
     }
     event.setCancelled(true);
     if (!(event.getWhoClicked() instanceof Player player)
-        || !view.owner.equals(player.getUniqueId())){
+        || !view.owner.equals(player.getUniqueId())) {
       return;
     }
     int slot = event.getRawSlot();
-    if (slot < 0 || slot >= 54){
+    if (slot < 0 || slot >= 54) {
       return;
     }
     boolean right = event.isRightClick(), shift = event.isShiftClick();
@@ -515,10 +543,10 @@ final class PracticeMenu implements Listener {
             plugin,
             () -> {
               if (!player.isOnline()
-                  || player.getOpenInventory().getTopInventory().getHolder() != view){
+                  || player.getOpenInventory().getTopInventory().getHolder() != view) {
                 return;
               }
-              if (!player.hasPermission("practice.use")){
+              if (!player.hasPermission("practice.use")) {
                 player.closeInventory();
                 return;
               }
@@ -527,15 +555,15 @@ final class PracticeMenu implements Listener {
                 player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, .35f, 1.1f);
 
                 // Actions on KITS screen
-                if (view.screen == Screen.KITS && slot == 0){
+                if (view.screen == Screen.KITS && slot == 0) {
                   Bukkit.dispatchCommand(player, "practice kit editor");
                   return;
                 }
-                if (view.screen == Screen.KITS && slot >= 1 && slot <= 7){
+                if (view.screen == Screen.KITS && slot >= 1 && slot <= 7) {
                   show(player, choice, Screen.KITS, CATEGORIES.get(slot - 1), 0);
                   return;
                 }
-                if (slot == 8){
+                if (slot == 8) {
                   player.closeInventory();
                   return;
                 }
@@ -544,12 +572,12 @@ final class PracticeMenu implements Listener {
                 int index = MenuPaging.index(slot);
                 if (view.screen != Screen.PREVIEW
                     && index >= 0
-                    && view.page * MenuPaging.PAGE_SIZE + index < view.entries.size()){
+                    && view.page * MenuPaging.PAGE_SIZE + index < view.entries.size()) {
                   String name = view.entries.get(view.page * MenuPaging.PAGE_SIZE + index);
-                  if (view.screen == Screen.KITS){
-                    if (shift){
+                  if (view.screen == Screen.KITS) {
+                    if (shift) {
                       Set<String> starred = favorites(player);
-                      if (!starred.remove(name)){
+                      if (!starred.remove(name)) {
                         starred.add(name);
                       }
                       String key = player.getUniqueId().toString();
@@ -562,16 +590,14 @@ final class PracticeMenu implements Listener {
                         throw failure;
                       }
                       show(player, choice, Screen.KITS, view.category, view.page);
-                    }
-                    else if (right){
+                    } else if (right) {
                       show(
                           player,
                           new Selection(name, choice.difficulty(), choice.mode(), choice.bestOf()),
                           Screen.PREVIEW,
                           view.category,
                           view.page);
-                    }
-                    else {
+                    } else {
                       show(
                           player,
                           new Selection(name, choice.difficulty(), choice.mode(), choice.bestOf()),
@@ -579,16 +605,14 @@ final class PracticeMenu implements Listener {
                           view.category,
                           view.page);
                     }
-                  }
-                  else if (view.screen == Screen.DIFFICULTIES){
+                  } else if (view.screen == Screen.DIFFICULTIES) {
                     show(
                         player,
                         new Selection(choice.kit(), name, choice.mode(), choice.bestOf()),
                         Screen.KITS,
                         view.category,
                         0);
-                  }
-                  else if (view.screen == Screen.MODES){
+                  } else if (view.screen == Screen.MODES) {
                     PracticeMode chosenMode = PracticeMode.parse(name);
                     int bestOf = chosenMode == PracticeMode.MATCH
                         ? Math.max(3, choice.bestOf() % 2 == 0 ? choice.bestOf() + 1 : choice.bestOf())
@@ -610,12 +634,12 @@ final class PracticeMenu implements Listener {
                 // navigation and action bar
                 switch (slot) {
                   case 36 -> {
-                    if (view.screen != Screen.PREVIEW && view.page > 0){
+                    if (view.screen != Screen.PREVIEW && view.page > 0) {
                       show(player, choice, view.screen, view.category, view.page - 1);
                     }
                   }
                   case 44 -> {
-                    if (view.screen != Screen.PREVIEW && view.page + 1 < MenuPaging.pages(view.entries.size())){
+                    if (view.screen != Screen.PREVIEW && view.page + 1 < MenuPaging.pages(view.entries.size())) {
                       show(player, choice, view.screen, view.category, view.page + 1);
                     }
                   }
@@ -623,18 +647,16 @@ final class PracticeMenu implements Listener {
                     show(player, choice, Screen.KITS, "all", 0);
                   }
                   case 46 -> {
-                    if (view.screen == Screen.DIFFICULTIES){
+                    if (view.screen == Screen.DIFFICULTIES) {
                       show(player, choice, Screen.KITS, view.category, 0);
-                    }
-                    else {
+                    } else {
                       show(player, choice, Screen.DIFFICULTIES, view.category, 0);
                     }
                   }
                   case 47 -> {
-                    if (view.screen == Screen.MODES){
+                    if (view.screen == Screen.MODES) {
                       show(player, choice, Screen.KITS, view.category, 0);
-                    }
-                    else {
+                    } else {
                       show(player, choice, Screen.MODES, view.category, 0);
                     }
                   }
@@ -650,19 +672,13 @@ final class PracticeMenu implements Listener {
                         view.page);
                   }
                   case 49 -> {
-                    if (view.screen == Screen.DIFFICULTIES || view.screen == Screen.MODES || view.screen == Screen.STATS){
-                      show(player, choice, Screen.KITS, view.category, 0);
-                    }
-                    else {
-                      player.closeInventory();
-                      plugin.startFromMenu(player, choice);
-                    }
+                    player.closeInventory();
+                    plugin.startFromMenu(player, choice);
                   }
                   case 50 -> {
-                    if (view.screen == Screen.PREVIEW){
+                    if (view.screen == Screen.PREVIEW) {
                       show(player, choice, Screen.KITS, view.category, view.page);
-                    }
-                    else {
+                    } else {
                       show(player, choice, Screen.PREVIEW, view.category, view.page);
                     }
                   }
@@ -670,10 +686,9 @@ final class PracticeMenu implements Listener {
                     plugin.openSettings(player);
                   }
                   case 52 -> {
-                    if (view.screen == Screen.STATS){
+                    if (view.screen == Screen.STATS) {
                       show(player, choice, Screen.KITS, view.category, 0);
-                    }
-                    else {
+                    } else {
                       show(player, choice, Screen.STATS, view.category, 0);
                     }
                   }
@@ -694,7 +709,7 @@ final class PracticeMenu implements Listener {
 
   @EventHandler
   public void drag(InventoryDragEvent event) {
-    if (event.getView().getTopInventory().getHolder() instanceof View){
+    if (event.getView().getTopInventory().getHolder() instanceof View) {
       event.setCancelled(true);
     }
   }
@@ -709,7 +724,7 @@ final class PracticeMenu implements Listener {
 
   void closeAll() {
     for (Player player : Bukkit.getOnlinePlayers()) {
-      if (player.getOpenInventory().getTopInventory().getHolder() instanceof View){
+      if (player.getOpenInventory().getTopInventory().getHolder() instanceof View) {
         player.closeInventory();
       }
     }

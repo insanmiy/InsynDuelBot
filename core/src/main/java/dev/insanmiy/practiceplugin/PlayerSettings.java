@@ -51,6 +51,30 @@ final class PlayerSettings {
     return data.getInt(id + "." + key, -1);
   }
 
+  boolean hasBotOverrides(UUID id) {
+    String[] botKeys = {
+      "bot-aim",
+      "bot-reaction",
+      "bot-attack-charge",
+      "bot-sprint-reset",
+      "bot-shield-chance",
+      "bot-strafe-speed",
+      "bot-heal-threshold"
+    };
+    for (String k : botKeys) {
+      if (data.contains(id + "." + k) && data.getInt(id + "." + k, -1) != -1) {
+        return true;
+      }
+    }
+    String[] toggleKeys = {"healing", "utilities", "criticals", "shields", "strafing", "counters"};
+    for (String k : toggleKeys) {
+      if (data.contains(id + "." + k) && !data.getBoolean(id + "." + k, true)) {
+        return true;
+      }
+    }
+    return false;
+  }
+
   void resetBotSettings(UUID id) throws IOException {
     String[] botKeys = {
       "bot-aim",

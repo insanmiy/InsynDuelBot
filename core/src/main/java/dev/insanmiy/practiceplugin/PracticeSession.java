@@ -8,6 +8,7 @@ import java.util.*;
 import org.bukkit.boss.BossBar;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
+import net.kyori.adventure.text.format.TextDecoration;
 import net.kyori.adventure.title.Title;
 import org.bukkit.*;
 import org.bukkit.attribute.Attribute;
@@ -25,6 +26,7 @@ public final class PracticeSession {
   final Difficulty difficulty;
   final PracticeMode mode;
   final Match match;
+  final int roundTimeoutSeconds;
   String arenaName = "default";
   boolean endingRound;
   final BotOptions options;
@@ -63,6 +65,7 @@ public final class PracticeSession {
     startingSaturation = plugin.settings().number(owner.getUniqueId(), "saturation");
     this.mode = mode;
     hud = plugin.settings().flag(owner.getUniqueId(), "hud");
+    roundTimeoutSeconds = plugin.getConfig().getInt("session.round-timeout-seconds", 0);
     match =
         new Match(
             plugin.settings().number(owner.getUniqueId(), "countdown") * 20,
@@ -212,16 +215,47 @@ public final class PracticeSession {
     if (fighting()) totalFightTicks++;
     bot.tick(owner, difficulty, arena, fighting());
     if (closing) return;
-    int timeout = plugin.getConfig().getInt("session.round-timeout-seconds", 0);
-    if (timeout > 0 && fighting() && tick - fightStart >= timeout * 20L) {
+    if (roundTimeoutSeconds > 0 && fighting() && tick - fightStart >= roundTimeoutSeconds * 20L) {
       owner.sendMessage(TextUI.legacy(Component.text("Round Timed Out; Resetting.")));
       fightStart = tick;
       resetRound();
     }
+
+    if (match.phase() == Match.Phase.COUNTDOWN) {
+      int remaining = match.remaining();
+      if (remaining > 0 && remaining % 20 == 0) {
+        int seconds = remaining / 20;
+        if (seconds <= 5 && seconds >= 1) {
+          NamedTextColor color =
+              seconds <= 1
+                  ? NamedTextColor.RED
+                  : (seconds == 2 ? NamedTextColor.GOLD : NamedTextColor.YELLOW);
+          owner.showTitle(
+              Title.title(
+                  Component.text(seconds, color, TextDecoration.BOLD),
+                  Component.text("Round " + match.round(), NamedTextColor.GRAY),
+                  Title.Times.times(
+                      java.time.Duration.ZERO,
+                      java.time.Duration.ofMillis(750),
+                      java.time.Duration.ofMillis(250))));
+          owner.playSound(owner.getLocation(), Sound.BLOCK_NOTE_BLOCK_HAT, 0.8f, 1.0f);
+        }
+      }
+    }
+
     if (match.tick()) {
       if (match.phase() == Match.Phase.COUNTDOWN) resetRound();
       else if (match.phase() == Match.Phase.FIGHT) {
         fightStart = tick;
+        owner.showTitle(
+            Title.title(
+                Component.text("FIGHT!", NamedTextColor.RED, TextDecoration.BOLD),
+                Component.empty(),
+                Title.Times.times(
+                    java.time.Duration.ZERO,
+                    java.time.Duration.ofMillis(1000),
+                    java.time.Duration.ofMillis(500))));
+        owner.playSound(owner.getLocation(), Sound.BLOCK_NOTE_BLOCK_BELL, 0.8f, 1.5f);
         owner.sendMessage(TextUI.legacy(Component.text("Fight! /practice Stop To Finish.")));
       }
     }
@@ -404,9 +438,11 @@ public final class PracticeSession {
     captureLayout();
     bar.removePlayer(owner);
     TextUI.actionBar(owner, Component.empty());
-    owner.sendMessage(TextUI.legacy(
-        Component.text(
-            "Session: " + roundsWon + "W/" + roundsLost + "L | " + total.summary(totalFightTicks))));
+    if (totalFightTicks > 0 || roundsWon + roundsLost > 0) {
+      owner.sendMessage(TextUI.legacy(
+          Component.text(
+              "Session: " + roundsWon + "W/" + roundsLost + "L | " + total.summary(totalFightTicks))));
+    }
     try {
       try {
         plugin.clearUtilities(this);
@@ -423,6 +459,23 @@ public final class PracticeSession {
         plugin.progress().record(this);
       }
     }
+
+    Component actions = Component.text("  ")
+        .append(Component.text("[Rematch]", NamedTextColor.GREEN, TextDecoration.BOLD)
+            .clickEvent(net.kyori.adventure.text.event.ClickEvent.runCommand("/practice rematch"))
+            .hoverEvent(net.kyori.adventure.text.event.HoverEvent.showText(
+                Component.text("Click to rematch with the same kit & difficulty", NamedTextColor.GRAY))))
+        .append(Component.text("   "))
+        .append(Component.text("[Kit Menu]", NamedTextColor.AQUA, TextDecoration.BOLD)
+            .clickEvent(net.kyori.adventure.text.event.ClickEvent.runCommand("/practice menu"))
+            .hoverEvent(net.kyori.adventure.text.event.HoverEvent.showText(
+                Component.text("Click to open the practice kit selection menu", NamedTextColor.GRAY))))
+        .append(Component.text("   "))
+        .append(Component.text("[Settings]", NamedTextColor.GOLD, TextDecoration.BOLD)
+            .clickEvent(net.kyori.adventure.text.event.ClickEvent.runCommand("/practice settings"))
+            .hoverEvent(net.kyori.adventure.text.event.HoverEvent.showText(
+                Component.text("Click to customize bot settings", NamedTextColor.GRAY))));
+    owner.sendMessage(actions);
   }
 
   private void stripModifiers(Player player, boolean save) {
