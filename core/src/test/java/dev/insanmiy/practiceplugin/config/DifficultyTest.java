@@ -23,11 +23,23 @@ class DifficultyTest {
             "lt4", 4, 3, 4.5, 1.0, 0.45, true, 0.45, 0.55, 0.48, 7, true, "LT4 · Competent", "Description", Material.IRON_SWORD);
     assertEquals("LT4 · Competent", dWithCustom.prettyDisplayName());
     assertEquals(Material.IRON_SWORD, dWithCustom.effectiveIcon());
+    assertEquals(0.50, dWithCustom.critChance());
 
     Difficulty dDefault =
         new Difficulty(
             "lt4", 4, 3, 4.5, 1.0, 0.45, true, 0.45, 0.55, 0.48, 7, true);
     assertEquals("LT4", dDefault.prettyDisplayName());
+    assertEquals(0.50, dDefault.critChance());
+  }
+
+  @Test
+  void testDefaultCritChance() {
+    assertEquals(0.98, Difficulty.defaultCritChance(1));
+    assertEquals(0.85, Difficulty.defaultCritChance(2));
+    assertEquals(0.85, Difficulty.defaultCritChance(3));
+    assertEquals(0.50, Difficulty.defaultCritChance(4));
+    assertEquals(0.50, Difficulty.defaultCritChance(6));
+    assertEquals(0.20, Difficulty.defaultCritChance(10));
   }
 
   @Test
@@ -55,6 +67,11 @@ class DifficultyTest {
     assertEquals(0.5, modified.aimError());
     assertEquals(0.95, modified.attackCharge());
     assertEquals(0.7, modified.shieldChance());
+    assertEquals(0.50, modified.critChance());
+
+    BotOptions noCrits = new BotOptions(true, true, false, true, true);
+    Difficulty disabledCrits = base.withOptions(noCrits);
+    assertEquals(0.0, disabledCrits.critChance());
   }
 
   @Test
@@ -65,5 +82,9 @@ class DifficultyTest {
         new Difficulty("invalid", 4, -1, 4.0, 1.0, 0.5, false, 0.5));
     assertThrows(IllegalArgumentException.class, () ->
         new Difficulty("invalid", 4, 2, 50.0, 1.0, 0.5, false, 0.5)); // aimError > 45
+    assertThrows(IllegalArgumentException.class, () ->
+        new Difficulty("invalid", 4, 2, 4.0, 1.0, 0.5, false, 0.5, 0.65, 0.5, 6, true, -0.1, null, null, null));
+    assertThrows(IllegalArgumentException.class, () ->
+        new Difficulty("invalid", 4, 2, 4.0, 1.0, 0.5, false, 0.5, 0.65, 0.5, 6, true, 1.5, null, null, null));
   }
 }

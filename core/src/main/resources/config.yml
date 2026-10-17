@@ -8,7 +8,7 @@ config-version: 7
 arena:
   # Block protection radius (in blocks) around the arena center.
   # Outside players cannot place or break blocks within this area.
-  radius: 32.0
+  radius: 128.0
 
   # Maximum allowed arena radius limit (in blocks).
   # Set to 0.0 for unlimited arena radius.
@@ -17,7 +17,7 @@ arena:
 # Session & Match Defaults
 session:
   # Default kit chosen when a player opens the practice menu for the first time.
-  default-kit: modern-netherite-sword
+  default-kit: modern-diamond-sword
 
   # Default bot combat difficulty tier (can be any difficulty defined under 'difficulties:').
   default-difficulty: lt4
@@ -29,13 +29,13 @@ session:
   default-mode: match
 
   # Series round count for "match" mode (e.g. 5 = best of 5, first to 3 wins).
-  best-of: 5
+  best-of: 3
 
   # Starting saturation level for both fighters at the start of each round (0.0 - 20.0).
   starting-saturation: 20.0
 
   # Pre-match countdown delay in seconds before combat begins.
-  countdown-seconds: 5
+  countdown-seconds: 4
 
   # Pause delay in seconds between rounds in a series before the next round begins.
   between-round-seconds: 3
@@ -47,7 +47,7 @@ session:
 bot-name: PracticeBot
 
 # Display the real-time match BossBar showing bot health and round status.
-hud: false
+hud: true
 
 # Enable animated pulsing glass panes and glint effects in plugin GUI menus.
 menu-animations: true
@@ -69,7 +69,8 @@ menu-animations: true
 # - counters:            Whether the bot equips an axe to disable shields when the opponent blocks.
 # - sprint-reset-chance: Chance to sprint-reset (W-tap) after each hit to deal combo knockback (0.0 - 1.0).
 # - strafe-strength:     Lateral dodging movement speed multiplier (0.0 - 1.0; 1.0 = max strafe).
-# - heal-threshold:      Health percentage threshold to drink/splash pots or eat gapples (0.0 - 1.0).
+# - heal-threshold:      Health percentage threshold to drink/splash pots or eat golden apples (0.0 - 1.0).
+# - crit-chance:         Chance to attempt a jump critical hit instead of a normal ground hit (0.0 - 1.0).
 # - attacks-enabled:     Whether the bot actively attacks back (set false for peaceful / passive).
 difficulties:
   dummy:
@@ -86,6 +87,7 @@ difficulties:
     strafe-strength: 0.2
     heal-threshold: 0.35
     shield-ticks: 8
+    crit-chance: 0.0
     attacks-enabled: false
 
   lt5:
@@ -102,6 +104,7 @@ difficulties:
     strafe-strength: 0.2
     heal-threshold: 0.35
     shield-ticks: 8
+    crit-chance: 0.20
 
   ht5:
     display-name: "HT5 · Beginner"
@@ -117,6 +120,7 @@ difficulties:
     strafe-strength: 0.4
     heal-threshold: 0.42
     shield-ticks: 7
+    crit-chance: 0.35
 
   lt4:
     display-name: "LT4 · Competent"
@@ -132,6 +136,7 @@ difficulties:
     strafe-strength: 0.55
     heal-threshold: 0.48
     shield-ticks: 7
+    crit-chance: 0.50
 
   ht4:
     display-name: "HT4 · Skilled"
@@ -147,6 +152,7 @@ difficulties:
     strafe-strength: 0.7
     heal-threshold: 0.55
     shield-ticks: 6
+    crit-chance: 0.70
 
   lt3:
     display-name: "LT3 · Advanced"
@@ -162,6 +168,7 @@ difficulties:
     strafe-strength: 0.8
     heal-threshold: 0.6
     shield-ticks: 6
+    crit-chance: 0.85
 
   ht3:
     display-name: "HT3 · Expert"
@@ -177,6 +184,7 @@ difficulties:
     strafe-strength: 0.85
     heal-threshold: 0.65
     shield-ticks: 5
+    crit-chance: 0.90
 
   lt2:
     display-name: "LT2 · Master"
@@ -192,6 +200,7 @@ difficulties:
     strafe-strength: 0.9
     heal-threshold: 0.68
     shield-ticks: 5
+    crit-chance: 0.95
 
   ht2:
     display-name: "HT2 · Grandmaster"
@@ -207,6 +216,7 @@ difficulties:
     strafe-strength: 0.95
     heal-threshold: 0.7
     shield-ticks: 5
+    crit-chance: 0.98
 
   lt1:
     display-name: "LT1 · Elite"
@@ -222,6 +232,7 @@ difficulties:
     strafe-strength: 1.0
     heal-threshold: 0.72
     shield-ticks: 5
+    crit-chance: 1.0
 
   ht1:
     display-name: "HT1 · Apex"
@@ -237,3 +248,4 @@ difficulties:
     strafe-strength: 1.0
     heal-threshold: 0.75
     shield-ticks: 5
+    crit-chance: 1.0

@@ -98,7 +98,7 @@ public final class TacticalMovement {
       if (edgeMaxY <= 0.6) {
         // Step-up without jump (e.g. carpet, slab)
         Block headroom = getBlock(world, blockX, Location.locToBlock(currentY + 1.0), blockZ);
-        if (headroom != null && clear(headroom)) {
+        if (clear(headroom)) {
           return currentY + edgeMaxY;
         }
         return null;
@@ -107,9 +107,9 @@ public final class TacticalMovement {
         Block stepFeet = getBlock(world, blockX, Location.locToBlock(currentY + 1.0), blockZ);
         Block stepHead = getBlock(world, blockX, Location.locToBlock(currentY + 2.0), blockZ);
         Block jumpHeadroom = getBlock(world, blockX, Location.locToBlock(fromY + 2.0), blockZ);
-        if (stepFeet != null && clear(stepFeet)
-            && stepHead != null && clear(stepHead)
-            && jumpHeadroom != null && clear(jumpHeadroom)) {
+        if (clear(stepFeet)
+			&& clear(stepHead)
+			&& clear(jumpHeadroom)) {
           return currentY + 1.0;
         }
         return null;
@@ -118,7 +118,7 @@ public final class TacticalMovement {
 
     // Feet level is clear; ensure eye level is clear
     Block aboveBlock = getBlock(world, blockX, Location.locToBlock(currentY + 1.0), blockZ);
-    if (aboveBlock == null || !clear(aboveBlock)) return null;
+    if (!clear(aboveBlock)) return null;
 
     // Check immediate floor at current elevation
     Block floorBlock = getBlock(world, blockX, Location.locToBlock(currentY - 0.15), blockZ);
@@ -133,7 +133,7 @@ public final class TacticalMovement {
     // Ledge drops (1 to 3 blocks down)
     for (int drop = 1; drop <= 3; drop++) {
       Block dropAir = getBlock(world, blockX, Location.locToBlock(currentY - drop + 0.85), blockZ);
-      if (dropAir == null || !clear(dropAir)) return null;
+      if (!clear(dropAir)) return null;
 
       Block landing = getBlock(world, blockX, Location.locToBlock(currentY - drop - 0.15), blockZ);
       if (landing == null || hazardous(landing.getType())) return null;

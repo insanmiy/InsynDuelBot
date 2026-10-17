@@ -17,9 +17,45 @@ public record Difficulty(
     double healThreshold,
     int shieldTicks,
     boolean attacksEnabled,
+    double critChance,
     String displayName,
     String description,
     Material icon) {
+
+  public Difficulty(
+      String name,
+      int decisionTicks,
+      int perceptionTicks,
+      double aimError,
+      double attackCharge,
+      double shieldChance,
+      boolean counters,
+      double sprintResetChance,
+      double strafeStrength,
+      double healThreshold,
+      int shieldTicks,
+      boolean attacksEnabled,
+      String displayName,
+      String description,
+      Material icon) {
+    this(
+        name,
+        decisionTicks,
+        perceptionTicks,
+        aimError,
+        attackCharge,
+        shieldChance,
+        counters,
+        sprintResetChance,
+        strafeStrength,
+        healThreshold,
+        shieldTicks,
+        attacksEnabled,
+        defaultCritChance(decisionTicks),
+        displayName,
+        description,
+        icon);
+  }
 
   public Difficulty(
       String name,
@@ -47,6 +83,7 @@ public record Difficulty(
         healThreshold,
         shieldTicks,
         attacksEnabled,
+        defaultCritChance(decisionTicks),
         null,
         null,
         null);
@@ -74,9 +111,14 @@ public record Difficulty(
         .5,
         6,
         true,
+        defaultCritChance(decisions),
         null,
         null,
         null);
+  }
+
+  public static double defaultCritChance(int decisionTicks) {
+    return decisionTicks <= 1 ? 0.98 : (decisionTicks <= 3 ? 0.85 : (decisionTicks <= 6 ? 0.50 : 0.20));
   }
 
   public Difficulty {
@@ -93,6 +135,7 @@ public record Difficulty(
         || !unit(sprintResetChance)
         || !unit(strafeStrength)
         || !unit(healThreshold)
+        || !unit(critChance)
         || shieldTicks < 1
         || shieldTicks > 40)
       throw new IllegalArgumentException("Invalid Difficulty Values For " + name);
@@ -142,9 +185,11 @@ public record Difficulty(
     String iconName = c.getString("icon", null);
     Material parsedIcon = null;
     if (iconName != null) parsedIcon = Material.matchMaterial(iconName);
+    int decisionTicks = c.getInt("decision-ticks", 4);
+    double defaultCrit = defaultCritChance(decisionTicks);
     return new Difficulty(
         name,
-        c.getInt("decision-ticks", 4),
+        decisionTicks,
         c.getInt("perception-ticks", 2),
         c.getDouble("aim-error", 4.0),
         c.getDouble("attack-charge", 1.0),
@@ -155,6 +200,7 @@ public record Difficulty(
         c.getDouble("heal-threshold", .5),
         c.getInt("shield-ticks", 6),
         c.getBoolean("attacks-enabled", true),
+        c.getDouble("crit-chance", defaultCrit),
         dispName,
         desc,
         parsedIcon);
@@ -174,6 +220,7 @@ public record Difficulty(
         healThreshold,
         shieldTicks,
         false,
+        0.0,
         displayName,
         description,
         icon);
@@ -196,6 +243,7 @@ public record Difficulty(
             ? 0
             : (options.strafeStrength() >= 0 ? options.strafeStrength() : strafeStrength);
     double heal = options.healThreshold() >= 0 ? options.healThreshold() : healThreshold;
+    double crit = !options.criticals() ? 0.0 : critChance;
     return new Difficulty(
         name,
         dec,
@@ -209,6 +257,7 @@ public record Difficulty(
         heal,
         shieldTicks,
         attacksEnabled,
+        crit,
         displayName,
         description,
         icon);

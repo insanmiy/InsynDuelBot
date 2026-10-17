@@ -262,7 +262,12 @@ public final class NmsBot implements BotPlatform {
       handle.stopUsingItem();
       return;
     }
-    if (ticks >= resetSprintUntil && !handle.isSprinting() && handle.zza > 0 && d.attacksEnabled() && ticks >= shieldUntil) {
+    if (ticks >= resetSprintUntil
+        && !handle.isSprinting()
+        && handle.zza > 0
+        && d.attacksEnabled()
+        && ticks >= shieldUntil
+        && (!critical.tracking(ticks) || handle.onGround())) {
       handle.setSprinting(true);
     }
     // Record target position history
@@ -364,7 +369,10 @@ public final class NmsBot implements BotPlatform {
       waypointIndex = 0;
       handle.zza = distance > 1.1 ? 1.0f : Math.clamp((float) (0.35f + d.sprintResetChance() * 0.45f), 0.25f, 0.9f);
       handle.xxa = distance < 5 ? (float) d.strafeStrength() * strafe : 0;
-      handle.setSprinting(ticks >= resetSprintUntil && (distance > 1.0 || d.sprintResetChance() >= 0.7));
+      boolean canSprint = ticks >= resetSprintUntil
+          && (distance > 1.0 || d.sprintResetChance() >= 0.7)
+          && (!critical.tracking(ticks) || handle.onGround());
+      handle.setSprinting(canSprint);
     } else {
       if (currentPath == null
           || ticks - lastPathTick > 12
@@ -473,9 +481,9 @@ public final class NmsBot implements BotPlatform {
     handle.stopUsingItem();
     // Check line of sight and obstructions
     Vector facing = player().getEyeLocation().getDirection();
-    var hit = target.getBoundingBox().expand(0.2).rayTrace(player().getEyeLocation().toVector(), facing, 3.0);
+    var hit = target.getBoundingBox().expand(0.2).rayTrace(player().getEyeLocation().toVector(), facing, 3.2);
     double rayLength =
-        hit == null ? 3.0 : hit.getHitPosition().distance(player().getEyeLocation().toVector());
+        hit == null ? 3.2 : hit.getHitPosition().distance(player().getEyeLocation().toVector());
     var obstruction = CombatSight.obstruction(player(), facing, rayLength);
     if (obstruction != null) {
       if (obstruction.getType() == Material.COBWEB) utility.clearWeb(obstruction, ticks);
@@ -491,33 +499,44 @@ public final class NmsBot implements BotPlatform {
                 d.attackCharge());
     boolean critEligible =
         options.criticals()
+            && d.critChance() > 0.0
             && !handle.onClimbable()
             && !handle.isInWater()
             && !handle.isPassenger()
             && !handle.hasEffect(net.minecraft.world.effect.MobEffects.BLINDNESS)
             && !handle.level().paperConfig().entities.behavior.disablePlayerCrits
             && !perceived.blocking();
-    double critChance = d.decisionTicks() <= 1 ? 0.98 : (d.decisionTicks() <= 3 ? 0.85 : (d.decisionTicks() <= 6 ? 0.50 : 0.20));
+    boolean inAttackRange = (hit != null || distance <= 3.2) && player().hasLineOfSight(target);
+    boolean canJump =
+        !handle.horizontalCollision
+            && handle.level()
+                .noCollision(handle, handle.getBoundingBox().expandTowards(0, 1.3, 0));
+    boolean chooseJump = inAttackRange && canJump && random.nextDouble() < d.critChance();
+
+    boolean falling = !handle.onGround()
+        && handle.getDeltaMovement().y < 0
+        && (handle.fallDistance > 0 || handle.getDeltaMovement().y < -0.05);
+    if (falling && handle.fallDistance <= 0.0f) {
+      handle.fallDistance = (float) Math.max(0.1, -handle.getDeltaMovement().y);
+    }
+
     // Check if critical jump is ready
     CriticalWindow.Action criticalAction =
         critical.decide(
             ticks,
             handle.onGround(),
-            handle.fallDistance > 0 && handle.getDeltaMovement().y < 0,
+            falling,
             critEligible,
             ready,
-            distance <= 3.0 && player().hasLineOfSight(target),
-            distance <= 2.9
-                && !handle.horizontalCollision
-                && handle.level()
-                    .noCollision(handle, handle.getBoundingBox().expandTowards(0, 1.3, 0))
-                && random.nextDouble() < critChance);
+            inAttackRange,
+            chooseJump);
     if (criticalAction != CriticalWindow.Action.NONE) {
       handle.setSprinting(false);
       handle.zza = 1.0f;
       handle.xxa *= .5f;
       if (criticalAction == CriticalWindow.Action.JUMP) {
         handle.jumpFromGround();
+        resetSprintUntil = ticks + 12;
         return;
       }
       if (criticalAction == CriticalWindow.Action.WAIT) return;
@@ -526,13 +545,15 @@ public final class NmsBot implements BotPlatform {
         target.getInventory().getItemInMainHand().getType().name().endsWith("_AXE");
     // Attack target and reset sprint
     if (ready && hit != null && player().hasLineOfSight(target)) {
+      handle.setSprinting(false);
       swingClock.attempted(ticks);
       strike(player(), target);
       critical.attacked();
       if (random.nextDouble() < d.sprintResetChance()) {
-        handle.setSprinting(false);
         int sprintDelay = Math.max(1, (int) Math.round((1.0 - d.sprintResetChance()) * 5.0 + 1.0));
         resetSprintUntil = ticks + sprintDelay;
+      } else {
+        resetSprintUntil = ticks + 1;
       }
     // Block with shield if safe
     } else if (distance < 3.6
@@ -561,7 +582,6 @@ public final class NmsBot implements BotPlatform {
     if (!critical.tracking(ticks)
         || utility.busy(ticks)
         || handle.onGround()
-        || handle.fallDistance <= 0
         || handle.getDeltaMovement().y >= 0
         || handle.onClimbable()
         || handle.isInWater()
@@ -569,6 +589,9 @@ public final class NmsBot implements BotPlatform {
         || handle.hasEffect(net.minecraft.world.effect.MobEffects.BLINDNESS)
         || handle.level().paperConfig().entities.behavior.disablePlayerCrits
         || !Kit.melee(player().getInventory().getItemInMainHand().getType())) return;
+    if (handle.fallDistance <= 0.0f) {
+      handle.fallDistance = (float) Math.max(0.1, -handle.getDeltaMovement().y);
+    }
     double charge = handle.getAttackStrengthScale(0);
     double minCharge = currentDifficulty != null ? currentDifficulty.attackCharge() : 1.0;
     if (!swingClock.ready(
@@ -578,7 +601,7 @@ public final class NmsBot implements BotPlatform {
             minCharge)
         || charge < minCharge) return;
     Vector direction = player().getEyeLocation().getDirection();
-    var hit = target.getBoundingBox().expand(0.2).rayTrace(player().getEyeLocation().toVector(), direction, 3.0);
+    var hit = target.getBoundingBox().expand(0.2).rayTrace(player().getEyeLocation().toVector(), direction, 3.2);
     if (hit == null
         || CombatSight.obstruction(
                 player(),
@@ -590,8 +613,12 @@ public final class NmsBot implements BotPlatform {
     strike(player(), target);
     critical.attacked();
     double sprintChance = currentDifficulty != null ? currentDifficulty.sprintResetChance() : 0.85;
-    int sprintDelay = Math.max(1, (int) Math.round((1.0 - sprintChance) * 5.0 + 1.0));
-    resetSprintUntil = ticks + sprintDelay;
+    if (random.nextDouble() < sprintChance) {
+      int sprintDelay = Math.max(1, (int) Math.round((1.0 - sprintChance) * 5.0 + 1.0));
+      resetSprintUntil = ticks + sprintDelay;
+    } else {
+      resetSprintUntil = ticks + 1;
+    }
   }
 
   // Avoid falling into hazards
@@ -690,3 +717,4 @@ public final class NmsBot implements BotPlatform {
     public void send(@NotNull Packet<?> packet, PacketSendListener listener, boolean flush) {}
   }
 }
+
