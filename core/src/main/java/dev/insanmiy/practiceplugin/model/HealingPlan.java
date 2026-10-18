@@ -44,19 +44,20 @@ public final class HealingPlan {
             && (s.hunger() <= 18 || s.saturation() < 4 || s.naturalRegeneration() && fraction < .9);
     boolean golden =
         s.golden()
-            && ((!s.regenerating() && fraction <= Math.min(.85, s.threshold() + .2))
-                || !s.food() && s.hunger() <= 6);
+            && (fraction <= Math.min(.85, Math.max(.75, s.threshold() + .25))
+                || s.absorption() < 3.0
+                || (!s.food() && s.hunger() <= 6));
     boolean safe =
         (s.distance() >= 5 || s.covered() && s.distance() >= 3.5)
             && s.health() + s.absorption() > s.incoming() * 1.5;
     if (safe) {
-      if (golden && (fraction < .65 || s.incoming() > s.maximum() * .12 || !food))
+      if (golden && (fraction < .65 || s.incoming() > s.maximum() * .12 || !food || s.absorption() < 3.0))
         return Action.GOLDEN;
       if (food) return Action.FOOD;
       if (golden) return Action.GOLDEN;
       if (healingNeeded && s.splash() && !s.regenerating()) return Action.SPLASH;
     } else if (healingNeeded && s.splash()) return Action.SPLASH;
-    if ((food || golden) && s.escape() && s.seekingTicks() < 24) return Action.RETREAT;
+    if (!urgent(s) && (food || golden) && s.escape() && s.seekingTicks() < 24) return Action.RETREAT;
     if (golden && (!s.splash() || urgent(s))) return Action.GOLDEN;
     if (food && (s.hunger() <= 6 || s.seekingTicks() >= 24)) return Action.FOOD;
     return Action.NONE;

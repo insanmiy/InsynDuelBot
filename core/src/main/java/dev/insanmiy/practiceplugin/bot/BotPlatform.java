@@ -26,6 +26,8 @@ public interface BotPlatform extends AutoCloseable {
 
   default void onOpponentPearled(Player opponent) {}
 
+  default void onTotemPopped() {}
+
   default void configure(
       dev.insanmiy.practiceplugin.model.BotOptions options, boolean naturalRegeneration) {}
 

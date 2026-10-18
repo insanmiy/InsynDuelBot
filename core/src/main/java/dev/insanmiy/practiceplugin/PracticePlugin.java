@@ -867,6 +867,17 @@ public final class PracticePlugin extends JavaPlugin implements Listener {
     session.bot.onIncomingDamage(event.getFinalDamage());
   }
 
+  @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
+  public void resurrect(EntityResurrectEvent e) {
+    PracticeSession session = sessionFor(e.getEntity());
+    if (session == null
+        || !session.fighting()
+        || session.bot == null
+        || !e.getEntity().equals(session.bot.player())) return;
+
+    session.bot.onTotemPopped();
+  }
+
   @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
   public void damage(EntityDamageEvent e) {
     Entity source = e instanceof EntityDamageByEntityEvent by ? by.getDamager() : null;

@@ -226,6 +226,11 @@ public final class NmsBot implements BotPlatform {
   }
 
   @Override
+  public void onTotemPopped() {
+    utility.onTotemPopped(ticks);
+  }
+
+  @Override
   public void configure(
       dev.insanmiy.practiceplugin.model.BotOptions options, boolean naturalRegeneration) {
     this.options = options;

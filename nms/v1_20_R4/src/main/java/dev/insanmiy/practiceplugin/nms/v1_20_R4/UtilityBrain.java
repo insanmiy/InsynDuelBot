@@ -60,6 +60,9 @@ final class UtilityBrain {
   private Vector cachedEscape;
   private boolean repairWorking;
   private int repairSeekingSince = -1, nextRepairSeek, nextArmorSwap;
+  private int postTotemRecoveryUntil;
+  private int totemPoppedTick = -1000;
+  private int lastEscapePearlTick = -1000;
   private int nextPitEscape, nextBlockPlace, pitStuckTicks;
   private Location lastPitCheckLoc;
   private int digStuckTicks;
@@ -98,6 +101,9 @@ final class UtilityBrain {
     nextEscapeCheck = 0;
     repairWorking = false;
     repairSeekingSince = -1;
+    postTotemRecoveryUntil = 0;
+    totemPoppedTick = -1000;
+    lastEscapePearlTick = -1000;
     nextPitEscape = nextBlockPlace = pitStuckTicks = 0;
     lastPitCheckLoc = null;
     digStuckTicks = 0;
@@ -117,7 +123,30 @@ final class UtilityBrain {
         || mining != null
         || preparingSplash >= 0
         || tick < splashUntil
-        || handle.isUsingItem();
+        || handle.isUsingItem()
+        || (tick < postTotemRecoveryUntil
+            && (player().getHealth()
+                    / Attributes.getValue(player(), Attributes.MAX_HEALTH, 20.0))
+                < 0.85);
+  }
+
+  void onTotemPopped(int tick) {
+    postTotemRecoveryUntil = tick + 80;
+    totemPoppedTick = tick;
+    nextTotem = 0;
+    Player self = player();
+    int totemSlot = find(i -> i.getType() == Material.TOTEM_OF_UNDYING);
+    if (totemSlot >= 0 && self.getInventory().getItemInOffHand().getType() != Material.TOTEM_OF_UNDYING) {
+      ItemStack totemItem = self.getInventory().getItem(totemSlot);
+      ItemStack displaced =
+          self.getInventory().getItemInOffHand().getType().isAir()
+              ? null
+              : self.getInventory().getItemInOffHand().clone();
+      self.getInventory().setItem(totemSlot, displaced);
+      self.getInventory().setItemInOffHand(totemItem);
+      NmsBot.synchronizeEquipment(self);
+      nextTotem = tick + 2;
+    }
   }
 
   void onOpponentHit(int tick) {
@@ -231,6 +260,18 @@ final class UtilityBrain {
     }
     if (water(tick)) {
       repair.stop(tick);
+      return true;
+    }
+
+    if (options.useUtilities()
+        && (tick < postTotemRecoveryUntil
+            || (HealingPlan.urgent(healing) && fraction <= 0.35 && distance < 6.0))) {
+      if (escapePearl(target, difficulty, tick, distance, fraction, healing)) return true;
+    }
+
+    if (tick < postTotemRecoveryUntil && fraction < 0.85) {
+      if (options.useHealing() && heal(target, tick, fraction, healing)) return true;
+      retreat();
       return true;
     }
 
@@ -781,7 +822,8 @@ final class UtilityBrain {
             && Boolean.TRUE.equals(self.getWorld().getGameRuleValue(GameRule.NATURAL_REGENERATION)),
         (self.getHealth()
                     < Attributes.getValue(self, Attributes.MAX_HEALTH, 20.0) * .9
-                || self.getFoodLevel() < 20)
+                || self.getFoodLevel() < 20
+                || self.getAbsorptionAmount() < 3.0)
             && escapeDirection() != null,
         covered,
         seekingSpaceSince < 0 ? 0 : tick - seekingSpaceSince);
@@ -969,16 +1011,77 @@ final class UtilityBrain {
     if (opponent != null) {
       Vector away = escapeDirection();
       if (away != null) {
-        float yaw = player().getLocation().setDirection(away).getYaw();
-        BotLook.towards(handle, yaw, 15, 40);
-        handle.zza =
-            Math.abs(dev.insanmiy.practiceplugin.model.LookMotion.delta(handle.getYRot(), yaw)) < 30
-                ? .65f
-                : 0;
-      } else handle.zza = 0;
-    } else handle.zza = -.65f;
+        float yaw = (float) Math.toDegrees(Math.atan2(-away.getX(), away.getZ()));
+        BotLook.towards(handle, yaw, 30, 60);
+        float delta =
+            Math.abs(dev.insanmiy.practiceplugin.model.LookMotion.delta(handle.getYRot(), yaw));
+        handle.zza = delta < 45 ? 1.0f : 0.6f;
+      } else handle.zza = -1.0f;
+    } else handle.zza = -1.0f;
     handle.xxa = 0;
-    handle.setSprinting(false);
+    if (!handle.isUsingItem()) {
+      handle.setSprinting(true);
+    } else {
+      handle.setSprinting(false);
+    }
+    if (handle.horizontalCollision && handle.onGround() && handle.zza > 0) {
+      handle.jumpFromGround();
+    }
+  }
+
+  private boolean escapePearl(
+      Player target,
+      Difficulty difficulty,
+      int tick,
+      double distance,
+      double fraction,
+      HealingPlan.State healing) {
+    if (tick < nextPearl || player().hasCooldown(Material.ENDER_PEARL)) return false;
+    if (lastEscapePearlTick >= totemPoppedTick && tick >= postTotemRecoveryUntil && tick - lastEscapePearlTick < 100) return false;
+    if (player().getHealth() + player().getAbsorptionAmount() <= 3.0) return false;
+    int pearlSlot = find(i -> i.getType() == Material.ENDER_PEARL);
+    if (pearlSlot < 0) return false;
+
+    Vector away = escapeDirection();
+    if (away == null || away.lengthSquared() < 0.001) {
+      away = player().getLocation().toVector().subtract(target.getLocation().toVector()).setY(0);
+    }
+    if (away.lengthSquared() < 0.001) {
+      away = player().getLocation().getDirection().setY(0).multiply(-1);
+    }
+    if (away.lengthSquared() < 0.001) {
+      away = new Vector(1, 0, 0);
+    }
+    away.normalize();
+
+    float yaw = (float) Math.toDegrees(Math.atan2(-away.getX(), away.getZ()));
+    float pitch = -28.0f;
+
+    Location eye = player().getEyeLocation();
+    Vector throwDir = new Location(player().getWorld(), 0, 0, 0, yaw, pitch).getDirection();
+    var hit = player().getWorld().rayTraceBlocks(eye, throwDir, 3.0, FluidCollisionMode.NEVER, true);
+    if (hit != null && hit.getHitBlock() != null && hit.getHitBlock().getType().isSolid()) {
+      return false;
+    }
+
+    handle.setYRot(yaw);
+    handle.setXRot(pitch);
+    handle.setYHeadRot(yaw);
+    BotLook.publish(handle);
+    prepare(
+        pearlSlot,
+        tick,
+        () -> {
+          handle.setYRot(yaw);
+          handle.setXRot(pitch);
+          handle.setYHeadRot(yaw);
+          BotLook.publish(handle);
+          nativeUse();
+          nextPearl = currentTick + 60;
+          lastEscapePearlTick = currentTick;
+        },
+        () -> true);
+    return true;
   }
 
   private Vector escapeDirection() {
@@ -1065,7 +1168,10 @@ final class UtilityBrain {
     double currentHealth = self.getHealth();
 
     double dangerThreshold = Math.max(0.40, difficulty.healThreshold());
-    boolean inDanger = currentHealth <= (dangerThreshold * 20.0) || healthFraction <= dangerThreshold;
+    boolean inDanger =
+        currentHealth <= (dangerThreshold * 20.0)
+            || healthFraction <= dangerThreshold
+            || tick < postTotemRecoveryUntil;
 
     if (totemSlot >= 0) {
       if (offhandType == Material.TOTEM_OF_UNDYING) {
@@ -1113,7 +1219,7 @@ final class UtilityBrain {
     if (totemSlot < 0) return;
     double currentHealth = self.getHealth();
     double maxHealth = Attributes.getValue(self, Attributes.MAX_HEALTH, 20.0);
-    if (currentHealth <= 10.0 || (currentHealth / maxHealth) <= 0.5) {
+    if (currentHealth <= 10.0 || (currentHealth / maxHealth) <= 0.5 || tick < postTotemRecoveryUntil) {
       ItemStack totemItem = self.getInventory().getItem(totemSlot);
       ItemStack displaced = offhand.getType().isAir() ? null : offhand.clone();
       self.getInventory().setItem(totemSlot, displaced);
