@@ -23,7 +23,6 @@ class MenuPagingTest {
     assertEquals(14, MenuPaging.index(28));
     assertEquals(20, MenuPaging.index(34));
 
-    // Invalid/decorative slots
     assertEquals(-1, MenuPaging.index(0));
     assertEquals(-1, MenuPaging.index(9));
     assertEquals(-1, MenuPaging.index(17));
@@ -41,6 +40,6 @@ class MenuPagingTest {
     assertEquals(0, MenuPaging.clamp(-1, 50));
     assertEquals(0, MenuPaging.clamp(0, 50));
     assertEquals(1, MenuPaging.clamp(1, 50));
-    assertEquals(2, MenuPaging.clamp(10, 50)); // Clamped to last page
+    assertEquals(2, MenuPaging.clamp(10, 50));
   }
 }

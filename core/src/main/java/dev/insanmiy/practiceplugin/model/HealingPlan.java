@@ -30,11 +30,15 @@ public final class HealingPlan {
   private HealingPlan() {}
 
   public static boolean urgent(State s) {
-    return s.health() <= s.maximum() * .3
-        || s.health() + s.absorption() <= s.incoming() + s.maximum() * .12;
+    if (s == null || s.maximum() <= 0) return false;
+    double fraction = s.health() / s.maximum();
+    if (fraction <= .3) return true;
+    return fraction <= Math.max(.35, s.threshold())
+        && s.health() + s.absorption() <= (s.incoming() * .35) + s.maximum() * .12;
   }
 
   public static Action choose(State s) {
+    if (s == null || s.maximum() <= 0) return Action.NONE;
     double fraction = s.health() / s.maximum();
     boolean healingNeeded = fraction <= Math.max(.5, s.threshold());
     if (s.splash() && s.maximum() - s.health() >= 2 && urgent(s)) return Action.SPLASH;
@@ -44,21 +48,23 @@ public final class HealingPlan {
             && (s.hunger() <= 18 || s.saturation() < 4 || s.naturalRegeneration() && fraction < .9);
     boolean golden =
         s.golden()
-            && (fraction <= Math.min(.85, Math.max(.75, s.threshold() + .25))
-                || s.absorption() < 3.0
+            && (fraction <= Math.min(.85, s.threshold() + .2)
                 || (!s.food() && s.hunger() <= 6));
     boolean safe =
         (s.distance() >= 5 || s.covered() && s.distance() >= 3.5)
             && s.health() + s.absorption() > s.incoming() * 1.5;
     if (safe) {
-      if (golden && (fraction < .65 || s.incoming() > s.maximum() * .12 || !food || s.absorption() < 3.0))
+      boolean refreshAbsorption =
+          s.golden() && s.absorption() < 3.0 && (fraction < 1.0 || s.absorption() == 0.0);
+      if (golden && (fraction < .65 || s.incoming() > s.maximum() * .12 || !food)
+          || refreshAbsorption)
         return Action.GOLDEN;
       if (food) return Action.FOOD;
       if (golden) return Action.GOLDEN;
       if (healingNeeded && s.splash() && !s.regenerating()) return Action.SPLASH;
     } else if (healingNeeded && s.splash()) return Action.SPLASH;
     if (!urgent(s) && (food || golden) && s.escape() && s.seekingTicks() < 24) return Action.RETREAT;
-    if (golden && (!s.splash() || urgent(s))) return Action.GOLDEN;
+    if (golden && urgent(s)) return Action.GOLDEN;
     if (food && (s.hunger() <= 6 || s.seekingTicks() >= 24)) return Action.FOOD;
     return Action.NONE;
   }

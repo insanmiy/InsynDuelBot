@@ -50,16 +50,7 @@ class DifficultyTest {
 
     BotOptions override =
         new BotOptions(
-            true, true, true, true, true,
-            0.5, // aimError override
-            2,   // decisionTicks override
-            1,   // perceptionTicks override
-            0.95, // attackCharge override
-            0.8,  // sprintReset override
-            0.7,  // shieldChance override
-            0.9,  // strafe override
-            0.6,  // heal override
-            true);
+            true, true, true, true, true, 0.5, 2, 1, 0.95, 0.8, 0.7, 0.9, 0.6, true);
 
     Difficulty modified = base.withOptions(override);
     assertEquals(2, modified.decisionTicks());
@@ -81,7 +72,7 @@ class DifficultyTest {
     assertThrows(IllegalArgumentException.class, () ->
         new Difficulty("invalid", 4, -1, 4.0, 1.0, 0.5, false, 0.5));
     assertThrows(IllegalArgumentException.class, () ->
-        new Difficulty("invalid", 4, 2, 50.0, 1.0, 0.5, false, 0.5)); // aimError > 45
+        new Difficulty("invalid", 4, 2, 50.0, 1.0, 0.5, false, 0.5));
     assertThrows(IllegalArgumentException.class, () ->
         new Difficulty("invalid", 4, 2, 4.0, 1.0, 0.5, false, 0.5, 0.65, 0.5, 6, true, -0.1, null, null, null));
     assertThrows(IllegalArgumentException.class, () ->

@@ -17,7 +17,7 @@ class CombatStatsTest {
     assertEquals(5.0, stats.taken());
     assertEquals(2, stats.hits());
     assertEquals(2, stats.longest());
-    assertEquals(0, stats.combo(120)); // hurt resets current combo
+    assertEquals(0, stats.combo(120));
   }
 
   @Test
@@ -27,9 +27,7 @@ class CombatStatsTest {
     stats.hit(5.0, 20);
     assertEquals(2, stats.combo(25));
 
-    // After combo timeout (> 40 ticks without hit)
     assertEquals(0, stats.combo(70));
-    // Longest combo remains 2
     assertEquals(2, stats.longest());
   }
 
@@ -38,7 +36,7 @@ class CombatStatsTest {
     CombatStats stats = new CombatStats();
     stats.swing();
     stats.swing();
-    stats.contact(); // 1 of 2 swings connected
+    stats.contact();
 
     assertEquals(50.0, stats.accuracy());
   }
