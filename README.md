@@ -38,7 +38,3 @@ Licensed Under The [MIT License](LICENSE).
 ## Contributing & Support
 
 Found A Bug Or Have An Idea? [Open An Issue](../../issues). Pull Requests Are Welcome.
-
-## Notice
-
-This Is A Passion Project, Nothing More.
