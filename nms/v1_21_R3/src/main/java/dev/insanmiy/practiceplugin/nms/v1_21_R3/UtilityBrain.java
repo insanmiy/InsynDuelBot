@@ -116,6 +116,7 @@ final class UtilityBrain {
 
   boolean busy(int tick) {
     return repairWorking
+        || repair.working()
         || prepared != null
         || handTiming.waiting(tick)
         || handTiming.settling(tick)
@@ -205,6 +206,10 @@ final class UtilityBrain {
         handTiming.reset();
         repair.stop(tick);
       } else {
+        if (repair.working() == true) {
+          repairWorking = true;
+          retreatForRepair();
+        }
         if (handTiming.ready(tick)) {
           prepared = null;
           intent.action().run();
@@ -213,7 +218,13 @@ final class UtilityBrain {
         return true;
       }
     }
-    if (handTiming.settling(tick)) return true;
+    if (handTiming.settling(tick)) {
+      if (repair.working() == true) {
+        repairWorking = true;
+        retreatForRepair();
+      }
+      return true;
+    }
     manageOffhand(tick, difficulty, fraction);
     Material active = self.getInventory().getItemInMainHand().getType();
     if (tick < splashUntil) {
@@ -269,12 +280,36 @@ final class UtilityBrain {
     }
 
     if (tick < postTotemRecoveryUntil && fraction < 0.85) {
-      if (options.useHealing() && heal(target, tick, fraction, healing)) return true;
+      if (options.useHealing()
+        && (tick < postTotemRecoveryUntil
+            || HealingPlan.urgent(healing) == true
+            || fraction < 0.65
+            || options.useUtilities() == false
+            || (repair.working() == false
+                && (tick < nextRepairSeek
+                    || repair.wantsRepair(
+                            tick,
+                            damagedMendingArmor(),
+                            find(i -> i.getType() == Material.EXPERIENCE_BOTTLE) >= 0)
+                        == false)))
+        && heal(target, tick, fraction, healing)) return true;
       retreat();
       return true;
     }
 
-    if (options.useHealing() && heal(target, tick, fraction, healing)) return true;
+    if (options.useHealing()
+        && (tick < postTotemRecoveryUntil
+            || HealingPlan.urgent(healing) == true
+            || fraction < 0.65
+            || options.useUtilities() == false
+            || (repair.working() == false
+                && (tick < nextRepairSeek
+                    || repair.wantsRepair(
+                            tick,
+                            damagedMendingArmor(),
+                            find(i -> i.getType() == Material.EXPERIENCE_BOTTLE) >= 0)
+                        == false)))
+        && heal(target, tick, fraction, healing)) return true;
     preparingSplash = -1;
     if (escapeWeb(tick)) {
       repair.stop(tick);
@@ -283,7 +318,10 @@ final class UtilityBrain {
     if (replaceArmor(tick)) return true;
     if (!options.useUtilities()) return false;
 
-    if (potUp(target, difficulty, tick)) return true;
+    if (repair.working() == false && potUp(target, difficulty, tick)) {
+      repair.stop(tick);
+      return true;
+    }
 
     if (repair(tick, distance, fraction)) return true;
     if (escapePit(target, difficulty, tick)) {
@@ -458,6 +496,16 @@ final class UtilityBrain {
   }
 
   private void retreatForRepair() {
+    if (repair.working() == true) {
+      retreat();
+      if (handle.zza > 0) {
+        handle.zza = 1;
+        handle.setSprinting(true);
+      }
+      handle.setXRot(90);
+      BotLook.publish(handle);
+      return;
+    }
     retreat();
     if (handle.zza > 0) {
       handle.zza = 1;
@@ -985,6 +1033,10 @@ final class UtilityBrain {
     prepared =
         new PreparedAction(
             selected, player().getInventory().getItemInMainHand().clone(), action, valid);
+    if (repairWorking == true) {
+      retreatForRepair();
+      return;
+    }
     handle.zza = handle.xxa = 0;
     handle.setSprinting(false);
   }

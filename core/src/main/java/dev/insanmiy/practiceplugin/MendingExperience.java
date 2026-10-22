@@ -20,7 +20,7 @@ final class MendingExperience {
     player.giveExp(remaining);
   }
 
-  private static long equippedDamage(Player p) {
+  static long equippedDamage(Player p) {
     long damage = armorDamage(p);
     return damage
         + damage(p.getInventory().getItemInMainHand())

@@ -184,7 +184,7 @@ public final class PracticePlugin extends JavaPlugin implements Listener {
     if (last != null && kits.containsKey(last.kit()) && difficulties.containsKey(last.difficulty())) {
       return last;
     }
-    String defaultKit = getConfig().getString("session.default-kit", "modern-netherite-sword");
+    String defaultKit = getConfig().getString("session.default-kit", "diamond-smp");
     if (!kits.containsKey(defaultKit) && !kits.isEmpty()) {
       defaultKit = kits.keySet().iterator().next();
     }
@@ -1109,10 +1109,10 @@ public final class PracticePlugin extends JavaPlugin implements Listener {
         && session.fighting()
         && e.getEntity().getShooter() instanceof Player p
         && participant(p)) {
-      long before = MendingExperience.armorDamage(p);
+      long before = MendingExperience.equippedDamage(p);
       MendingExperience.award(p, xp);
       if (session.bot != null && session.bot.player().equals(p))
-        session.bot.onRepairImpact(MendingExperience.armorDamage(p) < before);
+        session.bot.onRepairImpact(MendingExperience.equippedDamage(p) < before);
     }
   }
 

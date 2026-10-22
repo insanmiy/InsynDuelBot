@@ -17,7 +17,7 @@ arena:
 # Session & Match Defaults
 session:
   # Default kit chosen when a player opens the practice menu for the first time.
-  default-kit: modern-diamond-sword
+  default-kit: diamond-smp
 
   # Default bot combat difficulty tier (can be any difficulty defined under 'difficulties:').
   default-difficulty: lt4

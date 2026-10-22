@@ -14,6 +14,9 @@ class DifficultyTest {
     assertEquals("HT1", Difficulty.formatName("ht1"));
     assertEquals("Diamond Sword", Difficulty.formatName("diamond_sword"));
     assertEquals("Custom Kit", Difficulty.formatName("custom-kit"));
+    assertEquals("Diamond SMP", Difficulty.formatName("diamond-smp"));
+    assertEquals("Netherite SMP", Difficulty.formatName("netherite-smp"));
+    assertEquals("UHC", Difficulty.formatName("uhc"));
   }
 
   @Test
