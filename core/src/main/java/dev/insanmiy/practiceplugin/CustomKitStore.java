@@ -36,7 +36,7 @@ final class CustomKitStore {
     return yaml.saveToString();
   }
 
-  static void copy(ConfigurationSection from, ConfigurationSection to) {
+  static void copy(ConfigurationSection from, ConfigurationSection to) { if (from == null || to == null) return;
     for (String key : from.getKeys(false)) {
       if (from.isConfigurationSection(key))
         copy(from.getConfigurationSection(key), to.createSection(key));

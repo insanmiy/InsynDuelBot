@@ -315,7 +315,8 @@ public final class PracticeSession {
   }
 
   void followTeleport(Location destination) {
-    if (bot == null || closing || internalTeleport) return;
+    if (bot == null || closing || internalTeleport || !fighting()) return;
+    if (arena.contains(destination)) return;
     if (bot.player().getWorld().equals(destination.getWorld())
         && bot.player().getLocation().distanceSquared(destination) < 32 * 32) return;
     Location safe = nearbySafe(destination);

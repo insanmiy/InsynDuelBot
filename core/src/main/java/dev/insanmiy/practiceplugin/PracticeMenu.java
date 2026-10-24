@@ -24,17 +24,6 @@ final class PracticeMenu implements Listener {
     STATS
   }
 
-  private static final List<String> CATEGORIES =
-      List.of("all", "melee", "potion", "web", "ranged", "smp", "favorites");
-  private static final Material[] CATEGORY_ICONS = {
-    Material.COMPASS,
-    Material.DIAMOND_SWORD,
-    Material.SPLASH_POTION,
-    Material.COBWEB,
-    Material.BOW,
-    Material.TOTEM_OF_UNDYING,
-    Material.NETHER_STAR
-  };
   private final PracticePlugin plugin;
   private final File favoritesFile;
   private final YamlConfiguration favorites;
@@ -50,7 +39,6 @@ final class PracticeMenu implements Listener {
     final UUID owner;
     Selection choice;
     Screen screen;
-    String category;
     int page;
     List<String> entries;
     final Inventory inventory;
@@ -59,13 +47,11 @@ final class PracticeMenu implements Listener {
         Player player,
         Selection choice,
         Screen screen,
-        String category,
         int page,
         List<String> entries) {
       this.owner = player.getUniqueId();
       this.choice = choice;
       this.screen = screen;
-      this.category = category;
       this.page = page;
       this.entries = entries;
       String title = titleFor(screen, choice);
@@ -97,7 +83,7 @@ final class PracticeMenu implements Listener {
   }
 
   void open(Player player, Selection choice) {
-    show(player, drafts.getOrDefault(player.getUniqueId(), choice), Screen.KITS, "all", 0);
+    show(player, drafts.getOrDefault(player.getUniqueId(), choice), Screen.KITS, 0);
   }
 
   private Set<String> favorites(Player player) {
@@ -105,7 +91,7 @@ final class PracticeMenu implements Listener {
   }
 
   private void show(
-      Player player, Selection selection, Screen screen, String category, int requestedPage) {
+      Player player, Selection selection, Screen screen, int requestedPage) {
     if (plugin.kits().isEmpty() || plugin.difficulties().isEmpty()) {
       throw new IllegalArgumentException("No Valid Kits Or Difficulties. Check Configuration.");
     }
@@ -128,14 +114,7 @@ final class PracticeMenu implements Listener {
                 ? Arrays.stream(PracticeMode.values()).map(PracticeMode::id).toList()
                 : screen == Screen.STATS
                     ? Arrays.stream(PracticeMode.values()).map(PracticeMode::id).toList()
-                    : plugin.kits().values().stream()
-                        .filter(
-                            k ->
-                                category.equals("all")
-                                    || category.equals("favorites") && starred.contains(k.name())
-                                    || k.category().equals(category))
-                        .map(Kit::name)
-                        .toList();
+                    : List.copyOf(plugin.kits().keySet());
     int page = MenuPaging.clamp(requestedPage, entries.size());
 
     boolean canReuse = false;
@@ -146,14 +125,13 @@ final class PracticeMenu implements Listener {
           && (screen != Screen.PREVIEW || currentView.choice.kit().equals(choice.kit()))) {
         canReuse = true;
         currentView.choice = choice;
-        currentView.category = category;
         currentView.page = page;
         currentView.entries = entries;
         view = currentView;
       }
     }
     if (!canReuse) {
-      view = new View(player, choice, screen, category, page, entries);
+      view = new View(player, choice, screen, page, entries);
     }
     Inventory inventory = view.inventory;
     inventory.clear();
@@ -177,44 +155,16 @@ final class PracticeMenu implements Listener {
               NamedTextColor.GOLD,
               false,
               "Click To Create And Edit Custom Kits"));
-
-      for (int i = 0; i < CATEGORIES.size(); i++) {
-        String cat = CATEGORIES.get(i);
-        boolean active = category.equals(cat);
-        inventory.setItem(
-            i + 1,
-            icon(
-                CATEGORY_ICONS[i],
-                pretty(cat),
-                active ? NamedTextColor.GREEN : NamedTextColor.AQUA,
-                active,
-                active ? "Currently Selected" : "Click To View Category"));
-      }
-
-      inventory.setItem(8, icon(Material.BARRIER, "Close Menu", NamedTextColor.RED, false));
-
-      if (entries.isEmpty()) {
-        inventory.setItem(
-            22,
-            icon(
-                Material.BARRIER,
-                "No Kits In This Category",
-                NamedTextColor.YELLOW,
-                false,
-                "Shift Click A Kit To Favorite It",
-                "Click All To Browse Every Kit"));
-      }
-    } else {
-      inventory.setItem(
-          4,
-          icon(
-              Material.NETHER_STAR,
-              pretty(screen.name()),
-              NamedTextColor.GOLD,
-              true,
-              "Your Selection Is Kept While Navigating"));
-      inventory.setItem(8, icon(Material.BARRIER, "Close Menu", NamedTextColor.RED, false));
     }
+    inventory.setItem(
+        4,
+        icon(
+            Material.NETHER_STAR,
+            pretty(screen.name()),
+            NamedTextColor.GOLD,
+            true,
+            "Your Selection Is Kept While Navigating"));
+    inventory.setItem(8, icon(Material.BARRIER, "Close Menu", NamedTextColor.RED, false));
 
     if (screen == Screen.PREVIEW) {
       for (int slot = 0; slot < 41; slot++) {
@@ -377,10 +327,10 @@ final class PracticeMenu implements Listener {
         45,
         icon(
             Material.COMPASS,
-            screen == Screen.KITS ? "Browse All Kits" : "Back To Kits",
+            screen == Screen.KITS ? "Select Kit" : "Back To Kits",
             NamedTextColor.AQUA,
-            false,
-            "Reset Filter To View All Kits"));
+            screen == Screen.KITS,
+            screen == Screen.KITS ? "Current: " + pretty(choice.kit()) : "Return To Kit Selection"));
 
     inventory.setItem(
         46,
@@ -560,10 +510,6 @@ final class PracticeMenu implements Listener {
                   Bukkit.dispatchCommand(player, "practice kit editor");
                   return;
                 }
-                if (view.screen == Screen.KITS && slot <= 7) {
-                  show(player, choice, Screen.KITS, CATEGORIES.get(slot - 1), 0);
-                  return;
-                }
                 if (slot == 8) {
                   player.closeInventory();
                   return;
@@ -590,20 +536,18 @@ final class PracticeMenu implements Listener {
                         favorites.set(key, previous);
                         throw failure;
                       }
-                      show(player, choice, Screen.KITS, view.category, view.page);
+                      show(player, choice, Screen.KITS, view.page);
                     } else if (right) {
                       show(
                           player,
                           new Selection(name, choice.difficulty(), choice.mode(), choice.bestOf()),
                           Screen.PREVIEW,
-                          view.category,
                           view.page);
                     } else {
                       show(
                           player,
                           new Selection(name, choice.difficulty(), choice.mode(), choice.bestOf()),
                           Screen.KITS,
-                          view.category,
                           view.page);
                     }
                   } else if (view.screen == Screen.DIFFICULTIES) {
@@ -611,7 +555,6 @@ final class PracticeMenu implements Listener {
                         player,
                         new Selection(choice.kit(), name, choice.mode(), choice.bestOf()),
                         Screen.KITS,
-                        view.category,
                         0);
                   } else if (view.screen == Screen.MODES) {
                     PracticeMode chosenMode = PracticeMode.parse(name);
@@ -626,7 +569,6 @@ final class PracticeMenu implements Listener {
                             chosenMode,
                             bestOf),
                         Screen.KITS,
-                        view.category,
                         0);
                   }
                   return;
@@ -636,27 +578,27 @@ final class PracticeMenu implements Listener {
                 switch (slot) {
                   case 36 -> {
                     if (view.screen != Screen.PREVIEW && view.page > 0) {
-                      show(player, choice, view.screen, view.category, view.page - 1);
+                      show(player, choice, view.screen, view.page - 1);
                     }
                   }
                   case 44 -> {
                     if (view.screen != Screen.PREVIEW && view.page + 1 < MenuPaging.pages(view.entries.size())) {
-                      show(player, choice, view.screen, view.category, view.page + 1);
+                      show(player, choice, view.screen, view.page + 1);
                     }
                   }
-                  case 45 -> show(player, choice, Screen.KITS, "all", 0);
+                  case 45 -> show(player, choice, Screen.KITS, 0);
                   case 46 -> {
                     if (view.screen == Screen.DIFFICULTIES) {
-                      show(player, choice, Screen.KITS, view.category, 0);
+                      show(player, choice, Screen.KITS, 0);
                     } else {
-                      show(player, choice, Screen.DIFFICULTIES, view.category, 0);
+                      show(player, choice, Screen.DIFFICULTIES, 0);
                     }
                   }
                   case 47 -> {
                     if (view.screen == Screen.MODES) {
-                      show(player, choice, Screen.KITS, view.category, 0);
+                      show(player, choice, Screen.KITS, 0);
                     } else {
-                      show(player, choice, Screen.MODES, view.category, 0);
+                      show(player, choice, Screen.MODES, 0);
                     }
                   }
                   case 48 -> {
@@ -667,7 +609,6 @@ final class PracticeMenu implements Listener {
                         player,
                         new Selection(choice.kit(), choice.difficulty(), choice.mode(), nextBestOf),
                         view.screen,
-                        view.category,
                         view.page);
                   }
                   case 49 -> {
@@ -676,17 +617,17 @@ final class PracticeMenu implements Listener {
                   }
                   case 50 -> {
                     if (view.screen == Screen.PREVIEW) {
-                      show(player, choice, Screen.KITS, view.category, view.page);
+                      show(player, choice, Screen.KITS, view.page);
                     } else {
-                      show(player, choice, Screen.PREVIEW, view.category, view.page);
+                      show(player, choice, Screen.PREVIEW, view.page);
                     }
                   }
                   case 51 -> plugin.openSettings(player);
                   case 52 -> {
                     if (view.screen == Screen.STATS) {
-                      show(player, choice, Screen.KITS, view.category, 0);
+                      show(player, choice, Screen.KITS, 0);
                     } else {
-                      show(player, choice, Screen.STATS, view.category, 0);
+                      show(player, choice, Screen.STATS, 0);
                     }
                   }
                   case 53 -> player.closeInventory();
