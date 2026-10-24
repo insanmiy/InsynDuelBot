@@ -5,211 +5,162 @@
 #   health:                Starting and maximum health points (20 = 10 hearts)
 #   natural-regeneration:  Whether standard food/saturation healing is enabled
 #   armor:                 [BOOTS, LEGGINGS, CHESTPLATE, HELMET]
-#   armor-enchantments:    Applied armor enchantments (e.g. {protection: 4, unbreaking: 3, mending: 1})
-#   weapon-enchantments:   Applied melee weapon enchantments (e.g. {sharpness: 5, fire_aspect: 2, sweeping_edge: 3, efficiency: 5, unbreaking: 3, mending: 1})
-#   bow-enchantments:      Applied bow enchantments (e.g. {power: 5, punch: 2, unbreaking: 3, quick_charge: 3})
-#   offhand:               Off hand item (e.g. SHIELD:1, TOTEM_OF_UNDYING:1, or AIR)
-#   items:                 Inventory slots 0-35 with format: '<MATERIAL>:<AMOUNT>'
-#                          or objects: {type: <MATERIAL>, enchants: {<ENCHANT>: <LEVEL>}}
-#                          or potion objects: {type: SPLASH_POTION, potion: <POTION_TYPE>}
+#   armor-enchantments:    Enchantments applied to all 4 armor pieces
+#   bow-enchantments:      Enchantments applied to bows & crossbows
+#   offhand:               Off hand item (e.g. SHIELD, TOTEM_OF_UNDYING, or AIR)
+#   items:                 Inventory slots 0-35 (0-8 hotbar, 9-35 inventory)
+#                          Format: '<MATERIAL>:<AMOUNT>' or {type: <MATERIAL>, enchants: {<ENCHANT>: <LEVEL>}}
+#                          or for potions: {type: SPLASH_POTION, potion: <POTION_TYPE>}
 kits:
   diamond-smp:
-    description: "Diamond SMP | Full Diamond Prot IV, Sharp V Sword, KB I Sword, Axe, Crossbow, Shield & Totems"
+    description: "Official Diamond SMP Kit"
     health: 20
     natural-regeneration: true
-    armor: [DIAMOND_BOOTS, DIAMOND_LEGGINGS, DIAMOND_CHESTPLATE, DIAMOND_HELMET]
+    armor:
+      - {type: DIAMOND_BOOTS, enchants: {feather_falling: 4, depth_strider: 3}}
+      - {type: DIAMOND_LEGGINGS, enchants: {swift_sneak: 3}}
+      - DIAMOND_CHESTPLATE
+      - DIAMOND_HELMET
     armor-enchantments: {protection: 4, unbreaking: 3, mending: 1}
-    weapon-enchantments: {sharpness: 5, fire_aspect: 2, sweeping_edge: 3, efficiency: 5, unbreaking: 3, mending: 1}
-    bow-enchantments: {power: 5, quick_charge: 3, unbreaking: 3}
     offhand: {type: SHIELD, enchants: {unbreaking: 3, mending: 1}}
     items:
-      0: {type: DIAMOND_SWORD, enchants: {knockback: 1}}
+      0: {type: DIAMOND_SWORD, enchants: {sharpness: 5, fire_aspect: 2, unbreaking: 3}}
       1: 'GOLDEN_APPLE:64'
-      2: 'DIAMOND_AXE:1'
-      3: 'ENDER_PEARL:16'
-      4: 'COBWEB:64'
-      5: 'TOTEM_OF_UNDYING:1'
+      2: {type: DIAMOND_AXE, enchants: {sharpness: 5, unbreaking: 3}}
+      3: 'ENDER_PEARL:12'
+      4: 'COBWEB:48'
+      5: 'WATER_BUCKET:1'
       6: {type: SPLASH_POTION, potion: STRONG_STRENGTH}
       7: {type: SPLASH_POTION, potion: LONG_FIRE_RESISTANCE}
-      8: {type: SPLASH_POTION, potion: STRONG_SWIFTNESS}
-      9: 'EXPERIENCE_BOTTLE:64'
-      10: 'EXPERIENCE_BOTTLE:64'
-      11: 'CROSSBOW:1'
-      12: 'ARROW:64'
-      13: 'COBWEB:64'
+      8: {type: SPLASH_POTION, potion: LONG_SWIFTNESS}
+      9: {type: NETHERITE_PICKAXE, enchants: {efficiency: 5, silk_touch: 1, unbreaking: 3, mending: 1}}
+      10: 'GOLDEN_APPLE:64'
+      11: 'OAK_LOG:64'
+      12: 'EXPERIENCE_BOTTLE:64'
+      13: 'CHORUS_FRUIT:3'
       14: 'TOTEM_OF_UNDYING:1'
       15: {type: SPLASH_POTION, potion: STRONG_STRENGTH}
       16: {type: SPLASH_POTION, potion: LONG_FIRE_RESISTANCE}
-      17: {type: SPLASH_POTION, potion: STRONG_SWIFTNESS}
-      18: 'EXPERIENCE_BOTTLE:64'
-      19: 'GOLDEN_APPLE:64'
-      20: 'WATER_BUCKET:1'
-      21: 'ENDER_PEARL:16'
-      22: 'COBWEB:64'
-      23: 'TOTEM_OF_UNDYING:1'
+      17: {type: SPLASH_POTION, potion: LONG_SWIFTNESS}
+      18: 'WATER_BUCKET:1'
+      19: {type: SPLASH_POTION, potion: STRONG_STRENGTH}
+      20: {type: SPLASH_POTION, potion: STRONG_STRENGTH}
+      21: {type: SPLASH_POTION, potion: STRONG_STRENGTH}
+      22: {type: SPLASH_POTION, potion: STRONG_STRENGTH}
+      23: {type: SPLASH_POTION, potion: STRONG_STRENGTH}
       24: {type: SPLASH_POTION, potion: STRONG_STRENGTH}
       25: {type: SPLASH_POTION, potion: LONG_FIRE_RESISTANCE}
-      26: {type: SPLASH_POTION, potion: STRONG_SWIFTNESS}
-      27: 'DIAMOND_SWORD:1'
-      28: 'GOLDEN_APPLE:64'
-      29: 'BUCKET:16'
-      30: 'ENDER_PEARL:16'
-      31: 'COBWEB:64'
-      32: 'TOTEM_OF_UNDYING:1'
+      26: {type: SPLASH_POTION, potion: LONG_SWIFTNESS}
+      27: 'WATER_BUCKET:1'
+      28: 'WATER_BUCKET:1'
+      29: {type: SPLASH_POTION, potion: STRONG_STRENGTH}
+      30: {type: SPLASH_POTION, potion: STRONG_STRENGTH}
+      31: {type: SPLASH_POTION, potion: STRONG_STRENGTH}
+      32: {type: SPLASH_POTION, potion: STRONG_STRENGTH}
       33: {type: SPLASH_POTION, potion: STRONG_STRENGTH}
-      34: {type: SPLASH_POTION, potion: LONG_FIRE_RESISTANCE}
-      35: {type: SPLASH_POTION, potion: STRONG_SWIFTNESS}
+      34: {type: SPLASH_POTION, potion: STRONG_STRENGTH}
+      35: {type: SPLASH_POTION, potion: STRONG_STRENGTH}
 
   netherite-smp:
-    description: "Netherite SMP | Full Netherite Prot IV, Sharp V Sword, KB I Sword, Axe, Crossbow, Shield & Totems"
+    description: "Official Netherite SMP Kit"
     health: 20
     natural-regeneration: true
-    armor: [NETHERITE_BOOTS, NETHERITE_LEGGINGS, NETHERITE_CHESTPLATE, NETHERITE_HELMET]
-    armor-enchantments: {protection: 4, unbreaking: 3, mending: 1}
-    weapon-enchantments: {sharpness: 5, fire_aspect: 2, sweeping_edge: 3, efficiency: 5, unbreaking: 3, mending: 1}
-    bow-enchantments: {power: 5, quick_charge: 3, unbreaking: 3}
+    armor:
+      - {type: NETHERITE_BOOTS, enchants: {protection: 4, unbreaking: 3, mending: 1, feather_falling: 4}}
+      - {type: NETHERITE_LEGGINGS, enchants: {protection: 4, unbreaking: 3, mending: 1, swift_sneak: 3}}
+      - {type: NETHERITE_CHESTPLATE, enchants: {protection: 4, unbreaking: 3, mending: 1}}
+      - {type: NETHERITE_HELMET, enchants: {protection: 4, unbreaking: 3, mending: 1}}
     offhand: {type: SHIELD, enchants: {unbreaking: 3, mending: 1}}
     items:
-      0: {type: NETHERITE_SWORD, enchants: {knockback: 1}}
-      1: 'GOLDEN_APPLE:64'
-      2: 'NETHERITE_AXE:1'
-      3: 'ENDER_PEARL:16'
-      4: 'COBWEB:64'
-      5: 'TOTEM_OF_UNDYING:1'
-      6: {type: SPLASH_POTION, potion: STRONG_STRENGTH}
-      7: {type: SPLASH_POTION, potion: LONG_FIRE_RESISTANCE}
-      8: {type: SPLASH_POTION, potion: STRONG_SWIFTNESS}
-      9: 'EXPERIENCE_BOTTLE:64'
-      10: 'EXPERIENCE_BOTTLE:64'
-      11: 'CROSSBOW:1'
-      12: 'ARROW:64'
-      13: 'COBWEB:64'
-      14: 'TOTEM_OF_UNDYING:1'
-      15: {type: SPLASH_POTION, potion: STRONG_STRENGTH}
-      16: {type: SPLASH_POTION, potion: LONG_FIRE_RESISTANCE}
-      17: {type: SPLASH_POTION, potion: STRONG_SWIFTNESS}
-      18: 'EXPERIENCE_BOTTLE:64'
-      19: 'GOLDEN_APPLE:64'
-      20: 'WATER_BUCKET:1'
-      21: 'ENDER_PEARL:16'
-      22: 'COBWEB:64'
-      23: 'TOTEM_OF_UNDYING:1'
-      24: {type: SPLASH_POTION, potion: STRONG_STRENGTH}
-      25: {type: SPLASH_POTION, potion: LONG_FIRE_RESISTANCE}
-      26: {type: SPLASH_POTION, potion: STRONG_SWIFTNESS}
-      27: 'NETHERITE_SWORD:1'
-      28: 'GOLDEN_APPLE:64'
-      29: 'BUCKET:16'
-      30: 'ENDER_PEARL:16'
-      31: 'COBWEB:64'
-      32: 'TOTEM_OF_UNDYING:1'
-      33: {type: SPLASH_POTION, potion: STRONG_STRENGTH}
-      34: {type: SPLASH_POTION, potion: LONG_FIRE_RESISTANCE}
-      35: {type: SPLASH_POTION, potion: STRONG_SWIFTNESS}
-
-  sword:
-    description: "Sword | Full Diamond Prot III, Sweeping Edge III Diamond Sword, Golden Apples & Steak"
-    health: 20
-    natural-regeneration: true
-    armor: [DIAMOND_BOOTS, DIAMOND_LEGGINGS, DIAMOND_CHESTPLATE, DIAMOND_HELMET]
-    armor-enchantments: {protection: 3, unbreaking: 3}
-    weapon-enchantments: {sweeping_edge: 3, unbreaking: 3}
-    offhand: AIR
-    items:
-      0: 'DIAMOND_SWORD:1'
-      1: 'GOLDEN_APPLE:6'
-      2: 'COOKED_BEEF:64'
-
-  axe:
-    description: "Axe | Full Diamond, Diamond Axe & Sword, Crossbow, 6 Arrows & Shield"
-    health: 20
-    natural-regeneration: true
-    armor: [DIAMOND_BOOTS, DIAMOND_LEGGINGS, DIAMOND_CHESTPLATE, DIAMOND_HELMET]
-    armor-enchantments: {unbreaking: 3}
-    weapon-enchantments: {unbreaking: 3}
-    bow-enchantments: {unbreaking: 3}
-    offhand: {type: SHIELD, enchants: {unbreaking: 3}}
-    items:
-      0: 'DIAMOND_AXE:1'
-      1: 'DIAMOND_SWORD:1'
-      2: 'CROSSBOW:1'
-      3: 'COOKED_BEEF:64'
-      9: 'ARROW:6'
-
-  netherite-pot:
-    description: "Netherite Pot | Full Netherite Prot IV, Totems, Splash Health II, Speed II, Strength II & XP"
-    health: 20
-    natural-regeneration: true
-    armor: [NETHERITE_BOOTS, NETHERITE_LEGGINGS, NETHERITE_CHESTPLATE, NETHERITE_HELMET]
-    armor-enchantments: {protection: 4, unbreaking: 3, mending: 1}
-    weapon-enchantments: {sharpness: 5, sweeping_edge: 3, unbreaking: 3, mending: 1}
-    offhand: 'TOTEM_OF_UNDYING:1'
-    items:
-      0: 'NETHERITE_SWORD:1'
-      1: 'GOLDEN_APPLE:64'
-      2: {type: SPLASH_POTION, potion: STRONG_STRENGTH}
-      3: {type: SPLASH_POTION, potion: STRONG_SWIFTNESS}
-      4: {type: SPLASH_POTION, potion: STRONG_HEALING}
-      5: {type: SPLASH_POTION, potion: STRONG_HEALING}
-      6: 'EXPERIENCE_BOTTLE:64'
-      7: 'TOTEM_OF_UNDYING:1'
+      0: {type: NETHERITE_SWORD, enchants: {sharpness: 5, fire_aspect: 2, sweeping_edge: 3}}
+      1: {type: NETHERITE_SWORD, enchants: {sharpness: 5, fire_aspect: 2, sweeping_edge: 3, knockback: 1}}
+      2: {type: NETHERITE_AXE, enchants: {sharpness: 5}}
+      3: 'GOLDEN_APPLE:64'
+      4: 'GOLDEN_APPLE:64'
+      5: 'ENDER_PEARL:16'
+      6: 'ENDER_PEARL:16'
+      7: 'EXPERIENCE_BOTTLE:64'
       8: 'TOTEM_OF_UNDYING:1'
-      9: 'EXPERIENCE_BOTTLE:64'
-      10: 'EXPERIENCE_BOTTLE:64'
+      9: {type: SPLASH_POTION, potion: STRONG_STRENGTH}
+      10: {type: SPLASH_POTION, potion: STRONG_STRENGTH}
       11: {type: SPLASH_POTION, potion: STRONG_STRENGTH}
-      12: {type: SPLASH_POTION, potion: STRONG_SWIFTNESS}
-      13: {type: SPLASH_POTION, potion: STRONG_HEALING}
-      14: {type: SPLASH_POTION, potion: STRONG_HEALING}
-      15: {type: SPLASH_POTION, potion: STRONG_HEALING}
-      16: {type: SPLASH_POTION, potion: STRONG_HEALING}
-      17: {type: SPLASH_POTION, potion: STRONG_HEALING}
-      18: 'EXPERIENCE_BOTTLE:64'
-      19: 'EXPERIENCE_BOTTLE:64'
+      12: {type: SPLASH_POTION, potion: STRONG_STRENGTH}
+      13: {type: SPLASH_POTION, potion: STRONG_STRENGTH}
+      14: {type: SPLASH_POTION, potion: STRONG_STRENGTH}
+      15: {type: SPLASH_POTION, potion: STRONG_STRENGTH}
+      16: {type: SPLASH_POTION, potion: STRONG_STRENGTH}
+      17: {type: SPLASH_POTION, potion: STRONG_STRENGTH}
+      18: {type: SPLASH_POTION, potion: STRONG_STRENGTH}
+      19: {type: SPLASH_POTION, potion: STRONG_STRENGTH}
       20: {type: SPLASH_POTION, potion: STRONG_STRENGTH}
       21: {type: SPLASH_POTION, potion: STRONG_SWIFTNESS}
-      22: {type: SPLASH_POTION, potion: STRONG_HEALING}
-      23: {type: SPLASH_POTION, potion: STRONG_HEALING}
-      24: {type: SPLASH_POTION, potion: STRONG_HEALING}
-      25: {type: SPLASH_POTION, potion: STRONG_HEALING}
-      26: {type: SPLASH_POTION, potion: STRONG_HEALING}
-      27: 'EXPERIENCE_BOTTLE:64'
-      28: 'EXPERIENCE_BOTTLE:64'
-      29: {type: SPLASH_POTION, potion: STRONG_STRENGTH}
+      22: {type: SPLASH_POTION, potion: STRONG_SWIFTNESS}
+      23: {type: SPLASH_POTION, potion: STRONG_SWIFTNESS}
+      24: {type: SPLASH_POTION, potion: STRONG_SWIFTNESS}
+      25: {type: SPLASH_POTION, potion: STRONG_SWIFTNESS}
+      26: {type: SPLASH_POTION, potion: STRONG_SWIFTNESS}
+      27: {type: SPLASH_POTION, potion: STRONG_SWIFTNESS}
+      28: {type: SPLASH_POTION, potion: STRONG_SWIFTNESS}
+      29: {type: SPLASH_POTION, potion: STRONG_SWIFTNESS}
       30: {type: SPLASH_POTION, potion: STRONG_SWIFTNESS}
-      31: {type: SPLASH_POTION, potion: STRONG_HEALING}
-      32: {type: SPLASH_POTION, potion: STRONG_HEALING}
-      33: {type: SPLASH_POTION, potion: STRONG_HEALING}
-      34: {type: SPLASH_POTION, potion: STRONG_HEALING}
-      35: {type: SPLASH_POTION, potion: STRONG_HEALING}
+      31: {type: SPLASH_POTION, potion: STRONG_SWIFTNESS}
+      32: {type: SPLASH_POTION, potion: STRONG_SWIFTNESS}
+      33: {type: SPLASH_POTION, potion: LONG_FIRE_RESISTANCE}
+      34: {type: SPLASH_POTION, potion: LONG_FIRE_RESISTANCE}
+      35: {type: SPLASH_POTION, potion: LONG_FIRE_RESISTANCE}
 
-  diamond-pot:
-    description: "Diamond Pot | Full Diamond Prot IV, Sharp V Sword, Pearls, Speed II & Splash Health II"
+  sword:
+    description: "Official Sword PvP Kit"
     health: 20
     natural-regeneration: true
     armor: [DIAMOND_BOOTS, DIAMOND_LEGGINGS, DIAMOND_CHESTPLATE, DIAMOND_HELMET]
-    armor-enchantments: {protection: 4, unbreaking: 3, mending: 1}
-    weapon-enchantments: {sharpness: 5, fire_aspect: 2, sweeping_edge: 3, unbreaking: 3, mending: 1}
     offhand: AIR
     items:
-      0: 'DIAMOND_SWORD:1'
-      1: 'ENDER_PEARL:16'
-      2: 'COOKED_BEEF:64'
-      3: {type: SPLASH_POTION, potion: STRONG_SWIFTNESS}
-      4: {type: SPLASH_POTION, potion: LONG_FIRE_RESISTANCE}
+      0: DIAMOND_SWORD
+
+  axe:
+    description: "Official Axe PvP Kit"
+    health: 20
+    natural-regeneration: true
+    armor: [DIAMOND_BOOTS, DIAMOND_LEGGINGS, DIAMOND_CHESTPLATE, DIAMOND_HELMET]
+    offhand: SHIELD
+    items:
+      0: DIAMOND_AXE
+      1: DIAMOND_SWORD
+      2: CROSSBOW
+      3: BOW
+      4: 'ARROW:6'
+
+  pot:
+    description: "Official Pot PvP Kit"
+    health: 20
+    natural-regeneration: true
+    armor:
+      - {type: DIAMOND_BOOTS, enchants: {protection: 4, unbreaking: 3}}
+      - {type: DIAMOND_LEGGINGS, enchants: {protection: 4, unbreaking: 3}}
+      - {type: DIAMOND_CHESTPLATE, enchants: {protection: 4, unbreaking: 3}}
+      - {type: DIAMOND_HELMET, enchants: {protection: 4, unbreaking: 3}}
+    offhand: AIR
+    items:
+      0: {type: DIAMOND_SWORD, enchants: {sharpness: 5}}
+      1: {type: SPLASH_POTION, potion: STRONG_HEALING}
+      2: {type: SPLASH_POTION, potion: STRONG_HEALING}
+      3: {type: SPLASH_POTION, potion: STRONG_HEALING}
+      4: {type: SPLASH_POTION, potion: STRONG_HEALING}
       5: {type: SPLASH_POTION, potion: STRONG_HEALING}
       6: {type: SPLASH_POTION, potion: STRONG_HEALING}
       7: {type: SPLASH_POTION, potion: STRONG_HEALING}
-      8: {type: SPLASH_POTION, potion: STRONG_HEALING}
-      9: {type: SPLASH_POTION, potion: STRONG_SWIFTNESS}
-      10: {type: SPLASH_POTION, potion: STRONG_HEALING}
-      11: {type: SPLASH_POTION, potion: STRONG_HEALING}
-      12: {type: SPLASH_POTION, potion: STRONG_HEALING}
-      13: {type: SPLASH_POTION, potion: STRONG_HEALING}
-      14: {type: SPLASH_POTION, potion: STRONG_HEALING}
-      15: {type: SPLASH_POTION, potion: STRONG_HEALING}
-      16: {type: SPLASH_POTION, potion: STRONG_HEALING}
-      17: {type: SPLASH_POTION, potion: STRONG_HEALING}
-      18: {type: SPLASH_POTION, potion: STRONG_SWIFTNESS}
+      8: 'COOKED_BEEF:5'
+      9: {type: SPLASH_POTION, potion: STRONG_STRENGTH}
+      10: {type: SPLASH_POTION, potion: STRONG_SWIFTNESS}
+      11: {type: SPLASH_POTION, potion: REGENERATION}
+      12: {type: SPLASH_POTION, potion: STRONG_STRENGTH}
+      13: {type: SPLASH_POTION, potion: STRONG_SWIFTNESS}
+      14: {type: SPLASH_POTION, potion: REGENERATION}
+      15: {type: SPLASH_POTION, potion: STRONG_STRENGTH}
+      16: {type: SPLASH_POTION, potion: STRONG_SWIFTNESS}
+      17: {type: SPLASH_POTION, potion: REGENERATION}
+      18: {type: SPLASH_POTION, potion: STRONG_HEALING}
       19: {type: SPLASH_POTION, potion: STRONG_HEALING}
       20: {type: SPLASH_POTION, potion: STRONG_HEALING}
       21: {type: SPLASH_POTION, potion: STRONG_HEALING}
@@ -218,7 +169,7 @@ kits:
       24: {type: SPLASH_POTION, potion: STRONG_HEALING}
       25: {type: SPLASH_POTION, potion: STRONG_HEALING}
       26: {type: SPLASH_POTION, potion: STRONG_HEALING}
-      27: {type: SPLASH_POTION, potion: STRONG_SWIFTNESS}
+      27: {type: SPLASH_POTION, potion: STRONG_HEALING}
       28: {type: SPLASH_POTION, potion: STRONG_HEALING}
       29: {type: SPLASH_POTION, potion: STRONG_HEALING}
       30: {type: SPLASH_POTION, potion: STRONG_HEALING}
@@ -229,73 +180,31 @@ kits:
       35: {type: SPLASH_POTION, potion: STRONG_HEALING}
 
   uhc:
-    description: "UHC | Full Diamond Prot III, Sword, Axe, Bow, Crossbow, Cobwebs, Water, Lava, Gapples & Shield"
+    description: "UHC Kit"
     health: 20
     natural-regeneration: false
-    armor: [DIAMOND_BOOTS, DIAMOND_LEGGINGS, DIAMOND_CHESTPLATE, DIAMOND_HELMET]
-    armor-enchantments: {protection: 3, unbreaking: 3}
-    weapon-enchantments: {sharpness: 3, sweeping_edge: 3, efficiency: 3, unbreaking: 3}
-    bow-enchantments: {power: 2, unbreaking: 3}
-    offhand: {type: SHIELD, enchants: {unbreaking: 3}}
+    armor:
+      - {type: DIAMOND_BOOTS, enchants: {protection: 3}}
+      - {type: DIAMOND_LEGGINGS, enchants: {protection: 3}}
+      - {type: DIAMOND_CHESTPLATE, enchants: {protection: 2}}
+      - {type: DIAMOND_HELMET, enchants: {protection: 3}}
+    offhand: SHIELD
     items:
-      0: 'DIAMOND_SWORD:1'
-      1: 'DIAMOND_AXE:1'
-      2: 'GOLDEN_APPLE:12'
+      0: {type: DIAMOND_SWORD, enchants: {sharpness: 4}}
+      1: {type: DIAMOND_AXE, enchants: {sharpness: 1, efficiency: 3}}
+      2: 'GOLDEN_APPLE:10'
       3: 'COBWEB:8'
-      4: 'BOW:1'
-      5: {type: CROSSBOW, enchants: {piercing: 1, unbreaking: 3}}
+      4: {type: BOW, enchants: {power: 1}}
+      5: {type: CROSSBOW, enchants: {piercing: 1}}
       6: 'WATER_BUCKET:1'
       7: 'LAVA_BUCKET:1'
       8: 'COBBLESTONE:64'
-      9: 'ARROW:16'
-      10: 'DIAMOND_PICKAXE:1'
+      9: 'ARROW:10'
+      10: {type: DIAMOND_PICKAXE, enchants: {efficiency: 3}}
       11: 'WATER_BUCKET:1'
-      12: 'LAVA_BUCKET:1'
-      13: 'COBBLESTONE:64'
-      14: 'COOKED_BEEF:64'
-
-  smp:
-    description: "SMP | Full Netherite Prot IV, Pearls, Golden Apples, Totems, Shield, XP & Buff Potions"
-    health: 20
-    natural-regeneration: true
-    armor: [NETHERITE_BOOTS, NETHERITE_LEGGINGS, NETHERITE_CHESTPLATE, NETHERITE_HELMET]
-    armor-enchantments: {protection: 4, unbreaking: 3, mending: 1}
-    weapon-enchantments: {sharpness: 5, fire_aspect: 2, sweeping_edge: 3, efficiency: 5, unbreaking: 3, mending: 1}
-    offhand: {type: SHIELD, enchants: {unbreaking: 3, mending: 1}}
-    items:
-      0: {type: NETHERITE_SWORD, enchants: {knockback: 1}}
-      1: 'NETHERITE_AXE:1'
-      2: 'GOLDEN_APPLE:64'
-      3: 'ENDER_PEARL:16'
-      4: 'TOTEM_OF_UNDYING:1'
-      5: {type: SPLASH_POTION, potion: STRONG_STRENGTH}
-      6: {type: SPLASH_POTION, potion: STRONG_SWIFTNESS}
-      7: {type: SPLASH_POTION, potion: LONG_FIRE_RESISTANCE}
-      8: 'EXPERIENCE_BOTTLE:64'
-      9: 'EXPERIENCE_BOTTLE:64'
-      10: 'EXPERIENCE_BOTTLE:64'
-      11: 'ENDER_PEARL:16'
-      12: 'TOTEM_OF_UNDYING:1'
-      13: {type: SPLASH_POTION, potion: STRONG_STRENGTH}
-      14: {type: SPLASH_POTION, potion: STRONG_SWIFTNESS}
-      15: {type: SPLASH_POTION, potion: LONG_FIRE_RESISTANCE}
-      16: 'EXPERIENCE_BOTTLE:64'
-      17: 'EXPERIENCE_BOTTLE:64'
-      18: 'ENDER_PEARL:16'
-      19: 'TOTEM_OF_UNDYING:1'
-      20: {type: SPLASH_POTION, potion: STRONG_STRENGTH}
-      21: {type: SPLASH_POTION, potion: STRONG_SWIFTNESS}
-      22: {type: SPLASH_POTION, potion: LONG_FIRE_RESISTANCE}
-      23: 'NETHERITE_BOOTS:1'
-      24: 'NETHERITE_LEGGINGS:1'
-      25: 'NETHERITE_CHESTPLATE:1'
-      26: 'NETHERITE_HELMET:1'
-      27: 'ENDER_PEARL:16'
-      28: 'TOTEM_OF_UNDYING:1'
-      29: {type: SPLASH_POTION, potion: STRONG_STRENGTH}
-      30: {type: SPLASH_POTION, potion: STRONG_SWIFTNESS}
-      31: {type: SPLASH_POTION, potion: LONG_FIRE_RESISTANCE}
-      32: 'TOTEM_OF_UNDYING:1'
-      33: 'TOTEM_OF_UNDYING:1'
-      34: 'TOTEM_OF_UNDYING:1'
-      35: 'TOTEM_OF_UNDYING:1'
+      12: 'WATER_BUCKET:1'
+      13: 'WATER_BUCKET:1'
+      14: 'LAVA_BUCKET:1'
+      15: 'SHIELD:1'
+      16: 'COBBLESTONE:64'
+      17: 'OAK_PLANKS:64'
