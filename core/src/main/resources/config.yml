@@ -71,6 +71,7 @@ menu-animations: true
 # - strafe-strength:     Lateral dodging movement speed multiplier (0.0 - 1.0; 1.0 = max strafe).
 # - heal-threshold:      Health percentage threshold to drink/splash pots or eat golden apples (0.0 - 1.0).
 # - crit-chance:         Chance to attempt a jump critical hit instead of a normal ground hit (0.0 - 1.0).
+# - pearl-chance:        Chance to throw an escape Ender Pearl when low on health or after popping a totem (0.0 - 1.0).
 # - attacks-enabled:     Whether the bot actively attacks back (set false for peaceful / passive).
 difficulties:
   dummy:
@@ -88,6 +89,7 @@ difficulties:
     heal-threshold: 0.35
     shield-ticks: 8
     crit-chance: 0.0
+    pearl-chance: 0.0
     attacks-enabled: false
 
   lt5:
@@ -105,6 +107,7 @@ difficulties:
     heal-threshold: 0.35
     shield-ticks: 8
     crit-chance: 0.20
+    pearl-chance: 0.10
 
   ht5:
     display-name: "HT5 · Beginner"
@@ -121,6 +124,7 @@ difficulties:
     heal-threshold: 0.42
     shield-ticks: 7
     crit-chance: 0.35
+    pearl-chance: 0.15
 
   lt4:
     display-name: "LT4 · Competent"
@@ -137,6 +141,7 @@ difficulties:
     heal-threshold: 0.48
     shield-ticks: 7
     crit-chance: 0.50
+    pearl-chance: 0.25
 
   ht4:
     display-name: "HT4 · Skilled"
@@ -153,6 +158,7 @@ difficulties:
     heal-threshold: 0.55
     shield-ticks: 6
     crit-chance: 0.70
+    pearl-chance: 0.30
 
   lt3:
     display-name: "LT3 · Advanced"
@@ -169,6 +175,7 @@ difficulties:
     heal-threshold: 0.6
     shield-ticks: 6
     crit-chance: 0.85
+    pearl-chance: 0.35
 
   ht3:
     display-name: "HT3 · Expert"
@@ -185,6 +192,7 @@ difficulties:
     heal-threshold: 0.65
     shield-ticks: 5
     crit-chance: 0.90
+    pearl-chance: 0.40
 
   lt2:
     display-name: "LT2 · Master"
@@ -201,6 +209,7 @@ difficulties:
     heal-threshold: 0.68
     shield-ticks: 5
     crit-chance: 0.95
+    pearl-chance: 0.45
 
   ht2:
     display-name: "HT2 · Grandmaster"
@@ -217,6 +226,7 @@ difficulties:
     heal-threshold: 0.7
     shield-ticks: 5
     crit-chance: 0.98
+    pearl-chance: 0.50
 
   lt1:
     display-name: "LT1 · Elite"
@@ -233,6 +243,7 @@ difficulties:
     heal-threshold: 0.72
     shield-ticks: 5
     crit-chance: 1.0
+    pearl-chance: 0.55
 
   ht1:
     display-name: "HT1 · Apex"
@@ -249,3 +260,4 @@ difficulties:
     heal-threshold: 0.75
     shield-ticks: 5
     crit-chance: 1.0
+    pearl-chance: 0.60

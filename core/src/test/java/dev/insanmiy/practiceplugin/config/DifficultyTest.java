@@ -27,12 +27,14 @@ class DifficultyTest {
     assertEquals("LT4 · Competent", dWithCustom.prettyDisplayName());
     assertEquals(Material.IRON_SWORD, dWithCustom.effectiveIcon());
     assertEquals(0.50, dWithCustom.critChance());
+    assertEquals(0.25, dWithCustom.pearlChance());
 
     Difficulty dDefault =
         new Difficulty(
             "lt4", 4, 3, 4.5, 1.0, 0.45, true, 0.45, 0.55, 0.48, 7, true);
     assertEquals("LT4", dDefault.prettyDisplayName());
     assertEquals(0.50, dDefault.critChance());
+    assertEquals(0.25, dDefault.pearlChance());
   }
 
   @Test
@@ -43,6 +45,15 @@ class DifficultyTest {
     assertEquals(0.50, Difficulty.defaultCritChance(4));
     assertEquals(0.50, Difficulty.defaultCritChance(6));
     assertEquals(0.20, Difficulty.defaultCritChance(10));
+  }
+
+  @Test
+  void testDefaultPearlChance() {
+    assertEquals(0.0, Difficulty.defaultPearlChance(1, false));
+    assertEquals(0.50, Difficulty.defaultPearlChance(1, true));
+    assertEquals(0.35, Difficulty.defaultPearlChance(2, true));
+    assertEquals(0.25, Difficulty.defaultPearlChance(4, true));
+    assertEquals(0.15, Difficulty.defaultPearlChance(10, true));
   }
 
   @Test
@@ -62,10 +73,15 @@ class DifficultyTest {
     assertEquals(0.95, modified.attackCharge());
     assertEquals(0.7, modified.shieldChance());
     assertEquals(0.50, modified.critChance());
+    assertEquals(0.25, modified.pearlChance());
 
     BotOptions noCrits = new BotOptions(true, true, false, true, true);
     Difficulty disabledCrits = base.withOptions(noCrits);
     assertEquals(0.0, disabledCrits.critChance());
+
+    BotOptions noUtils = new BotOptions(true, false, true, true, true);
+    Difficulty disabledUtils = base.withOptions(noUtils);
+    assertEquals(0.0, disabledUtils.pearlChance());
   }
 
   @Test
@@ -80,5 +96,9 @@ class DifficultyTest {
         new Difficulty("invalid", 4, 2, 4.0, 1.0, 0.5, false, 0.5, 0.65, 0.5, 6, true, -0.1, null, null, null));
     assertThrows(IllegalArgumentException.class, () ->
         new Difficulty("invalid", 4, 2, 4.0, 1.0, 0.5, false, 0.5, 0.65, 0.5, 6, true, 1.5, null, null, null));
+    assertThrows(IllegalArgumentException.class, () ->
+        new Difficulty("invalid", 4, 2, 4.0, 1.0, 0.5, false, 0.5, 0.65, 0.5, 6, true, 0.5, -0.1, null, null, null));
+    assertThrows(IllegalArgumentException.class, () ->
+        new Difficulty("invalid", 4, 2, 4.0, 1.0, 0.5, false, 0.5, 0.65, 0.5, 6, true, 0.5, 1.5, null, null, null));
   }
 }

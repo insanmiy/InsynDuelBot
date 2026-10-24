@@ -21,7 +21,6 @@ final class KitFiles {
     Path customFile = folder.resolve("customkits.yml");
     Path legacyCustom = folder.resolve("custom-kits.yml");
     var config = YamlFiles.read(configFile);
-
     if (Files.exists(kitsFile)) YamlFiles.read(kitsFile);
     if (Files.exists(customFile)) YamlFiles.read(customFile);
     if (Files.exists(legacyCustom)) YamlFiles.read(legacyCustom);
@@ -35,7 +34,6 @@ final class KitFiles {
         config.set("kits", null);
         YamlFiles.write(configFile, config, folder.resolve("config-before-kit-split.yml.bak"));
       }
-
     }
   }
 }

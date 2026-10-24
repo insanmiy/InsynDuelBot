@@ -54,7 +54,7 @@ public final class NmsBot implements BotPlatform {
   private boolean closed;
   private boolean teleporting;
   // Combat timers and strafe state
-  private int ticks, strafe = 1, shieldUntil, resetSprintUntil, stuck;
+  private int ticks, strafe = 1, shieldUntil, resetSprintUntil, stuck, waterTicks;
   private Location previous;
   private Vec3 pendingVelocity;
   private Integer pendingTeleport;
@@ -189,6 +189,7 @@ public final class NmsBot implements BotPlatform {
     handle.resetAttackStrengthTicker();
     history.clear();
     stuck = 0;
+    waterTicks = 0;
     previous = location.clone();
     previousDecisionTick = ticks;
     shieldUntil = 0;
@@ -238,10 +239,29 @@ public final class NmsBot implements BotPlatform {
     utility.naturalRegeneration = naturalRegeneration;
   }
 
+
+  private boolean isBotInWater() {
+    if (handle.isInWater()) return true;
+    Location loc = player().getLocation();
+    return TacticalMovement.water(loc.getBlock())
+        || TacticalMovement.water(loc.clone().add(0, 0.5, 0).getBlock());
+  }
+
+  private void boostOutOfWater() {
+    if (handle.onGround()) {
+      handle.jumpFromGround();
+    } else if (handle.getDeltaMovement().y < 0.42
+        && handle.level().noCollision(handle, handle.getBoundingBox().expandTowards(0, 1.2, 0))) {
+      Vec3 vel = handle.getDeltaMovement();
+      handle.setDeltaMovement(vel.x, 0.42, vel.z);
+    }
+  }
+
   @Override
   public void tick(Player target, Difficulty d, Arena arena, boolean fighting) {
     if (closed) return;
     this.currentDifficulty = d;
+    utility.escapePearlChance = d.pearlChance();
     ticks++;
     acknowledgeTeleport();
     if (shieldUntil > 0 && (ticks >= shieldUntil || player().hasCooldown(Material.SHIELD))) {
@@ -292,7 +312,7 @@ public final class NmsBot implements BotPlatform {
       decide(target, history.getFirst(), d);
       decided = true;
     }
-    if (!decided && d.attacksEnabled() && !utility.busy(ticks))
+    if (!decided && d.attacksEnabled() && !utility.busy(ticks) && !isBotInWater())
       combatLook(target, history.getFirst(), d);
     avoidHazards();
     if (handle.horizontalCollision && handle.onGround() && handle.zza > 0) {
@@ -301,7 +321,20 @@ public final class NmsBot implements BotPlatform {
 
     Vec3 beforeTravel = handle.position();
 
-    handle.setJumping(d.attacksEnabled() && handle.isInWater());
+    boolean inWater = isBotInWater();
+    handle.setJumping(d.attacksEnabled() && inWater);
+    if (d.attacksEnabled() && inWater) {
+      Location loc = player().getLocation();
+      Vec3 vel = handle.getDeltaMovement();
+      if (handle.isUnderWater() || TacticalMovement.water(loc.clone().add(0, 1.0, 0).getBlock())) {
+        if (vel.y < 0.14) {
+          handle.setDeltaMovement(vel.x, 0.14, vel.z);
+        }
+      }
+      if (handle.horizontalCollision && handle.zza > 0) {
+        boostOutOfWater();
+      }
+    }
     var beforeLevel = handle.level();
     int beforeEpoch = movementEpoch;
     // Process entity tick
@@ -337,14 +370,18 @@ public final class NmsBot implements BotPlatform {
     if (utility.act(target, d, ticks)) return;
     combatLook(target, perceived, d);
     // Randomize strafe or reverse if stuck
+    int elapsedTicks = Math.max(1, ticks - previousDecisionTick);
     if (ticks % 40 < d.decisionTicks()) strafe = random.nextBoolean() ? 1 : -1;
     if (previous != null && here.distanceSquared(previous) < .015 && (Math.abs(handle.zza) > .1 || Math.abs(handle.xxa) > .1))
-      stuck += ticks - previousDecisionTick;
+      stuck += elapsedTicks;
     else stuck = 0;
+    boolean inWater = isBotInWater();
+    if (inWater) waterTicks += elapsedTicks;
+    else waterTicks = 0;
     previous = here;
     previousDecisionTick = ticks;
-    if (stuck >= 15 && handle.horizontalCollision && handle.onGround()) {
-      handle.jumpFromGround();
+    if (stuck >= 15 && handle.horizontalCollision && (handle.onGround() || inWater)) {
+      boostOutOfWater();
     }
     if (stuck >= 25) {
       strafe *= -1;
@@ -366,10 +403,51 @@ public final class NmsBot implements BotPlatform {
       synchronizeEquipment(player());
       swingClock.reset(ticks);
     }
+
+    // Prioritize exiting water onto dry land before engaging the player
+    Location waterExit = inWater ? TacticalMovement.findWaterExit(here, target.getLocation()) : null;
+    if (inWater && waterExit != null && waterTicks < 100) {
+      double wx = waterExit.getX() - here.getX();
+      double wy = waterExit.getY() - here.getY();
+      double wz = waterExit.getZ() - here.getZ();
+      double exitDistSq = wx * wx + wz * wz;
+
+      if (exitDistSq <= 16.0) {
+        currentPath = null;
+        waypointIndex = 0;
+        float exitYaw = (float) Math.toDegrees(Math.atan2(-wx, wz));
+        BotLook.towards(handle, exitYaw, wy > 0.2 ? -20f : 0f, 180f);
+        double curYawRad = Math.toRadians(handle.getYRot());
+        double sin = Math.sin(curYawRad), cos = Math.cos(curYawRad);
+        double hDist = Math.sqrt(exitDistSq);
+        if (hDist > 0.05) {
+          double nx = wx / hDist;
+          double nz = wz / hDist;
+          handle.zza = (float) (-nx * sin + nz * cos);
+          handle.xxa = (float) (nx * cos + nz * sin);
+          handle.setSprinting(handle.zza > 0.1f);
+        } else {
+          handle.zza = 1.0f;
+          handle.xxa = 0;
+          handle.setSprinting(true);
+        }
+        if (wy > 0.2 || handle.horizontalCollision || exitDistSq <= 2.25) {
+          boostOutOfWater();
+          handle.zza = 1.0f;
+          handle.setSprinting(true);
+        }
+        return;
+      }
+    }
+
     // Update movement inputs
     double horizontalDist = Math.hypot(direction.getX(), direction.getZ());
     double verticalDiff = perceived.location().getY() - here.getY();
-    boolean closeCombat = horizontalDist <= 3.2 && Math.abs(verticalDiff) <= 1.2 && player().hasLineOfSight(target);
+    boolean closeCombat =
+        !inWater
+            && horizontalDist <= 3.2
+            && Math.abs(verticalDiff) <= 1.2
+            && player().hasLineOfSight(target);
 
     if (closeCombat) {
       currentPath = null;
@@ -381,14 +459,15 @@ public final class NmsBot implements BotPlatform {
           && (!critical.tracking(ticks) || handle.onGround());
       handle.setSprinting(canSprint);
     } else {
+      Location navGoal = (inWater && waterExit != null) ? waterExit : target.getLocation();
       if (currentPath == null
           || ticks - lastPathTick > 12
           || lastPathTarget == null
-          || lastPathTarget.distanceSquared(target.getLocation()) > 3.0
+          || lastPathTarget.distanceSquared(navGoal) > 3.0
           || waypointIndex >= currentPath.size()) {
         lastPathTick = ticks;
-        lastPathTarget = target.getLocation().clone();
-        currentPath = TacticalPathfinder.findPath(player().getWorld(), here, target.getLocation(), 1200);
+        lastPathTarget = navGoal.clone();
+        currentPath = TacticalPathfinder.findPath(player().getWorld(), here, navGoal, 1200);
         waypointIndex = 0;
       }
 
@@ -427,7 +506,7 @@ public final class NmsBot implements BotPlatform {
         }
 
         float wpYaw = (float) Math.toDegrees(Math.atan2(-wx, wz));
-        boolean seeTarget = player().hasLineOfSight(target);
+        boolean seeTarget = !inWater && player().hasLineOfSight(target);
         float aimYaw = (distance < 7.0 && seeTarget)
             ? player().getEyeLocation().setDirection(perceived.location().clone().add(0, target.getHeight() * .65, 0).toVector().subtract(player().getEyeLocation().toVector())).getYaw()
             : wpYaw;
@@ -448,9 +527,9 @@ public final class NmsBot implements BotPlatform {
           handle.xxa = 0;
         }
 
-        if ((wp.action() == TacticalPathfinder.ActionType.JUMP_UP || wy > 0.35 || (handle.horizontalCollision && handle.onGround()))
-            && handle.onGround()) {
-          handle.jumpFromGround();
+        if ((wp.action() == TacticalPathfinder.ActionType.JUMP_UP || wy > 0.35 || handle.horizontalCollision)
+            && (handle.onGround() || inWater)) {
+          boostOutOfWater();
           handle.setSprinting(true);
           handle.zza = 1.0f;
         }
@@ -464,16 +543,16 @@ public final class NmsBot implements BotPlatform {
             handle.zza = 1.0f;
             handle.xxa = 0;
             handle.setSprinting(true);
-            if (handle.horizontalCollision && handle.onGround()) {
-              handle.jumpFromGround();
+            if (handle.horizontalCollision && (handle.onGround() || inWater)) {
+              boostOutOfWater();
             }
           }
         } else {
           combatLook(target, perceived, d);
           handle.zza = 0.7f;
           handle.xxa = 0;
-          if (handle.horizontalCollision && handle.onGround()) {
-            handle.jumpFromGround();
+          if (handle.horizontalCollision && (handle.onGround() || inWater)) {
+            boostOutOfWater();
           }
         }
       }
@@ -630,7 +709,8 @@ public final class NmsBot implements BotPlatform {
 
   // Avoid falling into hazards
   private void avoidHazards() {
-    if ((!handle.onGround() && !handle.isInWater()) || (handle.zza == 0 && handle.xxa == 0)) return;
+    if (isBotInWater()) return;
+    if (!handle.onGround() || (handle.zza == 0 && handle.xxa == 0)) return;
     if (currentPath != null && !currentPath.isEmpty() && waypointIndex < currentPath.size()) return;
     double yaw = Math.toRadians(handle.getYRot());
     double sin = Math.sin(yaw), cos = Math.cos(yaw);

@@ -108,9 +108,18 @@ public final class TacticalMovement {
         Block stepHead = getBlock(world, blockX, Location.locToBlock(currentY + 2.0), blockZ);
         Block jumpHeadroom = getBlock(world, blockX, Location.locToBlock(fromY + 2.0), blockZ);
         if (clear(stepFeet)
-			&& clear(stepHead)
-			&& clear(jumpHeadroom)) {
+            && clear(stepHead)
+            && clear(jumpHeadroom)) {
           return currentY + 1.0;
+        }
+        // When swimming in 2+ deep water near the surface, feet may be just below the upper water
+        // block while the shoreline bank is at currentY + 1.0 with dry air at currentY + 2.0..3.0.
+        if (stepFeet != null
+            && getCollisionMaxY(stepFeet) <= 1.0
+            && !hazardous(stepFeet.getType())
+            && clear(stepHead)
+            && clear(getBlock(world, blockX, Location.locToBlock(currentY + 3.0), blockZ))) {
+          return currentY + 2.0;
         }
         return null;
       }
@@ -189,6 +198,89 @@ public final class TacticalMovement {
         || material == Material.BUBBLE_COLUMN;
   }
 
+  public static boolean isDryStandable(World world, int x, int y, int z) {
+    Block floor = getBlock(world, x, y - 1, z);
+    Block feet = getBlock(world, x, y, z);
+    Block head = getBlock(world, x, y + 1, z);
+    if (floor == null || feet == null || head == null) return false;
+    if (water(floor) || water(feet) || water(head)) return false;
+    if (hazardous(floor.getType()) || hazardous(feet.getType()) || hazardous(head.getType()))
+      return false;
+    double floorMaxY = getCollisionMaxY(floor);
+    return floorMaxY > 0.0 && floorMaxY <= 1.0 && feet.isPassable() && head.isPassable();
+  }
+
+  public static Location findWaterExit(Location self, Location target) {
+    World world = self.getWorld();
+    if (world == null) return null;
+    int sx = self.getBlockX();
+    int sz = self.getBlockZ();
+    int surfaceY = Location.locToBlock(self.getY());
+    while (surfaceY < world.getMaxHeight() - 3
+        && water(getBlock(world, sx, surfaceY + 1, sz))) {
+      surfaceY++;
+    }
+
+    Location best = null;
+    double bestScore = -Double.MAX_VALUE;
+    int[][] cardinals = {{1, 0}, {-1, 0}, {0, 1}, {0, -1}};
+
+    for (int radius = 1; radius <= 12; radius++) {
+      for (int dx = -radius; dx <= radius; dx++) {
+        for (int dz = -radius; dz <= radius; dz++) {
+          if (Math.max(Math.abs(dx), Math.abs(dz)) != radius) continue;
+          int bx = sx + dx;
+          int bz = sz + dz;
+          for (int dy = -2; dy <= 2; dy++) {
+            int by = surfaceY + dy;
+            if (!isDryStandable(world, bx, by, bz)) continue;
+
+            // Check that this dry block can be stepped/jumped onto from an adjacent block
+            boolean reachableShore = false;
+            int dryNeighbors = 0;
+            for (int[] c : cardinals) {
+              int nx = bx + c[0];
+              int nz = bz + c[1];
+              if (isDryStandable(world, nx, by, nz)) {
+                dryNeighbors++;
+              }
+              Block adjWaterOrAir = getBlock(world, nx, by - 1, nz);
+              Block adjFeet = getBlock(world, nx, by, nz);
+              Block adjHead = getBlock(world, nx, by + 1, nz);
+              if (adjWaterOrAir != null
+                  && (water(adjWaterOrAir) || water(adjFeet))
+                  && clear(adjFeet)
+                  && clear(adjHead)) {
+                reachableShore = true;
+              }
+            }
+            if (!reachableShore && radius > 2) continue;
+
+            Location candidate = new Location(world, bx + 0.5, by, bz + 0.5);
+            double distToSelf = Math.hypot(candidate.getX() - self.getX(), candidate.getZ() - self.getZ());
+            double distToTarget =
+                target != null && world.equals(target.getWorld())
+                    ? Math.hypot(candidate.getX() - target.getX(), candidate.getZ() - target.getZ())
+                    : 0.0;
+
+            double score =
+                -distToSelf * 3.5
+                    - Math.abs(by - (surfaceY + 1)) * 1.5
+                    + dryNeighbors * 0.8
+                    - distToTarget * 0.25;
+            if (score > bestScore) {
+              bestScore = score;
+              best = candidate;
+            }
+          }
+        }
+      }
+      // Once we found a close reachable shore within 2 blocks, take the best nearby exit immediately
+      if (best != null && radius >= 3) break;
+    }
+    return best;
+  }
+
   public static Vector retreatDirection(Location self, Location target) {
     Vector away = self.toVector().subtract(target.toVector()).setY(0);
     if (away.lengthSquared() < .001) away = self.getDirection().setY(0).multiply(-1);
@@ -221,10 +313,13 @@ public final class TacticalMovement {
                           org.bukkit.FluidCollisionMode.NEVER,
                           true)
                   != null;
+      boolean endsInWater =
+          water(end.getBlock()) || water(end.clone().subtract(0, 0.5, 0).getBlock());
       double score =
           (end.distance(target) - selfTargetDist) * 4
               + (cover ? 5 : 0)
-              + (clearPath(self, candidate, 4.2) ? 1 : 0);
+              + (clearPath(self, candidate, 4.2) ? 1 : 0)
+              - (endsInWater ? 12 : 0);
       if (score > bestScore) {
         bestScore = score;
         best = candidate;

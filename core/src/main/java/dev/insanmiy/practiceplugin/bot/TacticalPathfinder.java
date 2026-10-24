@@ -173,21 +173,35 @@ public final class TacticalPathfinder {
     int cy = current.y;
 
     // 1. Same level walk (cy)
-    if (isPassable(TacticalMovement.getBlock(world, nx, cy, nz))
-        && isPassable(TacticalMovement.getBlock(world, nx, cy + 1, nz))
-        && isFloor(TacticalMovement.getBlock(world, nx, cy - 1, nz))) {
-      double cost = current.gScore + (isDiagonal ? 1.414 : 1.0);
-      tryAddNode(current, nx, cy, nz, ActionType.WALK, cost, targetX, targetY, targetZ, openSet, gScores);
+    Block nextFeet = TacticalMovement.getBlock(world, nx, cy, nz);
+    Block nextHead = TacticalMovement.getBlock(world, nx, cy + 1, nz);
+    Block nextFloor = TacticalMovement.getBlock(world, nx, cy - 1, nz);
+    if (isPassable(nextFeet) && isPassable(nextHead) && isFloor(nextFloor)) {
+      boolean inWater = TacticalMovement.water(nextFeet) || TacticalMovement.water(nextFloor);
+      double cost = current.gScore + (isDiagonal ? 1.414 : 1.0) + (inWater ? 2.0 : 0.0);
+      tryAddNode(
+          current,
+          nx,
+          cy,
+          nz,
+          inWater ? ActionType.SWIM : ActionType.WALK,
+          cost,
+          targetX,
+          targetY,
+          targetZ,
+          openSet,
+          gScores);
     }
 
-    // 2. Step up 1 block (cy + 1)
+    // 2. Step up 1 block (cy + 1) onto solid ground or upward through water
     Block stepFloor = TacticalMovement.getBlock(world, nx, cy, nz);
-    if (isSolid(stepFloor)
-        && TacticalMovement.getCollisionMaxY(stepFloor) <= 1.0
+    if ((isSolid(stepFloor) && TacticalMovement.getCollisionMaxY(stepFloor) <= 1.0
+            || TacticalMovement.water(stepFloor))
         && isPassable(TacticalMovement.getBlock(world, nx, cy + 1, nz))
         && isPassable(TacticalMovement.getBlock(world, nx, cy + 2, nz))
         && isPassable(TacticalMovement.getBlock(world, current.x, cy + 2, current.z))) {
-      double cost = current.gScore + (isDiagonal ? 1.75 : 1.35);
+      boolean intoWater = TacticalMovement.water(TacticalMovement.getBlock(world, nx, cy + 1, nz));
+      double cost = current.gScore + (isDiagonal ? 1.75 : 1.35) + (intoWater ? 1.5 : 0.0);
       tryAddNode(current, nx, cy + 1, nz, ActionType.JUMP_UP, cost, targetX, targetY, targetZ, openSet, gScores);
     }
 
@@ -200,7 +214,7 @@ public final class TacticalPathfinder {
         if (!isPassable(dropBlock)) break;
         Block landingFloor = TacticalMovement.getBlock(world, nx, dropY - 1, nz);
         if (TacticalMovement.water(landingFloor)) {
-          double cost = current.gScore + (isDiagonal ? 1.414 : 1.0) + 1.2;
+          double cost = current.gScore + (isDiagonal ? 1.414 : 1.0) + 2.5;
           tryAddNode(current, nx, dropY, nz, ActionType.SWIM, cost, targetX, targetY, targetZ, openSet, gScores);
           break;
         }
@@ -283,6 +297,19 @@ public final class TacticalPathfinder {
   }
 
   public static int findStandingY(World world, int x, int y, int z) {
+    Block at = TacticalMovement.getBlock(world, x, y, z);
+    if (TacticalMovement.water(at)) {
+      int surfaceY = y;
+      for (int offset = 0; offset <= 12; offset++) {
+        Block above = TacticalMovement.getBlock(world, x, y + offset + 1, z);
+        if (TacticalMovement.water(above)) {
+          surfaceY = y + offset + 1;
+        } else {
+          break;
+        }
+      }
+      return surfaceY;
+    }
     for (int offset = 0; offset <= 4; offset++) {
       int testY = y + offset;
       if (isFloor(TacticalMovement.getBlock(world, x, testY - 1, z))

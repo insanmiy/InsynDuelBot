@@ -1,5 +1,6 @@
 package dev.insanmiy.practiceplugin.nms.v1_21_R3;
 
+import dev.insanmiy.practiceplugin.Attributes;
 import dev.insanmiy.practiceplugin.bot.*;
 
 import dev.insanmiy.practiceplugin.config.Difficulty;
@@ -35,6 +36,7 @@ final class UtilityBrain {
   private boolean pendingHeal;
   private final DamagePressure pressure = new DamagePressure();
   boolean naturalRegeneration = true;
+  double escapePearlChance = 0.35;
   dev.insanmiy.practiceplugin.model.BotOptions options =
       dev.insanmiy.practiceplugin.model.BotOptions.defaults();
   private final RepairCadence repair = new RepairCadence();
@@ -62,6 +64,8 @@ final class UtilityBrain {
   private int postTotemRecoveryUntil;
   private int totemPoppedTick = -1000;
   private int lastEscapePearlTick = -1000;
+  private int escapePearlWindowUntil;
+  private boolean escapePearlAllowedInWindow;
   private int nextPitEscape, nextWindCharge, nextBlockPlace, pitStuckTicks;
   private Location lastPitCheckLoc;
   private int digStuckTicks;
@@ -103,6 +107,8 @@ final class UtilityBrain {
     postTotemRecoveryUntil = 0;
     totemPoppedTick = -1000;
     lastEscapePearlTick = -1000;
+    escapePearlWindowUntil = 0;
+    escapePearlAllowedInWindow = false;
     nextPitEscape = nextWindCharge = nextBlockPlace = pitStuckTicks = 0;
     lastPitCheckLoc = null;
     digStuckTicks = 0;
@@ -112,6 +118,13 @@ final class UtilityBrain {
 
   private Player player() {
     return handle.getBukkitEntity();
+  }
+
+  private boolean inWater(Player self) {
+    if (handle.isInWater()) return true;
+    Location loc = self.getLocation();
+    return TacticalMovement.water(loc.getBlock())
+        || TacticalMovement.water(loc.clone().add(0, 0.5, 0).getBlock());
   }
 
   boolean busy(int tick) {
@@ -126,13 +139,15 @@ final class UtilityBrain {
         || handle.isUsingItem()
         || (tick < postTotemRecoveryUntil
             && (player().getHealth()
-                    / player().getAttribute(org.bukkit.attribute.Attribute.MAX_HEALTH).getValue())
+                    / Attributes.getValue(player(), Attributes.MAX_HEALTH, 20.0))
                 < 0.85);
   }
 
   void onTotemPopped(int tick) {
     postTotemRecoveryUntil = tick + 80;
     totemPoppedTick = tick;
+    escapePearlWindowUntil = tick + 120;
+    escapePearlAllowedInWindow = Math.random() < escapePearlChance;
     nextTotem = 0;
     Player self = player();
     int totemSlot = find(i -> i.getType() == Material.TOTEM_OF_UNDYING);
@@ -175,12 +190,13 @@ final class UtilityBrain {
 
   boolean act(Player target, Difficulty difficulty, int tick) {
     currentTick = tick;
+    escapePearlChance = difficulty.pearlChance();
     repairWorking = false;
     opponent = target;
     Player self = player();
     double distance = self.getLocation().distance(target.getLocation());
     double fraction =
-        self.getHealth() / self.getAttribute(org.bukkit.attribute.Attribute.MAX_HEALTH).getValue();
+        self.getHealth() / Attributes.getValue(self, Attributes.MAX_HEALTH, 20.0);
     HealingPlan.State healing = healingState(target, difficulty, tick);
     boolean emergency =
         HealingPlan.urgent(healing)
@@ -297,6 +313,27 @@ final class UtilityBrain {
       return true;
     }
 
+    if (escapeWeb(tick)) {
+      repair.stop(tick);
+      return true;
+    }
+
+    // When in water with dry land nearby, get out of the water first before non-urgent utilities
+    if (inWater(self)) {
+      if (emergency && options.useHealing() && heal(target, tick, fraction, healing)) {
+        return true;
+      }
+      if (options.useUtilities() && escapePit(target, difficulty, tick)) {
+        repair.stop(tick);
+        return true;
+      }
+      if (TacticalMovement.findWaterExit(self.getLocation(), target.getLocation()) != null) {
+        preparingSplash = -1;
+        repair.stop(tick);
+        return false;
+      }
+    }
+
     if (options.useHealing()
         && (tick < postTotemRecoveryUntil
             || HealingPlan.urgent(healing) == true
@@ -311,10 +348,6 @@ final class UtilityBrain {
                         == false)))
         && heal(target, tick, fraction, healing)) return true;
     preparingSplash = -1;
-    if (escapeWeb(tick)) {
-      repair.stop(tick);
-      return true;
-    }
     if (replaceArmor(tick)) return true;
     if (!options.useUtilities()) return false;
 
@@ -489,7 +522,7 @@ final class UtilityBrain {
                   && player().getLocation().distanceSquared(opponent.getLocation()) >= 20.25
                   && currentTick - lastHit >= 20
                   && player().getHealth()
-                      >= player().getAttribute(org.bukkit.attribute.Attribute.MAX_HEALTH).getValue()
+                      >= Attributes.getValue(player(), Attributes.MAX_HEALTH, 20.0)
                           * .5);
     }
     return true;
@@ -558,11 +591,15 @@ final class UtilityBrain {
 
   private boolean water(int tick) {
     Player self = player();
-    if (placedWater != null && tick >= retrieveWater && self.getFireTicks() <= 0) {
+    if (placedWater != null
+        && tick >= retrieveWater
+        && self.getFireTicks() <= 0
+        && handle.fallDistance <= 1.0
+        && !inWeb(self)) {
       int bucket = find(i -> i.getType() == Material.BUCKET);
       if (bucket >= 0
           && placedWater.getWorld().equals(self.getWorld())
-          && placedWater.distanceSquared(self.getEyeLocation()) <= 16
+          && placedWater.distanceSquared(self.getEyeLocation()) <= 25
           && placedWater.getBlock().getType() == Material.WATER) {
         Location look =
             self.getEyeLocation()
@@ -582,16 +619,31 @@ final class UtilityBrain {
             () -> {
               lookAt(source.clone().add(.5, .5, .5));
               nativeUse();
+              if (source.getBlock().getType() == Material.WATER) {
+                source.getBlock().setType(Material.AIR);
+                ItemStack held = player().getInventory().getItemInMainHand();
+                if (held.getType() == Material.BUCKET) {
+                  if (held.getAmount() > 1) {
+                    held.setAmount(held.getAmount() - 1);
+                    player().getInventory().addItem(new ItemStack(Material.WATER_BUCKET));
+                  } else {
+                    player().getInventory().setItemInMainHand(new ItemStack(Material.WATER_BUCKET));
+                  }
+                  NmsBot.synchronizeEquipment(player());
+                }
+              }
               placedWater = null;
             },
             () ->
                 source.getBlock().getType() == Material.WATER
-                    && source.distanceSquared(player().getEyeLocation()) <= 16);
+                    && source.distanceSquared(player().getEyeLocation()) <= 25);
         return true;
       }
-      if (tick >= retrieveWater + 80) placedWater = null;
+      if (placedWater.getBlock().getType() != Material.WATER || tick >= retrieveWater + 40) {
+        placedWater = null;
+      }
     }
-    boolean trappedInWeb = inWeb(self);
+    boolean trappedInWeb = inWeb(self) && !inWater(self);
     if (tick < nextWater
         || self.getWorld().getEnvironment() == World.Environment.NETHER
         || !(self.getFireTicks() > 0 && !self.hasPotionEffect(PotionEffectType.FIRE_RESISTANCE)
@@ -618,7 +670,7 @@ final class UtilityBrain {
           nativeUse();
           nextWater = currentTick + (trappedInWeb ? 15 : 200);
           placedWater = destination.getLocation();
-          retrieveWater = currentTick + (trappedInWeb ? 4 : 20);
+          retrieveWater = currentTick + 4;
         },
         () ->
             destination.getLocation().distanceSquared(player().getEyeLocation()) <= 20.25
@@ -852,7 +904,7 @@ final class UtilityBrain {
     boolean covered = !self.hasLineOfSight(target);
     return new HealingPlan.State(
         self.getHealth(),
-        self.getAttribute(org.bukkit.attribute.Attribute.MAX_HEALTH).getValue(),
+        Attributes.getValue(self, Attributes.MAX_HEALTH, 20.0),
         self.getAbsorptionAmount(),
         self.getFoodLevel(),
         self.getSaturation(),
@@ -868,7 +920,7 @@ final class UtilityBrain {
         naturalRegeneration
             && Boolean.TRUE.equals(self.getWorld().getGameRuleValue(GameRule.NATURAL_REGENERATION)),
         (self.getHealth()
-                    < self.getAttribute(org.bukkit.attribute.Attribute.MAX_HEALTH).getValue() * .9
+                    < Attributes.getValue(self, Attributes.MAX_HEALTH, 20.0) * .9
                 || self.getFoodLevel() < 20
                 || self.getAbsorptionAmount() < 3.0)
             && escapeDirection() != null,
@@ -1087,9 +1139,15 @@ final class UtilityBrain {
       double distance,
       double fraction,
       HealingPlan.State healing) {
+    if (escapePearlChance <= 0.0) return false;
     if (tick < nextPearl || player().hasCooldown(Material.ENDER_PEARL)) return false;
     if (lastEscapePearlTick >= totemPoppedTick && tick >= postTotemRecoveryUntil && tick - lastEscapePearlTick < 100) return false;
     if (player().getHealth() + player().getAbsorptionAmount() <= 3.0) return false;
+    if (tick >= escapePearlWindowUntil) {
+      escapePearlWindowUntil = tick + 120;
+      escapePearlAllowedInWindow = Math.random() < escapePearlChance;
+    }
+    if (!escapePearlAllowedInWindow) return false;
     int pearlSlot = find(i -> i.getType() == Material.ENDER_PEARL);
     if (pearlSlot < 0) return false;
 
@@ -1130,6 +1188,8 @@ final class UtilityBrain {
           nativeUse();
           nextPearl = currentTick + 60;
           lastEscapePearlTick = currentTick;
+          escapePearlAllowedInWindow = false;
+          escapePearlWindowUntil = currentTick + 160;
         },
         () -> true);
     return true;
@@ -1269,7 +1329,7 @@ final class UtilityBrain {
     int totemSlot = find(i -> i.getType() == Material.TOTEM_OF_UNDYING);
     if (totemSlot < 0) return;
     double currentHealth = self.getHealth();
-    double maxHealth = self.getAttribute(org.bukkit.attribute.Attribute.MAX_HEALTH).getValue();
+    double maxHealth = Attributes.getValue(self, Attributes.MAX_HEALTH, 20.0);
     if (currentHealth <= 10.0 || (currentHealth / maxHealth) <= 0.5 || tick < postTotemRecoveryUntil) {
       ItemStack totemItem = self.getInventory().getItem(totemSlot);
       ItemStack displaced = offhand.getType().isAir() ? null : offhand.clone();
@@ -1312,14 +1372,15 @@ final class UtilityBrain {
     }
     lastPitCheckLoc = here.clone();
 
-    // 1 or 2 blocks up (or downhill) is standard terrain navigation, NEVER an escape situation
-    if (yDiff < 2.8) {
+    boolean botInWater = inWater(self);
+    // 1 or 2 blocks up (or downhill) is standard terrain navigation unless stuck in a water trench/pit
+    if (yDiff < 2.8 && !(botInWater && pitStuckTicks >= 35 && yDiff >= 0.8)) {
       return false;
     }
 
     boolean hasWalkablePath = TacticalPathfinder.hasWalkablePath(self.getWorld(), here, targetLoc);
     // If a walkable path exists, prioritize normal walking/jumping unless physically stuck for >= 50 ticks
-    if (hasWalkablePath && pitStuckTicks < 50) {
+    if (hasWalkablePath && pitStuckTicks < 50 && !(botInWater && pitStuckTicks >= 35)) {
       return false;
     }
 
@@ -1328,8 +1389,12 @@ final class UtilityBrain {
     // Bot needs vertical escape only when:
     // 1) Fully enclosed in a pit/trench (3+ solid walls)
     // 2) Or target is on a sheer high ledge directly above (horizontalDist <= 4.5 && yDiff >= 2.8) with no path
-    // 3) Or bot has been completely stuck for >= 40 ticks with no path
-    boolean needVerticalEscape = pitEnclosed || (horizontalDist <= 4.5 && !hasWalkablePath) || (pitStuckTicks >= 40);
+    // 3) Or bot has been completely stuck for >= 40 ticks (or >= 35 ticks in water)
+    boolean needVerticalEscape =
+        pitEnclosed
+            || (horizontalDist <= 4.5 && !hasWalkablePath)
+            || (pitStuckTicks >= 40)
+            || (botInWater && pitStuckTicks >= 35);
     if (!needVerticalEscape) {
       return false;
     }
@@ -1375,7 +1440,9 @@ final class UtilityBrain {
     }
 
     // 2. Ender Pearl: High-arc lob out of the pit to high ground (only if distant or target is far above or in pit)
-    if (!self.hasCooldown(Material.ENDER_PEARL) && tick >= nextPearl && (horizontalDist >= 6.0 || yDiff >= 4.0 || pitEnclosed)) {
+    if (!self.hasCooldown(Material.ENDER_PEARL)
+        && tick >= nextPearl
+        && (horizontalDist >= 6.0 || yDiff >= 4.0 || pitEnclosed || (botInWater && pitStuckTicks >= 35))) {
       int pearlSlot = find(i -> i.getType() == Material.ENDER_PEARL);
       if (pearlSlot >= 0 && targetLoc.getY() > target.getWorld().getMinHeight() + 2) {
         Vector toTarget = targetLoc.toVector().subtract(here.toVector());

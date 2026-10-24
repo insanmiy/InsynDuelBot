@@ -72,7 +72,12 @@ final class ConfigUpgrade {
     Path file = folder.resolve("config.yml");
     var actual = YamlFiles.read(file);
     int version = actual.getInt("config-version", 1);
-    if (version >= 7) return false;
+    if (version >= 7) {
+      if (backfillDifficultyFields(actual, defaults)) {
+        YamlFiles.write(file, actual);
+      }
+      return false;
+    }
 
     var custom =
         Files.exists(folder.resolve("custom-kits.yml"))
@@ -85,6 +90,30 @@ final class ConfigUpgrade {
     actual.set("config-version", 7);
     YamlFiles.write(file, actual);
     return true;
+  }
+
+  private static boolean backfillDifficultyFields(
+      ConfigurationSection actual, ConfigurationSection defaults) {
+    ConfigurationSection actualDiffs = actual.getConfigurationSection("difficulties");
+    ConfigurationSection defaultDiffs = defaults.getConfigurationSection("difficulties");
+    if (actualDiffs == null) return false;
+    boolean changed = false;
+    for (String key : actualDiffs.getKeys(false)) {
+      ConfigurationSection tier = actualDiffs.getConfigurationSection(key);
+      if (tier == null) continue;
+      if (!tier.contains("pearl-chance") && !tier.contains("escape-pearl-chance")) {
+        ConfigurationSection defTier =
+            defaultDiffs != null ? defaultDiffs.getConfigurationSection(key) : null;
+        double fallback =
+            defTier != null && defTier.contains("pearl-chance")
+                ? defTier.getDouble("pearl-chance")
+                : dev.insanmiy.practiceplugin.config.Difficulty.defaultPearlChance(
+                    tier.getInt("decision-ticks", 4), tier.getBoolean("attacks-enabled", true));
+        tier.set("pearl-chance", fallback);
+        changed = true;
+      }
+    }
+    return changed;
   }
 
   static void replaceCatalog(
