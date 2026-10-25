@@ -214,7 +214,7 @@ public final class Kit {
   }
 
   public static boolean supported(Material type, World world) {
-    return supported(type) && (world == null || type.isEnabledByFeature(world));
+    return supported(type);
   }
 
   public static boolean tool(Material type) {

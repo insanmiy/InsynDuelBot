@@ -137,11 +137,17 @@ final class KitEditor implements Listener {
       case "edit" -> edit(player, name);
       case "save" -> {
         var saved = store.read();
-        if (saved.contains(name) || plugin.kits().containsKey(name))
-          throw new IllegalArgumentException("Name Already Used. Choose A New Name Or Edit The Existing Kit.");
+        var existingSection = saved.getConfigurationSection(name);
+        if (existingSection != null && !CustomKitStore.editable(existingSection, player.getUniqueId(), player.hasPermission("practice.admin"))) {
+          throw new IllegalArgumentException("You Can Only Overwrite Your Own Custom Kits.");
+        }
+        if (existingSection == null && (plugin.kits().containsKey(name) || saved.contains(name))) {
+          throw new IllegalArgumentException("Name Already Used By A Built-In Kit.");
+        }
+        String revision = existingSection != null ? CustomKitStore.revision(existingSection) : null;
         var candidate = new YamlConfiguration();
         Kit.capture(player, candidate);
-        save(player, name, candidate, null);
+        save(player, name, candidate, revision);
         player.sendMessage(TextUI.legacy(Component.text("Saved " + name + ". Your Inventory Was Not Changed.")));
       }
       case "copy" -> {
@@ -163,6 +169,17 @@ final class KitEditor implements Listener {
         library(player, 0);
       }
       case "delete" -> {
+        if (args.length >= 4 && args[3].equalsIgnoreCase("confirm")) {
+          store.delete(
+              name,
+              null,
+              player.getUniqueId(),
+              player.hasPermission("practice.admin"));
+          plugin.refreshKits();
+          player.sendMessage(TextUI.legacy(
+              Component.text("Deleted " + name + ". Previous File: customkits.yml.bak")));
+          return;
+        }
         Draft draft = existing(player, name);
         show(player, Screen.DELETE, draft, 0);
       }
@@ -215,6 +232,7 @@ final class KitEditor implements Listener {
   }
 
   private Draft existing(Player player, String name) throws IOException {
+    name = CustomKitStore.name(name);
     var section = store.read().getConfigurationSection(name);
     if (section == null)
       throw new IllegalArgumentException("Custom Kit '" + name + "' Does Not Exist.");
@@ -222,38 +240,72 @@ final class KitEditor implements Listener {
         section, player.getUniqueId(), player.hasPermission("practice.admin")))
       throw new IllegalArgumentException(
           "You Can Only Edit Your Own Custom Kits. Copy A Preset To Customize It.");
-    Kit kit = Kit.read(name, section);
     Draft draft = new Draft(name);
     draft.revision = CustomKitStore.revision(section);
-    draft.description = kit.description();
-    kit.previewItems().forEach((slot, item) -> draft.items[slot] = item);
-    draft.health = kit.health();
-    draft.regeneration = kit.regeneration();
+    try {
+      Kit kit = Kit.read(name, section);
+      draft.description = kit.description();
+      kit.previewItems().forEach((slot, item) -> draft.items[slot] = item);
+      draft.health = kit.health();
+      draft.regeneration = kit.regeneration();
+    } catch (Exception e) {
+      plugin.getLogger().warning("Could not fully parse kit " + name + ": " + e.getMessage());
+      draft.description = section.getString("description", "Custom Kit: " + name);
+      draft.health = section.getDouble("health", 20.0);
+      draft.regeneration = section.getBoolean("natural-regeneration", true);
+    }
     return draft;
   }
 
   private static void importInventory(Player player, Draft draft) {
-    for (int i = 0; i < draft.items.length; i++) {
+    for (int i = 0; i < 36; i++) {
       ItemStack item = player.getInventory().getItem(i);
-      if (empty(item)) {
+      if (!empty(item) && fits(i, item.getType())) {
+        draft.items[i] = item.clone();
+      } else {
         draft.items[i] = null;
-      } else if (Kit.supported(item.getType(), player.getWorld()) && fits(draft.selected, item.getType())) {
-        put(draft, i, item);
       }
+    }
+    ItemStack[] armor = player.getInventory().getArmorContents();
+    for (int i = 0; i < 4; i++) {
+      ItemStack item = (armor != null && i < armor.length) ? armor[i] : null;
+      int slot = 36 + i;
+      if (!empty(item) && fits(slot, item.getType())) {
+        draft.items[slot] = item.clone();
+      } else {
+        draft.items[slot] = null;
+      }
+    }
+    ItemStack offhand = player.getInventory().getItemInOffHand();
+    if (!empty(offhand) && fits(40, offhand.getType())) {
+      draft.items[40] = offhand.clone();
+    } else {
+      draft.items[40] = null;
     }
   }
 
   private void importKit(Player player, String name) throws IOException {
     allowed(player);
     name = CustomKitStore.name(name);
-    if (plugin.kits().containsKey(name) || store.read().contains(name))
-      throw new IllegalArgumentException("Name Already Used. Choose A New Name.");
+    var saved = store.read();
+    var existingSection = saved.getConfigurationSection(name);
+    if (existingSection != null && !CustomKitStore.editable(existingSection, player.getUniqueId(), player.hasPermission("practice.admin"))) {
+      throw new IllegalArgumentException("You Can Only Overwrite Your Own Custom Kits.");
+    }
+    if (existingSection == null && (plugin.kits().containsKey(name) || saved.contains(name))) {
+      throw new IllegalArgumentException("Name Already Used By A Built-In Kit.");
+    }
     Draft draft = new Draft(name);
+    if (existingSection != null) {
+      draft.revision = CustomKitStore.revision(existingSection);
+    }
     draft.description = "Saved By " + player.getName();
     importInventory(player, draft);
+    save(player, draft.name, serialize(draft), draft.revision);
+    draft.revision = CustomKitStore.revision(store.read().getConfigurationSection(draft.name));
     show(player, Screen.EDIT, draft, 0);
     player.sendMessage(TextUI.legacy(
-        Component.text("Imported Your Inventory Into " + name + ". Click Save To Keep It.")));
+        Component.text("Imported Your Inventory Into " + name + " And Saved Successfully!")));
   }
 
   private void edit(Player player, String name) throws IOException {
@@ -283,7 +335,7 @@ final class KitEditor implements Listener {
           button(
               Material.WRITABLE_BOOK,
               name,
-              "Left: Edit | Right: Duplicate",
+              "Left: Edit | Right: Duplicate | Shift-Right: Delete",
               "/practice kit rename " + name + " <new-name>"));
     }
     view.inventory.setItem(
@@ -530,7 +582,7 @@ final class KitEditor implements Listener {
             view.palette.add(potion);
           }
       for (Material type : Material.values())
-        if (Kit.supported(type, player.getWorld())
+        if (Kit.supported(type)
             && inCategory(type, draft.paletteCategory)
             && fits(draft.selected, type)) {
           ItemStack item = new ItemStack(type);
@@ -771,6 +823,13 @@ final class KitEditor implements Listener {
                         "Could Not Complete The Kit Action. Check The Server Log Before Retrying.",
                         NamedTextColor.RED)));
                 plugin.getLogger().warning(e.toString());
+              } catch (Throwable t) {
+                player.sendMessage(TextUI.legacy(
+                    Component.text(
+                        "An unexpected error occurred while processing this kit action.",
+                        NamedTextColor.RED)));
+                plugin.getLogger().severe("Unexpected error in KitEditor: " + t.getMessage());
+                t.printStackTrace();
               }
             });
   }
@@ -791,8 +850,15 @@ final class KitEditor implements Listener {
     if (view.screen == Screen.LIBRARY) {
       int index = view.page * 45 + slot;
       if (slot < 45 && index < view.names.size()) {
-        if (right) create(player, unusedName(), view.names.get(index));
-        else edit(player, view.names.get(index));
+        String kitName = view.names.get(index);
+        if (shift && right) {
+          show(player, Screen.DELETE, existing(player, kitName), 0);
+        } else if (right) {
+          create(player, unusedName(), kitName);
+        } else {
+          edit(player, kitName);
+        }
+        return;
       } else if (slot == 45 && view.page == 0) {
         player.closeInventory();
         Bukkit.dispatchCommand(player, "practice menu");
@@ -813,7 +879,10 @@ final class KitEditor implements Listener {
         player.sendMessage(TextUI.legacy(
             Component.text("Deleted " + draft.name + ". Previous File: customkits.yml.bak")));
         library(player, 0);
-      } else if (slot == 53) show(player, Screen.EDIT, draft, 0);
+      } else if (slot == 53) {
+        if (draft.revision == null) library(player, 0);
+        else show(player, Screen.EDIT, draft, 0);
+      }
       return;
     }
     if (view.screen == Screen.PALETTE) {
@@ -1009,7 +1078,12 @@ final class KitEditor implements Listener {
         }
         case 50 -> {
           importInventory(player, draft);
-          player.sendMessage(TextUI.legacy(Component.text("Inventory Imported. Click Save To Keep These Changes.")));
+          int count = 0;
+          for (ItemStack it : draft.items) {
+            if (!empty(it)) count++;
+          }
+          player.sendMessage(TextUI.legacy(Component.text(
+              "Imported " + count + " items from your inventory. Click Save to keep these changes.")));
         }
         case 51 -> {
           if (!canEnchant(draft.items[draft.selected]))
@@ -1027,8 +1101,11 @@ final class KitEditor implements Listener {
           return;
         }
         case 53 -> {
-          if (draft.revision == null)
-            throw new IllegalArgumentException("This Draft Is Not Saved. Use Back To Discard It.");
+          if (draft.revision == null) {
+            player.sendMessage(TextUI.legacy(Component.text("Draft Discarded.", NamedTextColor.GRAY)));
+            library(player, 0);
+            return;
+          }
           show(player, Screen.DELETE, draft, 0);
           return;
         }
@@ -1098,6 +1175,13 @@ final class KitEditor implements Listener {
                             "Could Not Complete The Kit Action. Check The Server Log Before Retrying.",
                             NamedTextColor.RED)));
                 plugin.getLogger().warning(e.toString());
+              } catch (Throwable t) {
+                player.sendMessage(TextUI.legacy(
+                    Component.text(
+                        "An unexpected error occurred while naming kit.",
+                        NamedTextColor.RED)));
+                plugin.getLogger().severe("Unexpected error naming kit in KitEditor: " + t.getMessage());
+                t.printStackTrace();
               }
               show(player, Screen.EDIT, draft, 0);
             });

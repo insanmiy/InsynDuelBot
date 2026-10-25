@@ -574,7 +574,7 @@ final class UtilityBrain {
     if (placedWater != null
         && tick >= retrieveWater
         && self.getFireTicks() <= 0
-        && handle.fallDistance <= 1.0
+        && self.getFallDistance() <= 1.0f
         && !inWeb(self)) {
       int bucket = find(i -> i.getType() == Material.BUCKET);
       if (bucket >= 0
@@ -627,7 +627,7 @@ final class UtilityBrain {
     if (tick < nextWater
         || self.getWorld().getEnvironment() == World.Environment.NETHER
         || !(self.getFireTicks() > 0 && !self.hasPotionEffect(PotionEffectType.FIRE_RESISTANCE)
-            || handle.fallDistance > 3
+            || self.getFallDistance() > 3
             || trappedInWeb)) return false;
     int bucket = find(i -> i.getType() == Material.WATER_BUCKET);
     if (bucket < 0) return false;

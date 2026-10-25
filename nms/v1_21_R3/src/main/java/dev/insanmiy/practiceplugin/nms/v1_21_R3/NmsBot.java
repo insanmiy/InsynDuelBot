@@ -65,11 +65,12 @@ public final class NmsBot implements BotPlatform {
 
   public NmsBot(Player owner, Location spawn, String name, Consumer<UUID> register) {
     server = ((CraftServer) Bukkit.getServer()).getServer();
-    GameProfile profile = new GameProfile(UUID.randomUUID(), name);
-    // Copy owner skin and profile
-    profile
-        .getProperties()
-        .putAll(((CraftPlayer) owner).getHandle().getGameProfile().getProperties());
+    UUID botId = UUID.randomUUID();
+    GameProfile profile =
+        createBotProfile(
+            botId,
+            name,
+            owner != null ? ((CraftPlayer) owner).getHandle().getGameProfile() : null);
     handle =
         new ServerPlayer(
             server,
@@ -77,9 +78,9 @@ public final class NmsBot implements BotPlatform {
             profile,
             ClientInformation.createDefault());
     utility = new UtilityBrain(handle);
-    register.accept(profile.getId());
+    register.accept(botId);
     handle.getBukkitEntity().setPersistent(false);
-    handle.absMoveTo(spawn.getX(), spawn.getY(), spawn.getZ(), spawn.getYaw(), spawn.getPitch());
+    moveToLocation(handle, spawn);
     connection = new DummyConnection();
     CommonListenerCookie cookie = CommonListenerCookie.createInitial(profile, false);
     try {
@@ -92,7 +93,7 @@ public final class NmsBot implements BotPlatform {
 
               if (packet instanceof ClientboundSetEntityMotionPacket motion
                   && motion.getId() == handle.getId())
-                pendingVelocity = new Vec3(motion.getXa(), motion.getYa(), motion.getZa());
+                pendingVelocity = extractMotion(motion);
               if (packet instanceof ClientboundPlayerPositionPacket teleport)
                 pendingTeleport = teleport.id();
             }
@@ -104,11 +105,126 @@ public final class NmsBot implements BotPlatform {
           };
       handle.getBukkitEntity().setGameMode(GameMode.SURVIVAL);
       handle.getBukkitEntity().setCanPickupItems(false);
-      handle.setClientLoaded(true);
+      setClientLoadedSafe(handle);
       reset(spawn);
     } catch (RuntimeException | Error e) {
       close();
       throw e;
+    }
+  }
+
+  private static void moveToLocation(ServerPlayer player, Location loc) {
+    double x = loc.getX(), y = loc.getY(), z = loc.getZ();
+    float yaw = loc.getYaw(), pitch = loc.getPitch();
+    // 1. Try absSnapTo (MC 1.21.4+ / Paper 1.21.11)
+    try {
+      java.lang.reflect.Method m =
+          player.getClass().getMethod("absSnapTo", double.class, double.class, double.class, float.class, float.class);
+      m.invoke(player, x, y, z, yaw, pitch);
+      return;
+    } catch (Throwable ignored) {
+    }
+    // 2. Try absMoveTo (MC 1.21.2 - 1.21.3)
+    try {
+      java.lang.reflect.Method m =
+          player.getClass().getMethod("absMoveTo", double.class, double.class, double.class, float.class, float.class);
+      m.invoke(player, x, y, z, yaw, pitch);
+      return;
+    } catch (Throwable ignored) {
+    }
+    // 3. Fallback: snapTo
+    try {
+      java.lang.reflect.Method m =
+          player.getClass().getMethod("snapTo", double.class, double.class, double.class, float.class, float.class);
+      m.invoke(player, x, y, z, yaw, pitch);
+      return;
+    } catch (Throwable ignored) {
+    }
+    // 4. Safe fallback: setPos + rotations
+    player.setPos(x, y, z);
+    player.setYRot(yaw);
+    player.setXRot(pitch);
+    player.yRotO = yaw;
+    player.xRotO = pitch;
+  }
+
+  private static void setClientLoadedSafe(ServerPlayer player) {
+    try {
+      java.lang.reflect.Method m = player.getClass().getMethod("setClientLoaded", boolean.class);
+      m.invoke(player, true);
+    } catch (Throwable ignored) {
+    }
+  }
+
+  private static Vec3 extractMotion(ClientboundSetEntityMotionPacket motion) {
+    try {
+      java.lang.reflect.Method m = motion.getClass().getMethod("getMovement");
+      return (Vec3) m.invoke(motion);
+    } catch (Throwable ignored) {
+    }
+    try {
+      java.lang.reflect.Method x = motion.getClass().getMethod("getXa");
+      java.lang.reflect.Method y = motion.getClass().getMethod("getYa");
+      java.lang.reflect.Method z = motion.getClass().getMethod("getZa");
+      double dx = ((Number) x.invoke(motion)).doubleValue();
+      double dy = ((Number) y.invoke(motion)).doubleValue();
+      double dz = ((Number) z.invoke(motion)).doubleValue();
+      return new Vec3(dx, dy, dz);
+    } catch (Throwable ignored) {
+    }
+    return Vec3.ZERO;
+  }
+
+  private static GameProfile createBotProfile(UUID botId, String name, GameProfile ownerProfile) {
+    Object ownerProps = getProfileProperties(ownerProfile);
+    if (ownerProps != null) {
+      // 1. Try 3-arg constructor for modern AuthLib 7+ (Record GameProfile(UUID, String, PropertyMap))
+      for (java.lang.reflect.Constructor<?> ctor : GameProfile.class.getConstructors()) {
+        Class<?>[] paramTypes = ctor.getParameterTypes();
+        if (paramTypes.length == 3
+            && paramTypes[0] == UUID.class
+            && paramTypes[1] == String.class
+            && paramTypes[2].isAssignableFrom(ownerProps.getClass())) {
+          try {
+            return (GameProfile) ctor.newInstance(botId, name, ownerProps);
+          } catch (Throwable ignored) {
+          }
+        }
+      }
+    }
+    // 2. Fallback to 2-arg constructor for legacy AuthLib 6 (GameProfile(UUID, String))
+    GameProfile profile = new GameProfile(botId, name);
+    if (ownerProps != null) {
+      try {
+        Object botProps = getProfileProperties(profile);
+        if (botProps != null) {
+          for (java.lang.reflect.Method m : botProps.getClass().getMethods()) {
+            if ("putAll".equals(m.getName()) && m.getParameterCount() == 1) {
+              if (m.getParameterTypes()[0].isAssignableFrom(ownerProps.getClass())) {
+                m.invoke(botProps, ownerProps);
+                break;
+              }
+            }
+          }
+        }
+      } catch (Throwable ignored) {
+      }
+    }
+    return profile;
+  }
+
+  private static Object getProfileProperties(GameProfile profile) {
+    if (profile == null) return null;
+    try {
+      java.lang.reflect.Method m;
+      try {
+        m = profile.getClass().getMethod("properties");
+      } catch (NoSuchMethodException e) {
+        m = profile.getClass().getMethod("getProperties");
+      }
+      return m.invoke(profile);
+    } catch (Throwable t) {
+      return null;
     }
   }
 
@@ -131,7 +247,18 @@ public final class NmsBot implements BotPlatform {
   }
 
   public static void synchronizeEquipment(Player player) {
-    ((CraftPlayer) player).getHandle().detectEquipmentUpdatesPublic();
+    ServerPlayer handle = ((CraftPlayer) player).getHandle();
+    try {
+      java.lang.reflect.Method m = handle.getClass().getMethod("detectEquipmentUpdates");
+      m.invoke(handle);
+      return;
+    } catch (Throwable ignored) {
+    }
+    try {
+      java.lang.reflect.Method m = handle.getClass().getMethod("detectEquipmentUpdatesPublic");
+      m.invoke(handle);
+    } catch (Throwable ignored) {
+    }
   }
 
   public static boolean criticalsEnabled(Player player) {
@@ -182,7 +309,7 @@ public final class NmsBot implements BotPlatform {
       teleporting = false;
     }
     acknowledgeTeleport();
-    handle.setClientLoaded(true);
+    setClientLoadedSafe(handle);
     handle.setHealth(handle.getMaxHealth());
     handle.resetAttackStrengthTicker();
     history.clear();
@@ -598,9 +725,9 @@ public final class NmsBot implements BotPlatform {
 
     boolean falling = !handle.onGround()
         && handle.getDeltaMovement().y < 0
-        && (handle.fallDistance > 0 || handle.getDeltaMovement().y < -0.05);
-    if (falling && handle.fallDistance <= 0.0f) {
-      handle.fallDistance = (float) Math.max(0.1, -handle.getDeltaMovement().y);
+        && (player().getFallDistance() > 0 || handle.getDeltaMovement().y < -0.05);
+    if (falling && player().getFallDistance() <= 0.0f) {
+      player().setFallDistance((float) Math.max(0.1, -handle.getDeltaMovement().y));
     }
 
     // Check if critical jump is ready
@@ -672,8 +799,8 @@ public final class NmsBot implements BotPlatform {
         || handle.hasEffect(net.minecraft.world.effect.MobEffects.BLINDNESS)
         || handle.level().paperConfig().entities.behavior.disablePlayerCrits
         || !Kit.melee(player().getInventory().getItemInMainHand().getType())) return;
-    if (handle.fallDistance <= 0.0f) {
-      handle.fallDistance = (float) Math.max(0.1, -handle.getDeltaMovement().y);
+    if (player().getFallDistance() <= 0.0f) {
+      player().setFallDistance((float) Math.max(0.1, -handle.getDeltaMovement().y));
     }
     double charge = handle.getAttackStrengthScale(0);
     double minCharge = currentDifficulty != null ? currentDifficulty.attackCharge() : 1.0;
