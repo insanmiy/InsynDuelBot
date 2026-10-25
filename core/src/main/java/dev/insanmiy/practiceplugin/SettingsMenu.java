@@ -151,7 +151,7 @@ final class SettingsMenu implements Listener {
         18, 25, 26,
         27, 35,
         36, 37, 38, 39, 40, 41, 42, 43, 44,
-        46, 47, 48, 50, 51, 52
+        46, 47, 48, 50, 51, 52, 53
       };
     }
 
@@ -265,7 +265,6 @@ final class SettingsMenu implements Listener {
             "Restores All 7 Combat Settings Above To",
             "Their Default Values From Difficulty Tier.",
             "Click To Reset"));
-    view.inventory.setItem(53, item(Material.BARRIER, "Close"));
 
     if (!canReuse) {
       p.openInventory(view.inventory);
@@ -330,10 +329,6 @@ final class SettingsMenu implements Listener {
     PlayerSettings prefs = plugin.settings();
     UUID id = p.getUniqueId();
     try {
-      if (slot == 53) {
-        p.closeInventory();
-        return;
-      }
       if (slot == 45) {
         p.closeInventory();
         p.performCommand("practice menu");

@@ -166,7 +166,6 @@ final class UtilityBrain {
 
   void onOpponentHit(int tick) {
     lastHit = tick;
-    repair.stop(tick);
   }
 
   void recordDamage(int tick, double amount) {
@@ -211,7 +210,7 @@ final class UtilityBrain {
       handTiming.reset();
       handle.stopUsingItem();
       abortMining();
-      repair.stop(tick);
+      repair.cancel(tick);
     }
     if (prepared != null) {
       PreparedAction intent = prepared;
@@ -318,7 +317,7 @@ final class UtilityBrain {
       return true;
     }
 
-    // When in water with dry land nearby, get out of the water first before non-urgent utilities
+    // When in water with dry land nearby (and not already in close combat), get out of the water first before non-urgent utilities
     if (inWater(self)) {
       if (emergency && options.useHealing() && heal(target, tick, fraction, healing)) {
         return true;
@@ -327,7 +326,7 @@ final class UtilityBrain {
         repair.stop(tick);
         return true;
       }
-      if (TacticalMovement.findWaterExit(self.getLocation(), target.getLocation()) != null) {
+      if (distance > 3.5 && TacticalMovement.findWaterExit(self.getLocation(), target.getLocation()) != null) {
         preparingSplash = -1;
         repair.stop(tick);
         return false;
@@ -337,10 +336,11 @@ final class UtilityBrain {
     if (options.useHealing()
         && (tick < postTotemRecoveryUntil
             || HealingPlan.urgent(healing) == true
-            || fraction < 0.65
-            || options.useUtilities() == false
+            || fraction < 0.45
             || (repair.working() == false
-                && (tick < nextRepairSeek
+                && (fraction < 0.65
+                    || options.useUtilities() == false
+                    || tick < nextRepairSeek
                     || repair.wantsRepair(
                             tick,
                             damagedMendingArmor(),
@@ -482,24 +482,13 @@ final class UtilityBrain {
   private boolean repair(int tick, double distance, double healthFraction) {
     int xp = find(i -> i.getType() == Material.EXPERIENCE_BOTTLE);
     double damage = damagedMendingArmor();
+    // Do not stop mending just because the player is near; only stop if getting low on health
     boolean safe =
-        distance >= (repair.active() ? 4.5 : 6) && healthFraction >= .5 && tick - lastHit >= 20;
+        healthFraction >= .40
+            && (repair.active() || healthFraction >= .50);
     if (!repair.update(tick, damage, safe, xp >= 0)) {
-      if (!repair.wantsRepair(tick, damage, xp >= 0) || healthFraction < .5) {
-        repairSeekingSince = -1;
-        return false;
-      }
-
-      if (tick < nextRepairSeek || escapeDirection() == null) return false;
-      if (repairSeekingSince < 0) repairSeekingSince = tick;
-      if (tick - repairSeekingSince >= 60) {
-        repairSeekingSince = -1;
-        nextRepairSeek = tick + 100;
-        return false;
-      }
-      repairWorking = true;
-      retreatForRepair();
-      return true;
+      repairSeekingSince = -1;
+      return false;
     }
     repairSeekingSince = -1;
     repairWorking = true;
@@ -518,29 +507,20 @@ final class UtilityBrain {
             else repair.stop(currentTick);
           },
           () ->
-              opponent != null
-                  && player().getLocation().distanceSquared(opponent.getLocation()) >= 20.25
-                  && currentTick - lastHit >= 20
-                  && player().getHealth()
-                      >= Attributes.getValue(player(), Attributes.MAX_HEALTH, 20.0)
-                          * .5);
+              player().getHealth()
+                  >= Attributes.getValue(player(), Attributes.MAX_HEALTH, 20.0)
+                      * .40);
     }
     return true;
   }
 
   private void retreatForRepair() {
-    if (repair.working() == true) {
-      retreat();
-      if (handle.zza > 0) {
-        handle.zza = 1;
-        handle.setSprinting(true);
-      }
-      handle.setXRot(90);
-      BotLook.publish(handle);
-      return;
-    }
     retreat();
     if (handle.zza > 0) {
+      if (repair.working() == true) {
+        handle.setXRot(90);
+        BotLook.publish(handle);
+      }
       handle.zza = 1;
       handle.setSprinting(true);
     }
@@ -612,7 +592,7 @@ final class UtilityBrain {
         handle.setYRot(look.getYaw());
         handle.setXRot(look.getPitch());
         BotLook.publish(handle);
-        Location source = placedWater.clone();
+		Location source = placedWater.clone();
         prepare(
             bucket,
             tick,
@@ -950,7 +930,7 @@ final class UtilityBrain {
     }
     seekingSpaceSince = -1;
     abortMining();
-    repair.stop(tick);
+    repair.cancel(tick);
     if (action == HealingPlan.Action.SPLASH) {
       pendingHeal = true;
       if (selfPotion(

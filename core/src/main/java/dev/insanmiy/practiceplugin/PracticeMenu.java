@@ -164,7 +164,6 @@ final class PracticeMenu implements Listener {
             NamedTextColor.GOLD,
             true,
             "Your Selection Is Kept While Navigating"));
-    inventory.setItem(8, icon(Material.BARRIER, "Close Menu", NamedTextColor.RED, false));
 
     if (screen == Screen.PREVIEW) {
       for (int slot = 0; slot < 41; slot++) {
@@ -426,7 +425,6 @@ final class PracticeMenu implements Listener {
             "",
             "Click To View Stats"));
 
-    inventory.setItem(53, icon(Material.BARRIER, "Close Menu", NamedTextColor.RED, false));
 
     if (!canReuse) {
       player.openInventory(inventory);
@@ -508,10 +506,6 @@ final class PracticeMenu implements Listener {
                 // Actions on KITS screen
                 if (view.screen == Screen.KITS && slot == 0) {
                   Bukkit.dispatchCommand(player, "practice kit editor");
-                  return;
-                }
-                if (slot == 8) {
-                  player.closeInventory();
                   return;
                 }
 
@@ -630,7 +624,6 @@ final class PracticeMenu implements Listener {
                       show(player, choice, Screen.STATS, 0);
                     }
                   }
-                  case 53 -> player.closeInventory();
                   default -> {}
                 }
               } catch (IllegalArgumentException e) {

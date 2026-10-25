@@ -35,7 +35,7 @@ public final class RepairCadence {
     if (hasBottles == false
         || worstDamageFraction <= .15
         || active == true
-            && (workTicks >= 800 || unconfirmedShots >= 12 && tick - unconfirmedSince >= 80)) {
+            && (workTicks >= 160 || unconfirmedShots >= 8 && tick - unconfirmedSince >= 50)) {
       if (active == true) {
         finish(tick);
       }
@@ -43,18 +43,10 @@ public final class RepairCadence {
     }
     if (safe == false) {
       if (active == true) {
-        if (stoppedSince < 0) {
-          stoppedSince = tick;
-        }
-
-        else if (tick - stoppedSince >= 60) {
-          active = working = false;
-          stoppedSince = -1;
-          nextBurst = Math.max(nextBurst, tick + 40);
-          return false;
-        }
+        finish(tick);
+      } else {
+        stop(tick);
       }
-      stop(tick);
       return false;
     }
     stoppedSince = -1;
@@ -80,7 +72,7 @@ public final class RepairCadence {
     }
     nextThrow = tick + 4;
 
-    if (++shots >= 160) {
+    if (++shots >= 40) {
       finish(tick);
     }
   }
@@ -91,22 +83,26 @@ public final class RepairCadence {
     }
     unconfirmedShots = 0;
     failedImpacts = repaired ? 0 : failedImpacts + 1;
-    if (failedImpacts >= 8) {
+    if (failedImpacts >= 5) {
       finish(tick);
     }
   }
 
   public void stop(int tick) {
     if (active == true) {
-      nextThrow = Math.max(nextThrow, tick + 8);
+      nextThrow = Math.max(nextThrow, tick + 6);
     }
     working = false;
+  }
+
+  public void cancel(int tick) {
+    finish(tick);
   }
 
   private void finish(int tick) {
     active = working = false;
     stoppedSince = -1;
-    nextBurst = tick + 200;
+    nextBurst = tick + 240;
     nextThrow = tick + 10;
   }
 }

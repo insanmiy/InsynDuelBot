@@ -31,6 +31,7 @@ final class KitEditor implements Listener {
 
   private final PracticePlugin plugin;
   private final CustomKitStore store;
+  private final Map<UUID, Draft> pendingNames = new java.util.concurrent.ConcurrentHashMap<>();
 
   KitEditor(PracticePlugin plugin) {
     this.plugin = plugin;
@@ -93,7 +94,7 @@ final class KitEditor implements Listener {
     public int[] decorativeSlots() {
       return switch (screen) {
         case EDIT, PALETTE -> new int[0];
-        case LIBRARY -> new int[] {48, 51};
+        case LIBRARY -> new int[] {48, 51, 53};
         case TEMPLATES -> new int[] {48, 50, 51};
         case ITEM ->
             new int[] {
@@ -285,7 +286,11 @@ final class KitEditor implements Listener {
               "Left: Edit | Right: Duplicate",
               "/practice kit rename " + name + " <new-name>"));
     }
-    view.inventory.setItem(45, button(Material.ARROW, "Previous Page"));
+    view.inventory.setItem(
+        45,
+        page == 0
+            ? button(Material.ARROW, "Back To Main Menu", "Return To Kit Selection")
+            : button(Material.ARROW, "Previous Page"));
     view.inventory.setItem(
         46, button(Material.EMERALD, "Create Blank Kit", "No Fixed Kit-Count Limit"));
     view.inventory.setItem(
@@ -307,8 +312,13 @@ final class KitEditor implements Listener {
             "Copies Hotbar, Inventory, Armor And Offhand Into A New Draft",
             "Your Real Items Stay Untouched; Click Save When Ready",
             "/practice kit import <name>"));
-    view.inventory.setItem(53, button(Material.BARRIER, "Close"));
     player.openInventory(view.inventory);
+  }
+
+  private static boolean canEnchant(ItemStack item) {
+    if (empty(item)) return false;
+    for (Enchantment e : Registry.ENCHANTMENT) if (e.canEnchantItem(item)) return true;
+    return false;
   }
 
   private static boolean empty(ItemStack item) {
@@ -378,6 +388,9 @@ final class KitEditor implements Listener {
       palette(player, draft);
       return;
     }
+    if (screen == Screen.ENCHANT && !canEnchant(draft.items[draft.selected]))
+      throw new IllegalArgumentException("This Item Cannot Be Enchanted.");
+    pendingNames.remove(player.getUniqueId());
 
     int page = Math.max(0, requested);
     View view = new View(player, screen, draft, page);
@@ -433,7 +446,7 @@ final class KitEditor implements Listener {
       inv.setItem(51, button(Material.ENCHANTING_TABLE, "Enchant Selected Item"));
       inv.setItem(
           52,
-          button(Material.WRITABLE_BOOK, "Name This Kit", "Type A Name Using The GUI Keyboard"));
+          button(Material.WRITABLE_BOOK, "Name This Kit", "Click, Then Type A Name In Chat"));
       inv.setItem(53, button(Material.BARRIER, "Delete Saved Kit", "Confirmation Required"));
     } else if (screen == Screen.ITEM) {
       ItemStack item = draft.items[draft.selected];
@@ -780,11 +793,13 @@ final class KitEditor implements Listener {
       if (slot < 45 && index < view.names.size()) {
         if (right) create(player, unusedName(), view.names.get(index));
         else edit(player, view.names.get(index));
+      } else if (slot == 45 && view.page == 0) {
+        player.closeInventory();
+        Bukkit.dispatchCommand(player, "practice menu");
       } else if (slot == 45 || slot == 52) library(player, view.page + (slot == 45 ? -1 : 1));
       else if (slot == 46) create(player, unusedName(), null);
       else if (slot == 47) templates(player, 0);
       else if (slot == 50) importKit(player, unusedName());
-      else if (slot == 53) player.closeInventory();
       return;
     }
     if (view.screen == Screen.DELETE) {
@@ -867,11 +882,13 @@ final class KitEditor implements Listener {
         return;
       }
       if (slot == 21) {
+        if (!canEnchant(item)) throw new IllegalArgumentException("This Item Cannot Be Enchanted.");
         show(player, Screen.ENCHANT, draft, 0);
         return;
       }
       if (slot == 23) removeEnchants(item);
       else if (slot == 22 || slot == 24) {
+        if (!canEnchant(item)) throw new IllegalArgumentException("This Item Cannot Be Enchanted.");
         int applied = QuickEnchant.apply(item, slot == 24);
         player.playSound(player.getLocation(), Sound.BLOCK_ENCHANTMENT_TABLE_USE, .45f, 1.2f);
         player.sendMessage(TextUI.legacy(
@@ -995,12 +1012,18 @@ final class KitEditor implements Listener {
           player.sendMessage(TextUI.legacy(Component.text("Inventory Imported. Click Save To Keep These Changes.")));
         }
         case 51 -> {
+          if (!canEnchant(draft.items[draft.selected]))
+            throw new IllegalArgumentException("This Item Cannot Be Enchanted.");
           show(player, Screen.ENCHANT, draft, 0);
           return;
         }
         case 52 -> {
-          draft.nameInput = draft.name;
-          show(player, Screen.NAME, draft, 0);
+          pendingNames.put(player.getUniqueId(), draft);
+          player.closeInventory();
+          player.sendMessage(TextUI.legacy(
+              Component.text(
+                  "Type The New Kit Name In Chat (Or Type 'cancel' To Cancel).",
+                  NamedTextColor.YELLOW)));
           return;
         }
         case 53 -> {
@@ -1012,6 +1035,72 @@ final class KitEditor implements Listener {
         default -> {}
       }
     show(player, Screen.EDIT, draft, 0);
+  }
+
+  @EventHandler
+  public void quit(org.bukkit.event.player.PlayerQuitEvent event) {
+    pendingNames.remove(event.getPlayer().getUniqueId());
+  }
+
+  @SuppressWarnings("deprecation")
+  @EventHandler(priority = EventPriority.LOWEST)
+  public void chat(org.bukkit.event.player.AsyncPlayerChatEvent event) {
+    Player player = event.getPlayer();
+    Draft draft = pendingNames.remove(player.getUniqueId());
+    if (draft == null) return;
+    event.setCancelled(true);
+    String input = event.getMessage().trim();
+    Bukkit.getScheduler()
+        .runTask(
+            plugin,
+            () -> {
+              if (!player.isOnline()) return;
+              if (input.equalsIgnoreCase("cancel")) {
+                player.sendMessage(
+                    TextUI.legacy(Component.text("Kit Naming Cancelled.", NamedTextColor.GRAY)));
+                show(player, Screen.EDIT, draft, 0);
+                return;
+              }
+              try {
+                allowed(player);
+                String name = CustomKitStore.name(input);
+                if (!name.equals(draft.name)) {
+                  var saved = store.read();
+                  if (saved.contains(name) || plugin.kits().containsKey(name))
+                    throw new IllegalArgumentException("Name Already Used.");
+                  if (draft.revision != null) {
+                    if (!Objects.equals(
+                        draft.revision,
+                        CustomKitStore.revision(saved.getConfigurationSection(draft.name))))
+                      throw new IllegalArgumentException(
+                          "This Kit Changed. Reopen The Editor Before Renaming It.");
+                    store.rename(
+                        draft.name,
+                        name,
+                        player.getUniqueId(),
+                        player.hasPermission("practice.admin"),
+                        plugin.kits().keySet());
+                    plugin.refreshKits();
+                    draft.revision =
+                        CustomKitStore.revision(store.read().getConfigurationSection(name));
+                  }
+                  draft.name = name;
+                }
+                player.sendMessage(
+                    TextUI.legacy(
+                        Component.text("Kit Named " + draft.name + ".", NamedTextColor.GREEN)));
+              } catch (IllegalArgumentException e) {
+                player.sendMessage(TextUI.legacy(Component.text(e.getMessage(), NamedTextColor.RED)));
+              } catch (IOException e) {
+                player.sendMessage(
+                    TextUI.legacy(
+                        Component.text(
+                            "Could Not Complete The Kit Action. Check The Server Log Before Retrying.",
+                            NamedTextColor.RED)));
+                plugin.getLogger().warning(e.toString());
+              }
+              show(player, Screen.EDIT, draft, 0);
+            });
   }
 
   @EventHandler(priority = EventPriority.HIGHEST)

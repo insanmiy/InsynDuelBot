@@ -221,6 +221,14 @@ public final class TacticalMovement {
       surfaceY++;
     }
 
+    boolean targetInWater =
+        target != null
+            && world.equals(target.getWorld())
+            && (water(target.getBlock()) || water(target.clone().add(0, 0.5, 0).getBlock()));
+    if (targetInWater && self.distanceSquared(target) <= 36.0) {
+      return null;
+    }
+
     Location best = null;
     double bestScore = -Double.MAX_VALUE;
     int[][] cardinals = {{1, 0}, {-1, 0}, {0, 1}, {0, -1}};

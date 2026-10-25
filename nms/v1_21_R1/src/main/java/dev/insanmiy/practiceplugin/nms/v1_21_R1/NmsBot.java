@@ -1,5 +1,6 @@
 package dev.insanmiy.practiceplugin.nms.v1_21_R1;
 
+import dev.insanmiy.practiceplugin.Attributes;
 import dev.insanmiy.practiceplugin.bot.*;
 
 import com.mojang.authlib.GameProfile;
@@ -234,7 +235,6 @@ public final class NmsBot implements BotPlatform {
     utility.naturalRegeneration = naturalRegeneration;
   }
 
-
   private boolean isBotInWater() {
     if (handle.isInWater()) return true;
     Location loc = player().getLocation();
@@ -245,10 +245,10 @@ public final class NmsBot implements BotPlatform {
   private void boostOutOfWater() {
     if (handle.onGround()) {
       handle.jumpFromGround();
-    } else if (handle.getDeltaMovement().y < 0.42
-        && handle.level().noCollision(handle, handle.getBoundingBox().expandTowards(0, 1.2, 0))) {
+    } else if (handle.getDeltaMovement().y < 0.36
+        && handle.level().noCollision(handle, handle.getBoundingBox().expandTowards(0, 1.0, 0))) {
       Vec3 vel = handle.getDeltaMovement();
-      handle.setDeltaMovement(vel.x, 0.42, vel.z);
+      handle.setDeltaMovement(vel.x, 0.36, vel.z);
     }
   }
 
@@ -317,18 +317,18 @@ public final class NmsBot implements BotPlatform {
     Vec3 beforeTravel = handle.position();
 
     boolean inWater = isBotInWater();
-    handle.setJumping(d.attacksEnabled() && inWater);
-    if (d.attacksEnabled() && inWater) {
-      Location loc = player().getLocation();
-      Vec3 vel = handle.getDeltaMovement();
-      if (handle.isUnderWater() || TacticalMovement.water(loc.clone().add(0, 1.0, 0).getBlock())) {
-        if (vel.y < 0.14) {
-          handle.setDeltaMovement(vel.x, 0.14, vel.z);
-        }
-      }
-      if (handle.horizontalCollision && handle.zza > 0) {
-        boostOutOfWater();
-      }
+    boolean deepWater =
+        inWater
+            && (handle.isUnderWater()
+                || TacticalMovement.water(player().getLocation().clone().add(0, 0.85, 0).getBlock()));
+    // Sprinting in water triggers surface sprint-swimming, which looks like running on water.
+    if (inWater) handle.setSprinting(false);
+    handle.setJumping(
+        d.attacksEnabled()
+            && inWater
+            && (deepWater || (handle.horizontalCollision && handle.zza > 0)));
+    if (d.attacksEnabled() && inWater && handle.horizontalCollision && handle.zza > 0) {
+      boostOutOfWater();
     }
     var beforeLevel = handle.level();
     int beforeEpoch = movementEpoch;
@@ -336,8 +336,7 @@ public final class NmsBot implements BotPlatform {
     handle.doTick();
 
     if (beforeEpoch == movementEpoch
-        && beforeLevel == handle.level()
-        ) {
+        && beforeLevel == handle.level()) {
       Vec3 moved = handle.position().subtract(beforeTravel);
       handle.doCheckFallDamage(moved.x, moved.y, moved.z, handle.onGround());
       if (beforeEpoch == movementEpoch) handle.checkMovementStatistics(moved.x, moved.y, moved.z);
@@ -400,9 +399,17 @@ public final class NmsBot implements BotPlatform {
       swingClock.reset(ticks);
     }
 
-    // Prioritize exiting water onto dry land before engaging the player
-    Location waterExit = inWater ? TacticalMovement.findWaterExit(here, target.getLocation()) : null;
-    if (inWater && waterExit != null && waterTicks < 100) {
+    // Update movement inputs
+    double horizontalDist = Math.hypot(direction.getX(), direction.getZ());
+    double verticalDiff = perceived.location().getY() - here.getY();
+    boolean closeCombat =
+        horizontalDist <= 3.2
+            && Math.abs(verticalDiff) <= 1.4
+            && player().hasLineOfSight(target);
+
+    // Prioritize exiting water onto dry land only when not already in close combat range
+    Location waterExit = (!closeCombat && inWater) ? TacticalMovement.findWaterExit(here, target.getLocation()) : null;
+    if (inWater && waterExit != null && waterTicks < 80) {
       double wx = waterExit.getX() - here.getX();
       double wy = waterExit.getY() - here.getY();
       double wz = waterExit.getZ() - here.getZ();
@@ -427,7 +434,7 @@ public final class NmsBot implements BotPlatform {
           handle.xxa = 0;
           handle.setSprinting(true);
         }
-        if (wy > 0.2 || handle.horizontalCollision || exitDistSq <= 2.25) {
+        if ((wy > 0.25 && exitDistSq <= 1.8) || handle.horizontalCollision) {
           boostOutOfWater();
           handle.zza = 1.0f;
           handle.setSprinting(true);
@@ -435,15 +442,6 @@ public final class NmsBot implements BotPlatform {
         return;
       }
     }
-
-    // Update movement inputs
-    double horizontalDist = Math.hypot(direction.getX(), direction.getZ());
-    double verticalDiff = perceived.location().getY() - here.getY();
-    boolean closeCombat =
-        !inWater
-            && horizontalDist <= 3.2
-            && Math.abs(verticalDiff) <= 1.2
-            && player().hasLineOfSight(target);
 
     if (closeCombat) {
       currentPath = null;
@@ -523,7 +521,8 @@ public final class NmsBot implements BotPlatform {
           handle.xxa = 0;
         }
 
-        if ((wp.action() == TacticalPathfinder.ActionType.JUMP_UP || wy > 0.35 || handle.horizontalCollision)
+        if (((wp.action() == TacticalPathfinder.ActionType.JUMP_UP || wy > 0.35) && wDistSq <= 1.8
+                || handle.horizontalCollision)
             && (handle.onGround() || inWater)) {
           boostOutOfWater();
           handle.setSprinting(true);
@@ -576,7 +575,7 @@ public final class NmsBot implements BotPlatform {
         AttackGate.ready(charge, switchedWeapon, selected >= 0, d.attackCharge())
             && swingClock.ready(
                 ticks,
-                dev.insanmiy.practiceplugin.Attributes.getValue(player(), dev.insanmiy.practiceplugin.Attributes.ATTACK_SPEED, 4.0),
+                Attributes.getValue(player(), Attributes.ATTACK_SPEED, 4.0),
                 charge,
                 d.attackCharge());
     boolean critEligible =
@@ -678,7 +677,7 @@ public final class NmsBot implements BotPlatform {
     double minCharge = currentDifficulty != null ? currentDifficulty.attackCharge() : 1.0;
     if (!swingClock.ready(
             ticks,
-            dev.insanmiy.practiceplugin.Attributes.getValue(player(), dev.insanmiy.practiceplugin.Attributes.ATTACK_SPEED, 4.0),
+            Attributes.getValue(player(), Attributes.ATTACK_SPEED, 4.0),
             charge,
             minCharge)
         || charge < minCharge) return;
