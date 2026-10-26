@@ -1,0 +1,128 @@
+# All plugin messages and notifications can be customized below.
+#
+# Formatting Options:
+# - Standard Color Codes: &0-&f, &l (Bold), &o (Italic), &n (Underline), &m (Strikethrough), &r (Reset)
+# - Hex / RGB Color Codes: &#RRGGBB or <#RRGGBB> (e.g. &#55FF55 or <#FF5555>)
+# - Placeholders: %placeholder% (e.g. %prefix%, %player%, %arena%, %kit%, %difficulty%)
+# - To disable any message, set its value to "" or "none".
+# - Multiline messages are supported as lists:
+#     example-message:
+#       - "&aLine 1"
+#       - "&bLine 2"
+# ==============================================================================
+
+# %prefix%
+prefix: "&9InsynPracticeBot &r"
+
+general:
+    no-permission: "%prefix%&c You Are Missing The Permission: &e%permission%"
+    players-only: "%prefix%&cThis Command Can Only Be Used By Players."
+    number-format-error: "%prefix%&cExpected A Number But Got: %error%"
+    internal-error: "%prefix%&cPractice Could Not Complete That Action. Check The Server Log."
+    plugin-reloaded: "%prefix%&aSettings Reloaded."
+    reload-busy-warning: "%prefix%&cStop All Matches Before Reloading Settings."
+    menu-favorites-save-error: "%prefix%&cCould Not Save Favorites. Check The Server Log."
+
+session:
+    # Practice Session Lifecycle Messages
+    already-in-match: "%prefix%&cYour Practice Is Already Active. Use /practice Stop First."
+    stop-before-menu: "%prefix%&cUse /practice Stop Before Selecting Another Kit."
+    respawn-before-practice: "%prefix%&cRespawn Before Practicing."
+    recovery-pending: "%prefix%&cAn Interrupted Session Must Finish Recovery First."
+    unknown-selection: "%prefix%&cUnknown Kit/Difficulty. Use /practice Kits Or /practice Difficulties."
+    paper-criticals-warning: "%prefix%&eWarning: This World's Paper Configuration Disables Player Critical Hits. The Bot Respects That Setting."
+    custom-tuning-active: "%prefix%&eNotice: Custom Bot Tuning Is Active From Your Settings (/practice Settings)."
+    starting: "%prefix%&aStarting %kit% / %difficulty% / %mode%. Both Receive %summary%. Use /practice Stop To Finish."
+    starting-arena: "%prefix%&7Arena: &f%arena%"
+    no-active-match: "%prefix%&cNo Active Practice."
+    no-active-match-other: "%prefix%&cNo Active Practice For That Player."
+    match-stopped: "%prefix%&ePractice Stopped."
+    match-stopped-player: "%prefix%&eStopped Practice For %player%."
+    session-internal-error: "%prefix%&cPractice Could Not Start. Check The Server Log."
+    session-stopped-error: "%prefix%&cSession Stopped After An Internal Error."
+    bot-spawn-failed: "%prefix%&cCould Not Start The Bot."
+    fighter-disconnected: "%prefix%&cA Fighter Disconnected; Your State Has Been Saved For Recovery."
+    player-disconnected: "%prefix%&cPlayer Disconnected."
+    safe-ground-waiting: "%prefix%&ePractice Is Still Active. The Bot Is Waiting For Safe Ground Nearby."
+    water-journal-failed: "%prefix%&cPlace Water Or Lava Into Air Or A Placed Block; Oversized Flows Are Not Supported In Practice."
+    block-journal-failed: "%prefix%&cBlock Placement Cancelled Because Safe Cleanup Could Not Be Recorded."
+
+combat:
+    # Countdown And Round Start / End Notifications
+    round-timed-out: "%prefix%&eRound Timed Out; Resetting."
+    fight-start: "%prefix%&c&lFight! &7/practice Stop To Finish."
+    lethal-hit: "%prefix%&e%target% Took A Lethal Hit."
+    round-won: "%prefix%&aYou Won Round %round%. %summary%"
+    round-lost: "%prefix%&cBot Won Round %round%. %summary%"
+    duel-finished: "%prefix%&6Duel Finished! %result%"
+    match-finished: "%prefix%&6Match Finished! %result%"
+    series-finished: "%prefix%&6Series Finished: %score%."
+    player-won-duel: "You Won The Duel!"
+    bot-won-duel: "Bot Won The Duel!"
+    player-won-match: "You Won The Match %score%!"
+    bot-won-match: "Bot Won The Match %score%!"
+    session-summary: "%prefix%&7Session: &a%wins%W&7/&c%losses%L &7| %summary%"
+
+    # Pause And Resume Messages
+    rematch-none: "%prefix%&cStart A Practice Session First."
+    wait-for-round-result: "%prefix%&cWait For The Round Result."
+    already-paused: "%prefix%&cAlready Paused."
+    not-paused: "%prefix%&cNot Paused."
+    actionbar-paused: "&ePractice Paused. /practice Resume"
+    actionbar-resumed: "&aPractice Resumed."
+    hud-enabled: "%prefix%&7Practice HUD &aEnabled&7."
+    hud-hidden: "%prefix%&7Practice HUD &cHidden&7."
+
+arena:
+    # Arena Configuration And Feedback
+    no-free-arena: "%prefix%&cNo Free, Non-Overlapping Arena. %errors% Admins: /practice Arena Setplayer <name> And Setbot <name>."
+    occupied: "%prefix%&cThat Arena Is Occupied."
+    cannot-delete-occupied: "%prefix%&cCannot Delete An Occupied Arena."
+    unsafe-spawn: "%prefix%&cStand On Solid Ground With Clear Headroom."
+    saved-spawn: "%prefix%&aSaved %point% Spawn For Arena '%arena%'."
+    saved-radius: "%prefix%&aSaved Radius %radius% For Arena '%arena%'."
+    deleted: "%prefix%&aDeleted Arena '%arena%'."
+    teleported: "%prefix%&aTeleported To Arena '%arena%'."
+    missing-spawns: "%prefix%&cSet Both Spawns: /practice Arena Setplayer And Setbot."
+    radius-invalid: "%prefix%&cRadius Must Be At Least 1 Block."
+    radius-exceeds-max: "%prefix%&cArena Radius (%radius%) Exceeds Configured Max Radius (%max%)."
+    header: "&6--- Practice Arenas ---"
+    entry: "&7- &f%arena%&7: %status%"
+    status-ready: "&a[Ready (%radius%m)]"
+    status-in-use: "&c[In Use]"
+    status-incomplete: "&e[Incomplete: %error%]"
+    info: "%prefix%&7Player: &f%player% &7| Bot: &f%bot% &7| Radius: &f%radius%"
+    ready: "%prefix%&aArena Ready (%radius%m Radius)."
+
+kit:
+    # Kit Editor And Management Messages
+    editing: "%prefix%&eEditing %name%. Click Save To Keep It. Closing Discards Unsaved Changes."
+    saved: "%prefix%&aSaved %name%. Available Immediately In /practice."
+    deleted: "%prefix%&cDeleted %name%. Previous File: customkits.yml.bak"
+    discarded: "%prefix%&7Draft Discarded."
+    naming-prompt: "%prefix%&eType The New Kit Name In Chat (Or Type 'cancel' To Cancel)."
+    naming-cancelled: "%prefix%&7Kit Naming Cancelled."
+    named: "%prefix%&aKit Named %name%."
+    imported-inventory: "%prefix%&aImported %count% Items From Your Inventory. Click Save To Keep These Changes."
+    inventory-saved: "%prefix%&aImported Your Inventory Into %name% And Saved Successfully!"
+    armor-enchants-copied: "%prefix%&aCopied Compatible Enchantments To Equipped Armor."
+    reserve-filled: "%prefix%&aFilled %count% Empty Reserve Slots. Existing Items Kept."
+    enchantment-applied: "%prefix%&aApplied %enchant% %level% To %item%."
+    quick-enchant-applied: "%prefix%&aApplied %count% Enchantment Upgrades; Incompatible/Conflicting Choices Skipped."
+    action-error: "%prefix%&cCould Not Complete The Kit Action. Check The Server Log Before Retrying."
+    naming-error: "%prefix%&cAn Unexpected Error Occurred While Naming Kit."
+    unknown-kit: "%prefix%&cUnknown Kit."
+
+settings:
+    # Player Settings Messages
+    reset-defaults: "%prefix%&aReset Bot Combat Settings To Difficulty Defaults."
+    save-error: "%prefix%&cSettings Could Not Be Saved; Previous Value Retained."
+
+commands:
+    # Command Usage Messages
+    usage: "%prefix%&e/practice Menu | Settings | Start [Kit] [Difficulty] [Endless|Match|Duel] [Best Of] | Stop | Pause | Resume | Rematch | Hud | Damage | Stats | Kits | Difficulties | Kit Editor | Kit <Info|Create|Import|Edit|Save|Copy|Rename|Delete> <Name> | Status | Arena <List|Setplayer|Setbot|Setradius|Info|Delete|Tp> [Name] | Reload"
+    arena-usage: "%prefix%&e/practice Arena <List|Setplayer|Setbot|Setradius|Info|Delete|Tp> [Name]"
+    kit-command-usage: "%prefix%&e/practice Kit <Create|Import|Edit|Save|Delete|Copy|Rename> <Name>"
+    kit-info-usage: "%prefix%&e/practice Kit Info <Name>"
+    arena-delete-usage: "%prefix%&e/practice Arena Delete <Name>"
+    arena-setradius-usage: "%prefix%&e/practice Arena Setradius <Radius> [Name]"
