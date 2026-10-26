@@ -146,15 +146,18 @@ final class PracticeMenu implements Listener {
 
     Kit selected = plugin.kits().get(choice.kit());
 
+    boolean canKitEditor = player.hasPermission("practice.kits.editor")
+        || player.hasPermission("practice.admin")
+        || player.hasPermission("practice.*");
     if (screen == Screen.KITS) {
       inventory.setItem(
           0,
           icon(
-              Material.KNOWLEDGE_BOOK,
+              canKitEditor ? Material.KNOWLEDGE_BOOK : Material.BARRIER,
               "Custom Kit Editor",
-              NamedTextColor.GOLD,
+              canKitEditor ? NamedTextColor.GOLD : NamedTextColor.RED,
               false,
-              "Click To Create And Edit Custom Kits"));
+              canKitEditor ? "Click To Create And Edit Custom Kits" : "Locked: Missing practice.kits.editor"));
     }
     inventory.setItem(
         4,
@@ -365,9 +368,14 @@ final class PracticeMenu implements Listener {
             "Left Click: +2 Rounds",
             "Right Click: -2 Rounds"));
 
+    boolean canStart = player.hasPermission("practice.start")
+        || player.hasPermission("practice.admin")
+        || player.hasPermission("practice.*");
     boolean arenaAvailable = plugin.hasConfiguredArena();
     List<String> startLore = new ArrayList<>();
-    if (!arenaAvailable) {
+    if (!canStart) {
+      startLore.add("Locked: Missing practice.start");
+    } else if (!arenaAvailable) {
       startLore.add("No arena configured on this server.");
       startLore.add("Ask an admin to configure spawns:");
       startLore.add("/practice arena setplayer & setbot");
@@ -386,10 +394,10 @@ final class PracticeMenu implements Listener {
     inventory.setItem(
         49,
         icon(
-            arenaAvailable ? Material.LIME_CONCRETE : Material.RED_CONCRETE,
-            arenaAvailable ? "Start Practice" : "No Arena Configured",
-            arenaAvailable ? NamedTextColor.GREEN : NamedTextColor.RED,
-            arenaAvailable,
+            (!canStart || !arenaAvailable) ? Material.RED_CONCRETE : Material.LIME_CONCRETE,
+            !canStart ? "Start Practice Locked" : (arenaAvailable ? "Start Practice" : "No Arena Configured"),
+            (!canStart || !arenaAvailable) ? NamedTextColor.RED : NamedTextColor.GREEN,
+            canStart && arenaAvailable,
             startLore.toArray(String[]::new)));
 
     inventory.setItem(
@@ -403,27 +411,33 @@ final class PracticeMenu implements Listener {
             "",
             "Click To Inspect"));
 
+    boolean canSettings = player.hasPermission("practice.settings")
+        || player.hasPermission("practice.admin")
+        || player.hasPermission("practice.*");
     inventory.setItem(
         51,
         icon(
-            Material.REPEATER,
+            canSettings ? Material.REPEATER : Material.BARRIER,
             "Bot Settings",
-            NamedTextColor.AQUA,
+            canSettings ? NamedTextColor.AQUA : NamedTextColor.RED,
             false,
-            "Customize Bot Behavior And Rules",
+            canSettings ? "Customize Bot Behavior And Rules" : "Locked: Missing practice.settings",
             "",
-            "Click To Open Settings"));
+            canSettings ? "Click To Open Settings" : "No Permission"));
 
+    boolean canStats = player.hasPermission("practice.stats")
+        || player.hasPermission("practice.admin")
+        || player.hasPermission("practice.*");
     inventory.setItem(
         52,
         icon(
-            Material.BOOK,
+            canStats ? Material.BOOK : Material.BARRIER,
             "Your Progress",
-            NamedTextColor.GOLD,
+            canStats ? NamedTextColor.GOLD : NamedTextColor.RED,
             screen == Screen.STATS,
-            "View Match And Duel Record",
+            canStats ? "View Match And Duel Record" : "Locked: Missing practice.stats",
             "",
-            "Click To View Stats"));
+            canStats ? "Click To View Stats" : "No Permission"));
 
 
     if (!canReuse) {
@@ -495,7 +509,15 @@ final class PracticeMenu implements Listener {
                   || player.getOpenInventory().getTopInventory().getHolder() != view) {
                 return;
               }
-              if (!player.hasPermission("practice.use")) {
+              if (!player.hasPermission("practice.use")
+                  && !player.hasPermission("practice.admin")
+                  && !player.hasPermission("practice.*")) {
+                player.closeInventory();
+                return;
+              }
+              if (!player.hasPermission("practice.menu")
+                  && !player.hasPermission("practice.admin")
+                  && !player.hasPermission("practice.*")) {
                 player.closeInventory();
                 return;
               }
@@ -505,6 +527,11 @@ final class PracticeMenu implements Listener {
 
                 // Actions on KITS screen
                 if (view.screen == Screen.KITS && slot == 0) {
+                  if (!player.hasPermission("practice.kits.editor")
+                      && !player.hasPermission("practice.admin")
+                      && !player.hasPermission("practice.*")) {
+                    throw new IllegalArgumentException("Missing Permission: practice.kits.editor");
+                  }
                   Bukkit.dispatchCommand(player, "practice kit editor");
                   return;
                 }
@@ -606,6 +633,11 @@ final class PracticeMenu implements Listener {
                         view.page);
                   }
                   case 49 -> {
+                    if (!player.hasPermission("practice.start")
+                        && !player.hasPermission("practice.admin")
+                        && !player.hasPermission("practice.*")) {
+                      throw new IllegalArgumentException("Missing Permission: practice.start");
+                    }
                     player.closeInventory();
                     plugin.startFromMenu(player, choice);
                   }
@@ -616,8 +648,20 @@ final class PracticeMenu implements Listener {
                       show(player, choice, Screen.PREVIEW, view.page);
                     }
                   }
-                  case 51 -> plugin.openSettings(player);
+                  case 51 -> {
+                    if (!player.hasPermission("practice.settings")
+                        && !player.hasPermission("practice.admin")
+                        && !player.hasPermission("practice.*")) {
+                      throw new IllegalArgumentException("Missing Permission: practice.settings");
+                    }
+                    plugin.openSettings(player);
+                  }
                   case 52 -> {
+                    if (!player.hasPermission("practice.stats")
+                        && !player.hasPermission("practice.admin")
+                        && !player.hasPermission("practice.*")) {
+                      throw new IllegalArgumentException("Missing Permission: practice.stats");
+                    }
                     if (view.screen == Screen.STATS) {
                       show(player, choice, Screen.KITS, 0);
                     } else {
@@ -627,10 +671,9 @@ final class PracticeMenu implements Listener {
                   default -> {}
                 }
               } catch (IllegalArgumentException e) {
-                player.sendMessage(TextUI.legacy(text(e.getMessage(), NamedTextColor.RED)));
+                player.sendMessage(Messages.color(e.getMessage().contains("\u00A7") || e.getMessage().contains("&") ? e.getMessage() : "&c" + e.getMessage()));
               } catch (IOException e) {
-                player.sendMessage(TextUI.legacy(
-                    text("Could Not Save Favorites. Check The Server Log.", NamedTextColor.RED)));
+                plugin.messages().send(player, "general.menu-favorites-save-error");
                 plugin.getLogger().warning(e.toString());
               }
             });

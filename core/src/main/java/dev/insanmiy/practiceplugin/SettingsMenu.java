@@ -165,8 +165,10 @@ final class SettingsMenu implements Listener {
   }
 
   void open(Player p) {
+    if (!p.hasPermission("practice.settings") && !p.hasPermission("practice.admin") && !p.hasPermission("practice.*"))
+      throw new IllegalArgumentException(plugin.messages().get("general.no-permission", "%permission%", "practice.settings"));
     if (plugin.sessionFor(p) != null)
-      throw new IllegalArgumentException("Use /practice Stop Before Changing Match Settings.");
+      throw new IllegalArgumentException(plugin.messages().get("session.stop-before-menu"));
 
     boolean canReuse = false;
     View view;
@@ -317,7 +319,10 @@ final class SettingsMenu implements Listener {
             () -> {
               if (!p.isOnline() || p.getOpenInventory().getTopInventory().getHolder() != view)
                 return;
-              if (plugin.sessionFor(p) != null || !p.hasPermission("practice.use")) {
+              if (plugin.sessionFor(p) != null
+                  || (!p.hasPermission("practice.settings")
+                      && !p.hasPermission("practice.admin")
+                      && !p.hasPermission("practice.*"))) {
                 p.closeInventory();
                 return;
               }
@@ -337,7 +342,7 @@ final class SettingsMenu implements Listener {
       if (slot == 49) {
         prefs.resetBotSettings(id);
         p.playSound(p.getLocation(), Sound.BLOCK_ANVIL_USE, 0.4f, 1.2f);
-        p.sendMessage(TextUI.legacy(Component.text("Reset Bot Combat Settings To Difficulty Defaults.")));
+        plugin.messages().send(p, "settings.reset-defaults");
         open(p);
         return;
       }
@@ -375,7 +380,7 @@ final class SettingsMenu implements Listener {
       } else return;
       open(p);
     } catch (IOException failure) {
-      p.sendMessage(TextUI.legacy(Component.text("Settings Could Not Be Saved; Previous Value Retained.")));
+      plugin.messages().send(p, "settings.save-error");
     }
   }
 

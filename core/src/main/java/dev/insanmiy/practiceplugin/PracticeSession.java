@@ -192,7 +192,7 @@ public final class PracticeSession {
   void tick() {
     if (closing) return;
     if (!owner.isOnline() || bot == null || !bot.player().isOnline()) {
-      plugin.stop(this, "A fighter disconnected; your state has been saved for recovery.");
+      plugin.stop(this, plugin.messages().get("session.fighter-disconnected"));
       return;
     }
     if (owner.isDead() || bot.player().isDead()) return;
@@ -216,7 +216,7 @@ public final class PracticeSession {
     bot.tick(owner, difficulty, arena, fighting());
     if (closing) return;
     if (roundTimeoutSeconds > 0 && fighting() && tick - fightStart >= roundTimeoutSeconds * 20L) {
-      owner.sendMessage(TextUI.legacy(Component.text("Round Timed Out; Resetting.")));
+      plugin.messages().send(owner, "combat.round-timed-out");
       fightStart = tick;
       resetRound();
     }
@@ -256,7 +256,7 @@ public final class PracticeSession {
                     java.time.Duration.ofMillis(1000),
                     java.time.Duration.ofMillis(500))));
         owner.playSound(owner.getLocation(), Sound.BLOCK_NOTE_BLOCK_BELL, 0.8f, 1.5f);
-        owner.sendMessage(TextUI.legacy(Component.text("Fight! /practice Stop To Finish.")));
+        plugin.messages().send(owner, "combat.fight-start");
       }
     }
 
@@ -322,8 +322,7 @@ public final class PracticeSession {
     Location safe = nearbySafe(destination);
     if (safe != null) relocateBot(safe);
     else
-      owner.sendMessage(TextUI.legacy(
-          Component.text("Practice Is Still Active. The Bot Is Waiting For Safe Ground Nearby.")));
+      plugin.messages().send(owner, "session.safe-ground-waiting");
   }
 
   private void relocateBot(Location destination) {
@@ -340,7 +339,7 @@ public final class PracticeSession {
 
   void setPaused(boolean paused) {
     if (match.paused() == paused)
-      throw new IllegalArgumentException(paused ? "Already Paused." : "Not Paused.");
+      throw new IllegalArgumentException(plugin.messages().get(paused ? "combat.already-paused" : "combat.not-paused"));
     if (paused) {
       plugin.clearUtilities(this);
       for (Player p : new Player[] {owner, bot.player()}) {
@@ -360,8 +359,7 @@ public final class PracticeSession {
       pausedStates.clear();
     }
     match.setPaused(paused);
-    TextUI.actionBar(owner,
-        Component.text(paused ? "Practice Paused. /practice Resume" : "Practice Resumed."));
+    TextUI.actionBar(owner, plugin.messages().component(paused ? "combat.actionbar-paused" : "combat.actionbar-resumed"));
   }
 
   private record PausedState(
@@ -388,20 +386,17 @@ public final class PracticeSession {
       bar.removePlayer(owner);
       TextUI.actionBar(owner, Component.empty());
     }
-    owner.sendMessage(TextUI.legacy(Component.text("Practice HUD " + (hud ? "Enabled." : "Hidden."))));
+    plugin.messages().send(owner, hud ? "combat.hud-enabled" : "combat.hud-hidden");
   }
 
   void win(boolean player) {
     if (!match.win(player)) return;
     if (player) roundsWon++;
     else roundsLost++;
-    owner.sendMessage(TextUI.legacy(
-        Component.text(
-            (player ? "You Won" : "Bot Won")
-                + " Round "
-                + match.round()
-                + ". "
-                + round.summary(tick - fightStart))));
+    owner.sendMessage(plugin.messages().get(
+        player ? "combat.round-won" : "combat.round-lost",
+        "%round%", String.valueOf(match.round()),
+        "%summary%", round.summary(tick - fightStart)));
     if (match.phase() == Match.Phase.FINISHED) {
       boolean playerWonSeries = match.playerWins() > match.botWins();
       if (playerWonSeries) seriesWon++;
@@ -412,9 +407,13 @@ public final class PracticeSession {
       String result;
       if (duel || mode == PracticeMode.MATCH) {
         String kind = duel ? "Duel" : "Match";
-        result = (playerWonSeries ? "You Won The " : "Bot Won The ") + kind + (duel ? "!" : " " + score + "!");
-        owner.sendMessage(TextUI.legacy(Component.text(
-            (duel ? "Duel" : "Match") + " Finished! " + result)));
+        if (duel) {
+          result = plugin.messages().get(playerWonSeries ? "combat.player-won-duel" : "combat.bot-won-duel");
+          plugin.messages().send(owner, "combat.duel-finished", "%result%", result);
+        } else {
+          result = plugin.messages().get(playerWonSeries ? "combat.player-won-match" : "combat.bot-won-match", "%score%", score);
+          plugin.messages().send(owner, "combat.match-finished", "%result%", result);
+        }
         owner.showTitle(Title.title(
             Component.text(
                 (duel ? "" : "MATCH ") + (playerWonSeries ? "VICTORY!" : "DEFEAT!"),
@@ -425,8 +424,8 @@ public final class PracticeSession {
         Sound sound = playerWonSeries ? Sound.UI_TOAST_CHALLENGE_COMPLETE : Sound.ENTITY_WITHER_DEATH;
         owner.playSound(owner.getLocation(), sound, 0.8f, 1.0f);
       } else {
-        result = "Series Finished: " + score + ".";
-        owner.sendMessage(TextUI.legacy(Component.text(result)));
+        result = plugin.messages().get("combat.series-finished", "%score%", score);
+        owner.sendMessage(result);
       }
       String finalResult = result;
       plugin.getServer().getScheduler().runTaskLater(plugin, () -> plugin.stop(this, finalResult), 40L);
@@ -440,9 +439,12 @@ public final class PracticeSession {
     bar.removePlayer(owner);
     TextUI.actionBar(owner, Component.empty());
     if (totalFightTicks > 0 || roundsWon + roundsLost > 0) {
-      owner.sendMessage(TextUI.legacy(
-          Component.text(
-              "Session: " + roundsWon + "W/" + roundsLost + "L | " + total.summary(totalFightTicks))));
+      plugin.messages().send(
+          owner,
+          "combat.session-summary",
+          "%wins%", String.valueOf(roundsWon),
+          "%losses%", String.valueOf(roundsLost),
+          "%summary%", total.summary(totalFightTicks));
     }
     try {
       try {

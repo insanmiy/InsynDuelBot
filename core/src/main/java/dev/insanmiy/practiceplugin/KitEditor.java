@@ -114,31 +114,78 @@ final class KitEditor implements Listener {
   }
 
   void allowed(Player player) {
-    if (!player.hasPermission("practice.kits") && !player.hasPermission("practice.admin"))
+    if (!canEditor(player)
+        && !canCreate(player)
+        && !canDelete(player)
+        && !canImport(player))
       throw new IllegalArgumentException("Missing Permission: practice.kits");
     if (plugin.sessionFor(player) != null)
       throw new IllegalArgumentException("Stop Practice Before Editing Kits.");
+  }
+
+  boolean hasBypass(Player player) {
+    return player.hasPermission("practice.admin")
+        || player.hasPermission("practice.*")
+        || player.hasPermission("practice.kits.bypass");
+  }
+
+  boolean canCreate(Player player) {
+    return player.hasPermission("practice.admin")
+        || player.hasPermission("practice.*")
+        || player.hasPermission("practice.kits.create");
+  }
+
+  boolean canDelete(Player player) {
+    return player.hasPermission("practice.admin")
+        || player.hasPermission("practice.*")
+        || player.hasPermission("practice.kits.delete");
+  }
+
+  boolean canImport(Player player) {
+    return player.hasPermission("practice.admin")
+        || player.hasPermission("practice.*")
+        || player.hasPermission("practice.kits.import");
+  }
+
+  boolean canEditor(Player player) {
+    return player.hasPermission("practice.admin")
+        || player.hasPermission("practice.*")
+        || player.hasPermission("practice.kits.editor");
   }
 
   void command(Player player, String[] args) throws IOException {
     allowed(player);
     String action = args.length > 1 ? args[1].toLowerCase(Locale.ROOT) : "editor";
     if (action.equals("editor")) {
+      if (!canEditor(player)) throw new IllegalArgumentException("Missing Permission: practice.kits.editor");
       library(player, 0);
       return;
     }
     if (args.length < 3)
       throw new IllegalArgumentException(
-          "/practice Kit <Create|Import|Edit|Save|Delete|Copy|Rename> <Name>");
+          plugin.messages().get("commands.kit-command-usage"));
     String name = CustomKitStore.name(args[2]);
     switch (action) {
-      case "create" -> create(player, name, args.length > 3 ? args[3] : null);
-      case "import" -> importKit(player, name);
-      case "edit" -> edit(player, name);
+      case "create" -> {
+        if (!canCreate(player)) throw new IllegalArgumentException("Missing Permission: practice.kits.create");
+        create(player, name, args.length > 3 ? args[3] : null);
+      }
+      case "import" -> {
+        if (!canImport(player)) throw new IllegalArgumentException("Missing Permission: practice.kits.import");
+        importKit(player, name);
+      }
+      case "edit" -> {
+        if (!canEditor(player)) throw new IllegalArgumentException("Missing Permission: practice.kits.editor");
+        edit(player, name);
+      }
       case "save" -> {
         var saved = store.read();
         var existingSection = saved.getConfigurationSection(name);
-        if (existingSection != null && !CustomKitStore.editable(existingSection, player.getUniqueId(), player.hasPermission("practice.admin"))) {
+        if (existingSection == null && !canCreate(player))
+          throw new IllegalArgumentException("Missing Permission: practice.kits.create");
+        if (existingSection != null && !canEditor(player))
+          throw new IllegalArgumentException("Missing Permission: practice.kits.editor");
+        if (existingSection != null && !CustomKitStore.editable(existingSection, player.getUniqueId(), hasBypass(player))) {
           throw new IllegalArgumentException("You Can Only Overwrite Your Own Custom Kits.");
         }
         if (existingSection == null && (plugin.kits().containsKey(name) || saved.contains(name))) {
@@ -148,36 +195,38 @@ final class KitEditor implements Listener {
         var candidate = new YamlConfiguration();
         Kit.capture(player, candidate);
         save(player, name, candidate, revision);
-        player.sendMessage(TextUI.legacy(Component.text("Saved " + name + ". Your Inventory Was Not Changed.")));
+        plugin.messages().send(player, "kit.saved", "%name%", name);
       }
       case "copy" -> {
+        if (!canCreate(player)) throw new IllegalArgumentException("Missing Permission: practice.kits.create");
         if (args.length != 4)
           throw new IllegalArgumentException("/practice Kit Copy <Source> <New Name>");
         create(player, CustomKitStore.name(args[3]), name);
       }
       case "rename" -> {
+        if (!canCreate(player) && !canEditor(player)) throw new IllegalArgumentException("Missing Permission: practice.kits");
         if (args.length != 4)
           throw new IllegalArgumentException("/practice Kit Rename <Old Name> <New Name>");
         store.rename(
             name,
             args[3],
             player.getUniqueId(),
-            player.hasPermission("practice.admin"),
+            hasBypass(player),
             plugin.kits().keySet());
         plugin.refreshKits();
-        player.sendMessage(TextUI.legacy(Component.text("Renamed Kit To " + CustomKitStore.name(args[3]))));
+        plugin.messages().send(player, "kit.named", "%name%", CustomKitStore.name(args[3]));
         library(player, 0);
       }
       case "delete" -> {
+        if (!canDelete(player)) throw new IllegalArgumentException("Missing Permission: practice.kits.delete");
         if (args.length >= 4 && args[3].equalsIgnoreCase("confirm")) {
           store.delete(
               name,
               null,
               player.getUniqueId(),
-              player.hasPermission("practice.admin"));
+              hasBypass(player));
           plugin.refreshKits();
-          player.sendMessage(TextUI.legacy(
-              Component.text("Deleted " + name + ". Previous File: customkits.yml.bak")));
+          plugin.messages().send(player, "kit.deleted", "%name%", name);
           return;
         }
         Draft draft = existing(player, name);
@@ -198,7 +247,7 @@ final class KitEditor implements Listener {
         candidate,
         revision,
         player.getUniqueId(),
-        player.hasPermission("practice.admin"),
+        hasBypass(player),
         plugin.kits().keySet());
     plugin.refreshKits();
   }
@@ -213,6 +262,7 @@ final class KitEditor implements Listener {
 
   void create(Player player, String name, String template) throws IOException {
     allowed(player);
+    if (!canCreate(player)) throw new IllegalArgumentException("Missing Permission: practice.kits.create");
     name = CustomKitStore.name(name);
     if (plugin.kits().containsKey(name) || store.read().contains(name))
       throw new IllegalArgumentException("Name Already Used. Choose A New Name.");
@@ -226,9 +276,7 @@ final class KitEditor implements Listener {
       draft.description = kit.description();
     } else draft.items[0] = new ItemStack(Material.DIAMOND_SWORD);
     show(player, Screen.EDIT, draft, 0);
-    player.sendMessage(TextUI.legacy(
-        Component.text(
-            "Editing " + name + ". Click Save To Keep It. Closing Discards Unsaved Changes.")));
+    plugin.messages().send(player, "kit.editing", "%name%", name);
   }
 
   private Draft existing(Player player, String name) throws IOException {
@@ -237,7 +285,7 @@ final class KitEditor implements Listener {
     if (section == null)
       throw new IllegalArgumentException("Custom Kit '" + name + "' Does Not Exist.");
     if (!CustomKitStore.editable(
-        section, player.getUniqueId(), player.hasPermission("practice.admin")))
+        section, player.getUniqueId(), hasBypass(player)))
       throw new IllegalArgumentException(
           "You Can Only Edit Your Own Custom Kits. Copy A Preset To Customize It.");
     Draft draft = new Draft(name);
@@ -286,10 +334,11 @@ final class KitEditor implements Listener {
 
   private void importKit(Player player, String name) throws IOException {
     allowed(player);
+    if (!canImport(player)) throw new IllegalArgumentException("Missing Permission: practice.kits.import");
     name = CustomKitStore.name(name);
     var saved = store.read();
     var existingSection = saved.getConfigurationSection(name);
-    if (existingSection != null && !CustomKitStore.editable(existingSection, player.getUniqueId(), player.hasPermission("practice.admin"))) {
+    if (existingSection != null && !CustomKitStore.editable(existingSection, player.getUniqueId(), hasBypass(player))) {
       throw new IllegalArgumentException("You Can Only Overwrite Your Own Custom Kits.");
     }
     if (existingSection == null && (plugin.kits().containsKey(name) || saved.contains(name))) {
@@ -304,8 +353,7 @@ final class KitEditor implements Listener {
     save(player, draft.name, serialize(draft), draft.revision);
     draft.revision = CustomKitStore.revision(store.read().getConfigurationSection(draft.name));
     show(player, Screen.EDIT, draft, 0);
-    player.sendMessage(TextUI.legacy(
-        Component.text("Imported Your Inventory Into " + name + " And Saved Successfully!")));
+    plugin.messages().send(player, "kit.inventory-saved", "%name%", name);
   }
 
   private void edit(Player player, String name) throws IOException {
@@ -314,6 +362,7 @@ final class KitEditor implements Listener {
 
   void library(Player player, int requested) throws IOException {
     allowed(player);
+    if (!canEditor(player)) throw new IllegalArgumentException("Missing Permission: practice.kits.editor");
     var saved = store.read();
     List<String> names =
         saved.getKeys(false).stream()
@@ -322,7 +371,7 @@ final class KitEditor implements Listener {
                     CustomKitStore.editable(
                         saved.getConfigurationSection(n),
                         player.getUniqueId(),
-                        player.hasPermission("practice.admin")))
+                        hasBypass(player)))
             .sorted()
             .toList();
     int page = EditorRules.page(requested, names.size());
@@ -816,18 +865,12 @@ final class KitEditor implements Listener {
                     player.getLocation(), Sound.UI_BUTTON_CLICK, .25f, shift ? 1.4f : 1.1f);
                 handle(player, view, slot, right, shift, source);
               } catch (IllegalArgumentException e) {
-                player.sendMessage(TextUI.legacy(Component.text(e.getMessage(), NamedTextColor.RED)));
+                player.sendMessage(Messages.color(e.getMessage().contains("\u00A7") || e.getMessage().contains("&") ? e.getMessage() : "&c" + e.getMessage()));
               } catch (IOException e) {
-                player.sendMessage(TextUI.legacy(
-                    Component.text(
-                        "Could Not Complete The Kit Action. Check The Server Log Before Retrying.",
-                        NamedTextColor.RED)));
+                plugin.messages().send(player, "kit.action-error");
                 plugin.getLogger().warning(e.toString());
               } catch (Throwable t) {
-                player.sendMessage(TextUI.legacy(
-                    Component.text(
-                        "An unexpected error occurred while processing this kit action.",
-                        NamedTextColor.RED)));
+                plugin.messages().send(player, "general.internal-error");
                 plugin.getLogger().severe("Unexpected error in KitEditor: " + t.getMessage());
                 t.printStackTrace();
               }
@@ -841,8 +884,10 @@ final class KitEditor implements Listener {
     if (slot < 0) return;
     if (view.screen == Screen.TEMPLATES) {
       int index = view.page * 45 + slot;
-      if (slot < 45 && index < view.names.size())
+      if (slot < 45 && index < view.names.size()) {
+        if (!canCreate(player)) throw new IllegalArgumentException("Missing Permission: practice.kits.create");
         create(player, unusedName(), view.names.get(index));
+      }
       else if (slot == 45 || slot == 52) templates(player, view.page + (slot == 45 ? -1 : 1));
       else if (slot == 53) library(player, 0);
       return;
@@ -852,10 +897,13 @@ final class KitEditor implements Listener {
       if (slot < 45 && index < view.names.size()) {
         String kitName = view.names.get(index);
         if (shift && right) {
+          if (!canDelete(player)) throw new IllegalArgumentException("Missing Permission: practice.kits.delete");
           show(player, Screen.DELETE, existing(player, kitName), 0);
         } else if (right) {
+          if (!canCreate(player)) throw new IllegalArgumentException("Missing Permission: practice.kits.create");
           create(player, unusedName(), kitName);
         } else {
+          if (!canEditor(player)) throw new IllegalArgumentException("Missing Permission: practice.kits.editor");
           edit(player, kitName);
         }
         return;
@@ -863,21 +911,28 @@ final class KitEditor implements Listener {
         player.closeInventory();
         Bukkit.dispatchCommand(player, "practice menu");
       } else if (slot == 45 || slot == 52) library(player, view.page + (slot == 45 ? -1 : 1));
-      else if (slot == 46) create(player, unusedName(), null);
-      else if (slot == 47) templates(player, 0);
-      else if (slot == 50) importKit(player, unusedName());
+      else if (slot == 46) {
+        if (!canCreate(player)) throw new IllegalArgumentException("Missing Permission: practice.kits.create");
+        create(player, unusedName(), null);
+      } else if (slot == 47) {
+        if (!canCreate(player)) throw new IllegalArgumentException("Missing Permission: practice.kits.create");
+        templates(player, 0);
+      } else if (slot == 50) {
+        if (!canImport(player)) throw new IllegalArgumentException("Missing Permission: practice.kits.import");
+        importKit(player, unusedName());
+      }
       return;
     }
     if (view.screen == Screen.DELETE) {
       if (slot == 22) {
+        if (!canDelete(player)) throw new IllegalArgumentException("Missing Permission: practice.kits.delete");
         store.delete(
             draft.name,
             draft.revision,
             player.getUniqueId(),
-            player.hasPermission("practice.admin"));
+            hasBypass(player));
         plugin.refreshKits();
-        player.sendMessage(TextUI.legacy(
-            Component.text("Deleted " + draft.name + ". Previous File: customkits.yml.bak")));
+        plugin.messages().send(player, "kit.deleted", "%name%", draft.name);
         library(player, 0);
       } else if (slot == 53) {
         if (draft.revision == null) library(player, 0);
@@ -921,7 +976,7 @@ final class KitEditor implements Listener {
                 draft.name,
                 name,
                 player.getUniqueId(),
-                player.hasPermission("practice.admin"),
+                hasBypass(player),
                 plugin.kits().keySet());
             plugin.refreshKits();
             draft.revision = CustomKitStore.revision(store.read().getConfigurationSection(name));
@@ -960,11 +1015,7 @@ final class KitEditor implements Listener {
         if (!canEnchant(item)) throw new IllegalArgumentException("This Item Cannot Be Enchanted.");
         int applied = QuickEnchant.apply(item, slot == 24);
         player.playSound(player.getLocation(), Sound.BLOCK_ENCHANTMENT_TABLE_USE, .45f, 1.2f);
-        player.sendMessage(TextUI.legacy(
-            Component.text(
-                "Applied "
-                    + applied
-                    + " Enchantment Upgrades; Incompatible/Conflicting Choices Skipped.")));
+        plugin.messages().send(player, "kit.quick-enchant-applied", "%count%", String.valueOf(applied));
       } else if (slot == 25) {
         draft.items[draft.selected] = null;
         show(player, Screen.EDIT, draft, 0);
@@ -984,8 +1035,7 @@ final class KitEditor implements Listener {
             put(draft, i, item);
             filled++;
           }
-        player.sendMessage(TextUI.legacy(
-            Component.text("Filled " + filled + " Empty Reserve Slots. Existing Items Kept.")));
+        plugin.messages().send(player, "kit.reserve-filled", "%count%", String.valueOf(filled));
       } else if (slot == 40) {
         if (!armor(item.getType()))
           throw new IllegalArgumentException("Select An Armor Piece First.");
@@ -999,7 +1049,7 @@ final class KitEditor implements Listener {
                       target.addUnsafeEnchantment(e, Math.max(target.getEnchantmentLevel(e), level));
                   });
         }
-        player.sendMessage(TextUI.legacy(Component.text("Copied Compatible Enchantments To Equipped Armor.")));
+        plugin.messages().send(player, "kit.armor-enchants-copied");
       } else if (slot == 45 || slot == 53) {
         show(player, Screen.EDIT, draft, 0);
         return;
@@ -1070,20 +1120,23 @@ final class KitEditor implements Listener {
         case 47 -> draft.health = Math.min(100, draft.health + 2);
         case 48 -> draft.regeneration = !draft.regeneration;
         case 49 -> {
+          if (draft.revision == null && !canCreate(player))
+            throw new IllegalArgumentException("Missing Permission: practice.kits.create");
+          if (draft.revision != null && !canEditor(player))
+            throw new IllegalArgumentException("Missing Permission: practice.kits.editor");
           save(player, draft.name, serialize(draft), draft.revision);
           draft.revision =
               CustomKitStore.revision(store.read().getConfigurationSection(draft.name));
-          player.sendMessage(TextUI.legacy(
-              Component.text("Saved " + draft.name + ". Available Immediately In /practice.")));
+          plugin.messages().send(player, "kit.saved", "%name%", draft.name);
         }
         case 50 -> {
+          if (!canImport(player)) throw new IllegalArgumentException("Missing Permission: practice.kits.import");
           importInventory(player, draft);
           int count = 0;
           for (ItemStack it : draft.items) {
             if (!empty(it)) count++;
           }
-          player.sendMessage(TextUI.legacy(Component.text(
-              "Imported " + count + " items from your inventory. Click Save to keep these changes.")));
+          plugin.messages().send(player, "kit.imported-inventory", "%count%", String.valueOf(count));
         }
         case 51 -> {
           if (!canEnchant(draft.items[draft.selected]))
@@ -1094,18 +1147,16 @@ final class KitEditor implements Listener {
         case 52 -> {
           pendingNames.put(player.getUniqueId(), draft);
           player.closeInventory();
-          player.sendMessage(TextUI.legacy(
-              Component.text(
-                  "Type The New Kit Name In Chat (Or Type 'cancel' To Cancel).",
-                  NamedTextColor.YELLOW)));
+          plugin.messages().send(player, "kit.naming-prompt");
           return;
         }
         case 53 -> {
           if (draft.revision == null) {
-            player.sendMessage(TextUI.legacy(Component.text("Draft Discarded.", NamedTextColor.GRAY)));
+            plugin.messages().send(player, "kit.discarded");
             library(player, 0);
             return;
           }
+          if (!canDelete(player)) throw new IllegalArgumentException("Missing Permission: practice.kits.delete");
           show(player, Screen.DELETE, draft, 0);
           return;
         }
@@ -1133,8 +1184,7 @@ final class KitEditor implements Listener {
             () -> {
               if (!player.isOnline()) return;
               if (input.equalsIgnoreCase("cancel")) {
-                player.sendMessage(
-                    TextUI.legacy(Component.text("Kit Naming Cancelled.", NamedTextColor.GRAY)));
+                plugin.messages().send(player, "kit.naming-cancelled");
                 show(player, Screen.EDIT, draft, 0);
                 return;
               }
@@ -1155,7 +1205,7 @@ final class KitEditor implements Listener {
                         draft.name,
                         name,
                         player.getUniqueId(),
-                        player.hasPermission("practice.admin"),
+                        hasBypass(player),
                         plugin.kits().keySet());
                     plugin.refreshKits();
                     draft.revision =
@@ -1163,23 +1213,14 @@ final class KitEditor implements Listener {
                   }
                   draft.name = name;
                 }
-                player.sendMessage(
-                    TextUI.legacy(
-                        Component.text("Kit Named " + draft.name + ".", NamedTextColor.GREEN)));
+                plugin.messages().send(player, "kit.named", "%name%", draft.name);
               } catch (IllegalArgumentException e) {
-                player.sendMessage(TextUI.legacy(Component.text(e.getMessage(), NamedTextColor.RED)));
+                player.sendMessage(Messages.color(e.getMessage().contains("\u00A7") || e.getMessage().contains("&") ? e.getMessage() : "&c" + e.getMessage()));
               } catch (IOException e) {
-                player.sendMessage(
-                    TextUI.legacy(
-                        Component.text(
-                            "Could Not Complete The Kit Action. Check The Server Log Before Retrying.",
-                            NamedTextColor.RED)));
+                plugin.messages().send(player, "kit.action-error");
                 plugin.getLogger().warning(e.toString());
               } catch (Throwable t) {
-                player.sendMessage(TextUI.legacy(
-                    Component.text(
-                        "An unexpected error occurred while naming kit.",
-                        NamedTextColor.RED)));
+                plugin.messages().send(player, "kit.naming-error");
                 plugin.getLogger().severe("Unexpected error naming kit in KitEditor: " + t.getMessage());
                 t.printStackTrace();
               }
