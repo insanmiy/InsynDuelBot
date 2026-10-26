@@ -569,6 +569,11 @@ final class UtilityBrain {
     return 1 - (double) damage.getDamage() / item.getType().getMaxDurability();
   }
 
+  private static boolean isWaterSource(org.bukkit.block.Block block) {
+    if (block == null || block.getType() != Material.WATER) return false;
+    return block.getBlockData() instanceof org.bukkit.block.data.Levelled levelled && levelled.getLevel() == 0;
+  }
+
   private boolean water(int tick) {
     Player self = player();
     if (placedWater != null
@@ -580,7 +585,7 @@ final class UtilityBrain {
       if (bucket >= 0
           && placedWater.getWorld().equals(self.getWorld())
           && placedWater.distanceSquared(self.getEyeLocation()) <= 25
-          && placedWater.getBlock().getType() == Material.WATER) {
+          && isWaterSource(placedWater.getBlock())) {
         Location look =
             self.getEyeLocation()
                 .setDirection(
@@ -599,27 +604,25 @@ final class UtilityBrain {
             () -> {
               lookAt(source.clone().add(.5, .5, .5));
               nativeUse();
-              if (source.getBlock().getType() == Material.WATER) {
+              ItemStack held = player().getInventory().getItemInMainHand();
+              if (held.getType() == Material.BUCKET && isWaterSource(source.getBlock())) {
                 source.getBlock().setType(Material.AIR);
-                ItemStack held = player().getInventory().getItemInMainHand();
-                if (held.getType() == Material.BUCKET) {
-                  if (held.getAmount() > 1) {
-                    held.setAmount(held.getAmount() - 1);
-                    player().getInventory().addItem(new ItemStack(Material.WATER_BUCKET));
-                  } else {
-                    player().getInventory().setItemInMainHand(new ItemStack(Material.WATER_BUCKET));
-                  }
-                  NmsBot.synchronizeEquipment(player());
+                if (held.getAmount() > 1) {
+                  held.setAmount(held.getAmount() - 1);
+                  player().getInventory().addItem(new ItemStack(Material.WATER_BUCKET));
+                } else {
+                  player().getInventory().setItemInMainHand(new ItemStack(Material.WATER_BUCKET));
                 }
+                NmsBot.synchronizeEquipment(player());
               }
               placedWater = null;
             },
             () ->
-                source.getBlock().getType() == Material.WATER
+                isWaterSource(source.getBlock())
                     && source.distanceSquared(player().getEyeLocation()) <= 25);
         return true;
       }
-      if (placedWater.getBlock().getType() != Material.WATER || tick >= retrieveWater + 40) {
+      if (!isWaterSource(placedWater.getBlock()) || tick >= retrieveWater + 40) {
         placedWater = null;
       }
     }
@@ -649,7 +652,16 @@ final class UtilityBrain {
           handle.setXRot(90);
           nativeUse();
           nextWater = currentTick + (trappedInWeb ? 15 : 200);
-          placedWater = destination.getLocation();
+          if (isWaterSource(destination)) {
+            placedWater = destination.getLocation();
+          } else {
+            Location below = self.getLocation().getBlock().getLocation();
+            if (isWaterSource(below.getBlock())) {
+              placedWater = below;
+            } else {
+              placedWater = destination.getLocation();
+            }
+          }
           retrieveWater = currentTick + 4;
         },
         () ->
