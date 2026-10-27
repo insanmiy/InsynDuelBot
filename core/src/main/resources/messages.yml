@@ -1,18 +1,23 @@
 # All plugin messages and notifications can be customized below.
 #
 # Formatting Options:
-# - Standard Color Codes: &0-&f, &l (Bold), &o (Italic), &n (Underline), &m (Strikethrough), &r (Reset)
+# - Standard Color Codes: &0-&f, &l, &o, &n, &m, &r
 # - Hex / RGB Color Codes: &#RRGGBB or <#RRGGBB> (e.g. &#55FF55 or <#FF5555>)
-# - Placeholders: %placeholder% (e.g. %prefix%, %player%, %arena%, %kit%, %difficulty%)
+# - Context Placeholders: %placeholder% (e.g. %prefix%, %player%, %arena%, %kit%, %difficulty%)
+# - PlaceholderAPI (PAPI): Any %placeholder% is parsed if PlaceholderAPI is installed.
+# - Custom Placeholders: Define your own placeholders under the 'placeholders:' section below.
 # - To disable any message, set its value to "" or "none".
 # - Multiline messages are supported as lists:
 #     example-message:
 #       - "&aLine 1"
 #       - "&bLine 2"
-# ==============================================================================
 
 # %prefix%
 prefix: "&9InsynPracticeBot &r"
+
+# You Can Define Custom Placeholders Here To Use Across All Messages.
+placeholders:
+    "%server%": "&bMyServer"
 
 general:
     no-permission: "%prefix%&c You Are Missing The Permission: &e%permission%"
@@ -126,3 +131,4 @@ commands:
     kit-info-usage: "%prefix%&e/practice Kit Info <Name>"
     arena-delete-usage: "%prefix%&e/practice Arena Delete <Name>"
     arena-setradius-usage: "%prefix%&e/practice Arena Setradius <Radius> [Name]"
+

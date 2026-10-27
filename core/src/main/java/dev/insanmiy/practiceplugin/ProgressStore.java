@@ -5,7 +5,7 @@ import java.nio.file.*;
 import java.util.UUID;
 import org.bukkit.configuration.file.YamlConfiguration;
 
-final class ProgressStore {
+public final class ProgressStore {
   private final PracticePlugin plugin;
   private final File file;
   private final YamlConfiguration data;
@@ -51,6 +51,38 @@ final class ProgressStore {
         data.getLong(p + "hits"),
         data.getInt(p + "best-combo"),
         data.getLong(p + "ticks") / 1200.0);
+  }
+
+  public long roundsWon(UUID id, dev.insanmiy.practiceplugin.model.PracticeMode mode) {
+    return data.getLong(id + "." + mode.id() + ".rounds-won");
+  }
+
+  public long roundsLost(UUID id, dev.insanmiy.practiceplugin.model.PracticeMode mode) {
+    return data.getLong(id + "." + mode.id() + ".rounds-lost");
+  }
+
+  public long seriesWon(UUID id, dev.insanmiy.practiceplugin.model.PracticeMode mode) {
+    return data.getLong(id + "." + mode.id() + ".series-won");
+  }
+
+  public long seriesLost(UUID id, dev.insanmiy.practiceplugin.model.PracticeMode mode) {
+    return data.getLong(id + "." + mode.id() + ".series-lost");
+  }
+
+  public long totalRoundsWon(UUID id) {
+    long sum = 0;
+    for (dev.insanmiy.practiceplugin.model.PracticeMode m : dev.insanmiy.practiceplugin.model.PracticeMode.values()) {
+      sum += roundsWon(id, m);
+    }
+    return sum;
+  }
+
+  public long totalRoundsLost(UUID id) {
+    long sum = 0;
+    for (dev.insanmiy.practiceplugin.model.PracticeMode m : dev.insanmiy.practiceplugin.model.PracticeMode.values()) {
+      sum += roundsLost(id, m);
+    }
+    return sum;
   }
 
   void save() {

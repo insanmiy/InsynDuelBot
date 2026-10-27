@@ -4,6 +4,7 @@ plugins {
 
 dependencies {
     compileOnly("io.papermc.paper:paper-api:1.20.6-R0.1-SNAPSHOT")
+    compileOnly("me.clip:placeholderapi:2.11.6")
     testImplementation("io.papermc.paper:paper-api:1.20.6-R0.1-SNAPSHOT")
     testImplementation(platform("org.junit:junit-bom:5.10.2"))
     testImplementation("org.junit.jupiter:junit-jupiter")

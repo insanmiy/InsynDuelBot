@@ -337,6 +337,16 @@ public final class PracticeSession {
     }
   }
 
+
+  public Kit kit() { return kit; }
+  public Difficulty difficulty() { return difficulty; }
+  public PracticeMode mode() { return mode; }
+  public Match match() { return match; }
+  public String arenaName() { return arenaName; }
+  public boolean isPaused() { return match.paused(); }
+  public boolean isFighting() { return fighting(); }
+  public BotPlatform bot() { return bot; }
+
   void setPaused(boolean paused) {
     if (match.paused() == paused)
       throw new IllegalArgumentException(plugin.messages().get(paused ? "combat.already-paused" : "combat.not-paused"));

@@ -88,7 +88,7 @@ public final class PracticePlugin extends JavaPlugin implements Listener {
 
   private final Map<UUID, Selection> lastSelections = new HashMap<>();
 
-  PracticeSession sessionFor(Entity entity) {
+  public PracticeSession sessionFor(Entity entity) {
     if (entity instanceof Projectile p)
       return p.getShooter() instanceof Entity shooter ? sessionFor(shooter) : null;
     if (!(entity instanceof Player p)) return null;
@@ -162,7 +162,7 @@ public final class PracticePlugin extends JavaPlugin implements Listener {
         messages.get("arena.no-free-arena", "%errors%", String.join("; ", errors)));
   }
 
-  ProgressStore progress() {
+  public ProgressStore progress() {
     return progress;
   }
 
@@ -229,6 +229,7 @@ public final class PracticePlugin extends JavaPlugin implements Listener {
       return;
     }
     messages = new Messages(this);
+    dev.insanmiy.practiceplugin.papi.PapiHook.init(this);
     progress = new ProgressStore(this);
     blocks = new TemporaryBlocks(this);
     getServer()
@@ -286,6 +287,7 @@ public final class PracticePlugin extends JavaPlugin implements Listener {
 
   @Override
   public void onDisable() {
+    dev.insanmiy.practiceplugin.papi.PapiHook.shutdown();
     for (PracticeSession session : List.copyOf(sessions.values())) stop(session, messages != null ? messages.get("general.internal-error") : "Plugin Stopped.");
     clearUtilities();
     if (settingsMenu != null) settingsMenu.closeAll();
@@ -664,6 +666,8 @@ public final class PracticePlugin extends JavaPlugin implements Listener {
           reloadConfig();
           loadSettings();
           messages.reload();
+          dev.insanmiy.practiceplugin.papi.PapiHook.shutdown();
+          dev.insanmiy.practiceplugin.papi.PapiHook.init(this);
           messages.send(sender, "general.plugin-reloaded");
         }
         case "arena" -> {

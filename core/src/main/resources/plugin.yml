@@ -5,6 +5,7 @@ main: dev.insanmiy.practiceplugin.PracticePlugin
 api-version: '${minecraftVersion}'
 author: insanmiy
 description: PvP Duels Against A Custom Bot.
+softdepend: [PlaceholderAPI]
 commands:
   practice:
     description: PvP Bot Practice
