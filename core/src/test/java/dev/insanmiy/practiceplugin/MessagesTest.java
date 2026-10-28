@@ -2,6 +2,9 @@ package dev.insanmiy.practiceplugin;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.format.NamedTextColor;
+import net.kyori.adventure.text.format.TextDecoration;
 import org.junit.jupiter.api.Test;
 
 class MessagesTest {
@@ -25,5 +28,29 @@ class MessagesTest {
   void testEmptyAndNull() {
     assertEquals("", Messages.color(""));
     assertEquals("", Messages.color(null));
+    assertEquals(Component.empty(), Messages.toComponent(""));
+    assertEquals(Component.empty(), Messages.toComponent(null));
+  }
+
+  @Test
+  void testMiniMessageComponent() {
+    Component comp = Messages.toComponent("<red>Fight!</red>");
+    assertNotNull(comp);
+    assertFalse(comp.equals(Component.empty()));
+  }
+
+  @Test
+  void testMixedLegacyAndMiniMessage() {
+    Component comp = Messages.toComponent("&c&lFight! <gray>/practice Stop To Finish.</gray>");
+    assertNotNull(comp);
+    assertFalse(comp.equals(Component.empty()));
+  }
+
+  @Test
+  void testInvalidTagFallback() {
+    // Should not throw, should fall back to legacy deserializer
+    Component comp = Messages.toComponent("&cInvalid <not_a_valid_tag> Text");
+    assertNotNull(comp);
+    assertFalse(comp.equals(Component.empty()));
   }
 }

@@ -56,7 +56,7 @@ menu-animations: true
 
 # Optional Fields (per difficulty tier):
 # - display-name: Custom name shown in menus and HUD (e.g. "Rookie" or "§aBeginner")
-# - icon:         Item material shown in the GUI (e.g. WOODEN_SWORD, DIAMOND_SWORD)
+# - icon:         Item material shown in the GUI (e.g. WOODEN_SWORD, DIAMOND_SWORD, GRASS_BLOCK)
 # - description:  Custom lore description shown in the difficulty selection menu
 #
 # Combat Attributes:
@@ -77,7 +77,7 @@ difficulties:
   dummy:
     display-name: "Target Dummy"
     icon: TARGET
-    description: "Passive sandbox dummy that never attacks back."
+    description: "Dummy That Never Attacks."
     decision-ticks: 10
     perception-ticks: 10
     aim-error: 14.0
@@ -93,9 +93,9 @@ difficulties:
     attacks-enabled: false
 
   lt5:
-    display-name: "LT5 · Novice"
+    display-name: "LT5"
     icon: WOODEN_SWORD
-    description: "Slow reactions and wide aim. Great for learning basic mechanics."
+    description: "Bottom Of The Bottom."
     decision-ticks: 10
     perception-ticks: 10
     aim-error: 14.0
@@ -110,9 +110,9 @@ difficulties:
     pearl-chance: 0.10
 
   ht5:
-    display-name: "HT5 · Beginner"
+    display-name: "HT5"
     icon: STONE_SWORD
-    description: "Modest strafing and occasional blocks with basic combo resets."
+    description: "Top Of The Bottom."
     decision-ticks: 6
     perception-ticks: 6
     aim-error: 8.0
@@ -127,9 +127,9 @@ difficulties:
     pearl-chance: 0.15
 
   lt4:
-    display-name: "LT4 · Competent"
+    display-name: "LT4"
     icon: IRON_SWORD
-    description: "Solid fundamentals: blocks ~45%, W-taps ~45%, counters shields."
+    description: "Bottom Of The Middle"
     decision-ticks: 4
     perception-ticks: 3
     aim-error: 4.5
@@ -144,9 +144,9 @@ difficulties:
     pearl-chance: 0.25
 
   ht4:
-    display-name: "HT4 · Skilled"
+    display-name: "HT4 "
     icon: IRON_SWORD
-    description: "Quick reaction time, 75% W-tap combo resets, active shielding."
+    description: "Top Of The Middle"
     decision-ticks: 3
     perception-ticks: 2
     aim-error: 2.5
@@ -161,9 +161,9 @@ difficulties:
     pearl-chance: 0.30
 
   lt3:
-    display-name: "LT3 · Advanced"
+    display-name: "LT3"
     icon: DIAMOND_SWORD
-    description: "Sharp aim (2.0° error), heavy strafe dodging, fast shield counters."
+    description: "Gatekeeper Of The Elite"
     decision-ticks: 2
     perception-ticks: 2
     aim-error: 2.0
@@ -178,9 +178,9 @@ difficulties:
     pearl-chance: 0.35
 
   ht3:
-    display-name: "HT3 · Expert"
+    display-name: "HT3"
     icon: DIAMOND_SWORD
-    description: "Relentless pressure: 1.0° aim, 95% W-taps, aggressive shield play."
+    description: "Peak Of The Contenders"
     decision-ticks: 2
     perception-ticks: 1
     aim-error: 1.0
@@ -195,9 +195,9 @@ difficulties:
     pearl-chance: 0.40
 
   lt2:
-    display-name: "LT2 · Master"
+    display-name: "LT2"
     icon: NETHERITE_SWORD
-    description: "1-tick decisions, pinpoint 0.5° aim, 100% W-taps, near-instant defense."
+    description: "Bottom Of The Elite."
     decision-ticks: 1
     perception-ticks: 1
     aim-error: 0.5
@@ -212,9 +212,9 @@ difficulties:
     pearl-chance: 0.45
 
   ht2:
-    display-name: "HT2 · Grandmaster"
+    display-name: "HT2"
     icon: NETHERITE_SWORD
-    description: "High-tier mastery: 0.2° aim error, maximum mobility, rapid punishment."
+    description: "Top Of The Elite"
     decision-ticks: 1
     perception-ticks: 1
     aim-error: 0.2
@@ -229,9 +229,9 @@ difficulties:
     pearl-chance: 0.50
 
   lt1:
-    display-name: "LT1 · Elite"
+    display-name: "LT1"
     icon: NETHERITE_SWORD
-    description: "Instant reaction (0ms perception), laser aim (0.1°), 98% shield rate."
+    description: "Bottom Of The Best"
     decision-ticks: 1
     perception-ticks: 0
     aim-error: 0.1
@@ -246,9 +246,9 @@ difficulties:
     pearl-chance: 0.55
 
   ht1:
-    display-name: "HT1 · Apex"
+    display-name: "HT1"
     icon: NETHERITE_SWORD
-    description: "Flawless robotic precision: 0.0° aim, 0ms reaction, 100% defense."
+    description: "Top Of The Best"
     decision-ticks: 1
     perception-ticks: 0
     aim-error: 0.0

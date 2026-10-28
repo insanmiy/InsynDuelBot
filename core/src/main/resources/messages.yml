@@ -3,6 +3,7 @@
 # Formatting Options:
 # - Standard Color Codes: &0-&f, &l, &o, &n, &m, &r
 # - Hex / RGB Color Codes: &#RRGGBB or <#RRGGBB> (e.g. &#55FF55 or <#FF5555>)
+# - Adventure MiniMessage Tags: <red>, <gold>, <click:run_command:'...'>, <hover:show_text:'...'>
 # - Context Placeholders: %placeholder% (e.g. %prefix%, %player%, %arena%, %kit%, %difficulty%)
 # - PlaceholderAPI (PAPI): Any %placeholder% is parsed if PlaceholderAPI is installed.
 # - Custom Placeholders: Define your own placeholders under the 'placeholders:' section below.
@@ -20,9 +21,9 @@ placeholders:
     "%server%": "&bMyServer"
 
 general:
-    no-permission: "%prefix%&c You Are Missing The Permission: &e%permission%"
+    no-permission: "%prefix%&cYou Are Missing The Permission: &e%permission%"
     players-only: "%prefix%&cThis Command Can Only Be Used By Players."
-    number-format-error: "%prefix%&cExpected A Number But Got: %error%"
+    number-format-error: "%prefix%&cExpected A Number But Got: &e%error%"
     internal-error: "%prefix%&cPractice Could Not Complete That Action. Check The Server Log."
     plugin-reloaded: "%prefix%&aSettings Reloaded."
     reload-busy-warning: "%prefix%&cStop All Matches Before Reloading Settings."
@@ -51,6 +52,7 @@ session:
     safe-ground-waiting: "%prefix%&ePractice Is Still Active. The Bot Is Waiting For Safe Ground Nearby."
     water-journal-failed: "%prefix%&cPlace Water Or Lava Into Air Or A Placed Block; Oversized Flows Are Not Supported In Practice."
     block-journal-failed: "%prefix%&cBlock Placement Cancelled Because Safe Cleanup Could Not Be Recorded."
+    no-free-bot-names: "%prefix%&cNo Free Bot Names Available."
 
 combat:
     # Countdown And Round Start / End Notifications
@@ -91,6 +93,7 @@ arena:
     missing-spawns: "%prefix%&cSet Both Spawns: /practice Arena Setplayer And Setbot."
     radius-invalid: "%prefix%&cRadius Must Be At Least 1 Block."
     radius-exceeds-max: "%prefix%&cArena Radius (%radius%) Exceeds Configured Max Radius (%max%)."
+    name-invalid: "%prefix%&cArena Names: 1 To 32 Letters, Digits, Hyphen Or Underscore."
     header: "&6--- Practice Arenas ---"
     entry: "&7- &f%arena%&7: %status%"
     status-ready: "&a[Ready (%radius%m)]"
@@ -124,11 +127,35 @@ settings:
     save-error: "%prefix%&cSettings Could Not Be Saved; Previous Value Retained."
 
 commands:
-    # Command Usage Messages
-    usage: "%prefix%&e/practice Menu | Settings | Start [Kit] [Difficulty] [Endless|Match|Duel] [Best Of] | Stop | Pause | Resume | Rematch | Hud | Damage | Stats | Kits | Difficulties | Kit Editor | Kit <Info|Create|Import|Edit|Save|Copy|Rename|Delete> <Name> | Status | Arena <List|Setplayer|Setbot|Setradius|Info|Delete|Tp> [Name] | Reload"
+    # Command Usage And Status Messages
+    usage:
+        - "&6&m----------------------------------------"
+        - "&9&lInsynPracticeBot Commands"
+        - "&e/practice Menu &7- Open Practice Selection Menu"
+        - "&e/practice Start [Kit] [Difficulty] [Mode] [BestOf] &7- Start Match"
+        - "&e/practice Stop [Player] &7- Stop Current Match"
+        - "&e/practice Pause &7/ &e/practice Resume &7- Pause Or Resume Match"
+        - "&e/practice Rematch &7- Rematch Previous Opponent"
+        - "&e/practice Settings &7- Open Practice Settings GUI"
+        - "&e/practice Hud &7- Toggle BossBar HUD Display"
+        - "&e/practice Damage &7- Toggle Combat Damage Diagnostics"
+        - "&e/practice Stats &7- View Win/Loss Statistics"
+        - "&e/practice Kits &7- List Available Kits"
+        - "&e/practice Difficulties &7- List Bot Difficulties"
+        - "&e/practice Kit <Editor|Create|Import|Edit|Delete> &7- Manage Kits"
+        - "&e/practice Arena <List|Setplayer|Setbot|Tp> &7- Manage Arenas"
+        - "&e/practice Status &7- View Practice System Status"
+        - "&e/practice Reload &7- Reload Plugin Configuration"
+        - "&6&m----------------------------------------"
     arena-usage: "%prefix%&e/practice Arena <List|Setplayer|Setbot|Setradius|Info|Delete|Tp> [Name]"
     kit-command-usage: "%prefix%&e/practice Kit <Create|Import|Edit|Save|Delete|Copy|Rename> <Name>"
     kit-info-usage: "%prefix%&e/practice Kit Info <Name>"
     arena-delete-usage: "%prefix%&e/practice Arena Delete <Name>"
     arena-setradius-usage: "%prefix%&e/practice Arena Setradius <Radius> [Name]"
-
+    kit-entry: "&b%kit%&7: &f%summary%"
+    difficulty-entry: "&b%difficulty%&7: Reaction &f%decision%t&7, Perception &f%perception%t&7, Aim Error &f%aim% Degrees&7; Vanilla Damage"
+    stats-current: "&7Current (Not Saved Yet): &f%summary%"
+    status-sessions: "&7Active Sessions: &f%sessions% &7| Arenas: &f%arenas%"
+    status-kits: "&7Kits: &f%kits% &7| Default: &f%default_kit% &7/ &f%default_difficulty%"
+    status-match: "&f%player% &7• Round &f%round% &7• &a%wins%&7:&c%losses%"
+    status-no-match: "&7No Active Match."

@@ -10,16 +10,23 @@ import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.minimessage.MiniMessage;
 import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 import org.bukkit.ChatColor;
 import org.bukkit.command.CommandSender;
+import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.YamlConfiguration;
 
 public final class Messages {
   private static final Pattern HEX_PATTERN =
       Pattern.compile("(&#([A-Fa-f0-9]{6})|<#([A-Fa-f0-9]{6})>)");
+  private static final Pattern LEGACY_CODE_PATTERN =
+      Pattern.compile("(?i)[&§]([0-9a-fk-or])|&#([A-Fa-f0-9]{6})|§x(§[0-9a-fA-F]){6}");
+
   private static final LegacyComponentSerializer SERIALIZER =
       LegacyComponentSerializer.legacySection();
+  private static final MiniMessage MINI_MESSAGE =
+      MiniMessage.miniMessage();
 
   private final PracticePlugin plugin;
   private YamlConfiguration config = new YamlConfiguration();
@@ -65,7 +72,11 @@ public final class Messages {
   }
 
   public String prefix() {
-    return color(config.getString("prefix", "&8[&bInsynPracticeBot&8] &r"));
+    return color(config.getString("prefix", "&9InsynPracticeBot &r"));
+  }
+
+  public Component prefixComponent() {
+    return toComponent(config.getString("prefix", "&9InsynPracticeBot &r"));
   }
 
   public String get(String key, String... placeholders) {
@@ -104,43 +115,72 @@ public final class Messages {
     return formatted;
   }
 
+  public List<Component> getComponentList(String key, String... placeholders) {
+    return getComponentList((CommandSender) null, key, placeholders);
+  }
+
+  public List<Component> getComponentList(CommandSender sender, String key, String... placeholders) {
+    if (!config.isList(key)) {
+      Component single = component(sender, key, placeholders);
+      return single.equals(Component.empty()) ? List.of() : List.of(single);
+    }
+    List<String> rawList = config.getStringList(key);
+    List<Component> formatted = new ArrayList<>(rawList.size());
+    for (String line : rawList) {
+      Component lineComp = formatComponent(sender, line, placeholders);
+      if (!lineComp.equals(Component.empty())) {
+        formatted.add(lineComp);
+      }
+    }
+    return formatted;
+  }
+
   public Component component(String key, String... placeholders) {
     return component((CommandSender) null, key, placeholders);
   }
 
   public Component component(CommandSender sender, String key, String... placeholders) {
-    return SERIALIZER.deserialize(get(sender, key, placeholders));
+    if (config.isList(key)) {
+      List<Component> list = getComponentList(sender, key, placeholders);
+      if (list.isEmpty()) return Component.empty();
+      Component combined = list.get(0);
+      for (int i = 1; i < list.size(); i++) {
+        combined = combined.append(Component.newline()).append(list.get(i));
+      }
+      return combined;
+    }
+    String raw = config.getString(key);
+    if (raw == null) {
+      return toComponent(key);
+    }
+    return formatComponent(sender, raw, placeholders);
   }
 
   public void send(CommandSender sender, String key, String... placeholders) {
     if (sender == null) return;
     if (config.isList(key)) {
-      for (String line : getList(sender, key, placeholders)) {
-        if (!line.isEmpty()) {
-          sender.sendMessage(line);
-        }
+      for (Component line : getComponentList(sender, key, placeholders)) {
+        sender.sendMessage(line);
       }
       return;
     }
-    String formatted = get(sender, key, placeholders);
-    if (!formatted.isEmpty()) {
-      sender.sendMessage(formatted);
+    String raw = config.getString(key);
+    if (raw == null) return;
+    Component comp = formatComponent(sender, raw, placeholders);
+    if (!comp.equals(Component.empty())) {
+      sender.sendMessage(comp);
     }
   }
 
-  public String formatLine(String raw, String... placeholders) {
-    return formatLine((CommandSender) null, raw, placeholders);
-  }
-
-  public String formatLine(CommandSender sender, String raw, String... placeholders) {
-    if (raw == null) return "";
-    if (raw.isEmpty() || raw.equalsIgnoreCase("none")) {
+  private String formatRaw(CommandSender sender, String raw, String... placeholders) {
+    if (raw == null || raw.isEmpty() || raw.equalsIgnoreCase("none")) {
       return "";
     }
-    String formatted = raw.replace("%prefix%", prefix());
+    String prefixRaw = config.getString("prefix", "&9InsynPracticeBot &r");
+    String formatted = raw.replace("%prefix%", prefixRaw);
 
     // Custom placeholders defined in messages.yml
-    org.bukkit.configuration.ConfigurationSection customSection = config.getConfigurationSection("placeholders");
+    ConfigurationSection customSection = config.getConfigurationSection("placeholders");
     if (customSection != null) {
       for (String customKey : customSection.getKeys(false)) {
         String customVal = customSection.getString(customKey, "");
@@ -162,7 +202,81 @@ public final class Messages {
       formatted = dev.insanmiy.practiceplugin.papi.PapiHook.parse(player, formatted);
     }
 
-    return color(formatted);
+    return formatted;
+  }
+
+  public String formatLine(String raw, String... placeholders) {
+    return formatLine((CommandSender) null, raw, placeholders);
+  }
+
+  public String formatLine(CommandSender sender, String raw, String... placeholders) {
+    return color(formatRaw(sender, raw, placeholders));
+  }
+
+  public Component formatComponent(String raw, String... placeholders) {
+    return formatComponent((CommandSender) null, raw, placeholders);
+  }
+
+  public Component formatComponent(CommandSender sender, String raw, String... placeholders) {
+    return toComponent(formatRaw(sender, raw, placeholders));
+  }
+
+  public static Component toComponent(String message) {
+    if (message == null || message.isEmpty()) return Component.empty();
+    if (message.indexOf('<') != -1 && message.indexOf('>') != -1) {
+      try {
+        String converted = legacyToMiniMessage(message);
+        return MINI_MESSAGE.deserialize(converted);
+      } catch (Exception ignored) {
+        // Fallback to legacy deserializer if MiniMessage parsing encounters unknown or unclosed tags
+      }
+    }
+    return SERIALIZER.deserialize(color(message));
+  }
+
+  static String legacyToMiniMessage(String text) {
+    if (text == null || text.isEmpty()) return "";
+    Matcher matcher = LEGACY_CODE_PATTERN.matcher(text);
+    StringBuilder sb = new StringBuilder(text.length() + 32);
+    while (matcher.find()) {
+      if (matcher.group(1) != null) {
+        char code = Character.toLowerCase(matcher.group(1).charAt(0));
+        String tag = switch (code) {
+          case '0' -> "<black>";
+          case '1' -> "<dark_blue>";
+          case '2' -> "<dark_green>";
+          case '3' -> "<dark_aqua>";
+          case '4' -> "<dark_red>";
+          case '5' -> "<dark_purple>";
+          case '6' -> "<gold>";
+          case '7' -> "<gray>";
+          case '8' -> "<dark_gray>";
+          case '9' -> "<blue>";
+          case 'a' -> "<green>";
+          case 'b' -> "<aqua>";
+          case 'c' -> "<red>";
+          case 'd' -> "<light_purple>";
+          case 'e' -> "<yellow>";
+          case 'f' -> "<white>";
+          case 'k' -> "<obfuscated>";
+          case 'l' -> "<bold>";
+          case 'm' -> "<strikethrough>";
+          case 'n' -> "<underlined>";
+          case 'o' -> "<italic>";
+          case 'r' -> "<reset>";
+          default -> "";
+        };
+        matcher.appendReplacement(sb, tag);
+      } else if (matcher.group(2) != null) {
+        matcher.appendReplacement(sb, "<#" + matcher.group(2) + ">");
+      } else {
+        String full = matcher.group(0);
+        String hex = full.replace("§x", "").replace("§", "").replace("§X", "");
+        matcher.appendReplacement(sb, "<#" + hex + ">");
+      }
+    }
+    matcher.appendTail(sb);
+    return sb.toString();
   }
 
   public static String color(String message) {

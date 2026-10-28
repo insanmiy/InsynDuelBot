@@ -113,17 +113,17 @@ public final class PracticePlugin extends JavaPlugin implements Listener {
       String name = base.substring(0, Math.min(base.length(), 16 - suffix.length())) + suffix;
       if (Bukkit.getPlayerExact(name) == null) return name;
     }
-    throw new IllegalArgumentException("No Free Bot Names.");
+    throw new IllegalArgumentException(messages != null ? messages.get("session.no-free-bot-names") : "No Free Bot Names Available.");
   }
 
-  static String validArenaName(String name) {
+  String validArenaName(String name) {
     String normalized = name.toLowerCase(Locale.ROOT);
     if (!normalized.matches("[a-z0-9_-]{1,32}"))
-      throw new IllegalArgumentException("Arena Names: 1 To 32 Letters, Digits, Hyphen Or Underscore.");
+      throw new IllegalArgumentException(messages != null ? messages.get("arena.name-invalid") : "Arena Names: 1 To 32 Letters, Digits, Hyphen Or Underscore.");
     return normalized;
   }
 
-  private static String arenaPath(String name) {
+  private String arenaPath(String name) {
     return name.equals("default") ? "arena" : "arenas." + validArenaName(name);
   }
 
@@ -277,7 +277,7 @@ public final class PracticePlugin extends JavaPlugin implements Listener {
                   session.tick();
                 } catch (Exception | LinkageError e) {
                   getLogger().log(java.util.logging.Level.SEVERE, "Practice Session Failed", e);
-                  stop(session, "Session Stopped After An Internal Error.");
+                  stop(session, messages != null ? messages.get("session.session-stopped-error") : "Session Stopped After An Internal Error.");
                 }
               }
             },
@@ -583,13 +583,19 @@ public final class PracticePlugin extends JavaPlugin implements Listener {
           for (PracticeMode mode : PracticeMode.values())
             sender.sendMessage(Messages.color(progress.summary(p.getUniqueId(), mode)));
           if (session != null && session.owner.equals(p))
-            sender.sendMessage(Messages.color(
-                "&7Current (Not Saved Yet): &f" + session.total.summary(session.totalFightTicks)));
+            messages.send(
+                sender,
+                "commands.stats-current",
+                "%summary%",
+                session.total.summary(session.totalFightTicks));
         }
         case "kits" -> {
           checkPerm(sender, "practice.kits.list");
           kits.values()
-              .forEach(k -> sender.sendMessage(Messages.color("&b" + k.name() + "&7: &f" + k.summary())));
+              .forEach(
+                  k ->
+                      messages.send(
+                          sender, "commands.kit-entry", "%kit%", k.name(), "%summary%", k.summary()));
         }
         case "difficulties" -> {
           checkPerm(sender, "practice.difficulties.list");
@@ -597,15 +603,17 @@ public final class PracticePlugin extends JavaPlugin implements Listener {
               .values()
               .forEach(
                   d ->
-                      sender.sendMessage(Messages.color(
-                          "&b" + d.prettyDisplayName()
-                              + "&7: Reaction &f"
-                              + d.decisionTicks()
-                              + "t&7, Perception &f"
-                              + d.perceptionTicks()
-                              + "t&7, Aim Error &f"
-                              + d.aimError()
-                              + " Degrees&7; Vanilla Damage")));
+                      messages.send(
+                          sender,
+                          "commands.difficulty-entry",
+                          "%difficulty%",
+                          d.prettyDisplayName(),
+                          "%decision%",
+                          String.valueOf(d.decisionTicks()),
+                          "%perception%",
+                          String.valueOf(d.perceptionTicks()),
+                          "%aim%",
+                          String.valueOf(d.aimError())));
         }
         case "kit" -> {
           if (args.length > 1 && args[1].equalsIgnoreCase("info")) {
@@ -613,7 +621,7 @@ public final class PracticePlugin extends JavaPlugin implements Listener {
             if (args.length < 3) throw new IllegalArgumentException(messages.get("commands.kit-info-usage"));
             Kit kit = kits.get(args[2].toLowerCase(Locale.ROOT));
             if (kit == null) throw new IllegalArgumentException(messages.get("kit.unknown-kit"));
-            sender.sendMessage(Messages.color("&b" + kit.name() + "&7: &f" + kit.summary()));
+            messages.send(sender, "commands.kit-entry", "%kit%", kit.name(), "%summary%", kit.summary());
           } else kitEditor.command(player(sender), args);
         }
         case "stop" -> {
@@ -634,24 +642,37 @@ public final class PracticePlugin extends JavaPlugin implements Listener {
         }
         case "status" -> {
           checkPerm(sender, "practice.status");
-          sender.sendMessage(Messages.color("&7Active Sessions: &f" + sessions.size() + " &7| Arenas: &f" + arenaNames()));
-          sender.sendMessage(Messages.color(
-              "&7Kits: &f"
-                  + kits.keySet()
-                  + " &7| Default: &f"
-                  + getConfig().getString("session.default-kit")
-                  + " &7/ &f"
-                  + getConfig().getString("session.default-difficulty")));
-          sender.sendMessage(Messages.color(
-              session == null
-                  ? "&7No Active Match."
-                  : "&f" + session.owner.getName()
-                      + " &7• Round &f"
-                      + session.match.round()
-                      + " &7• &a"
-                      + session.match.playerWins()
-                      + "&7:&c"
-                      + session.match.botWins()));
+          messages.send(
+              sender,
+              "commands.status-sessions",
+              "%sessions%",
+              String.valueOf(sessions.size()),
+              "%arenas%",
+              String.valueOf(arenaNames()));
+          messages.send(
+              sender,
+              "commands.status-kits",
+              "%kits%",
+              String.valueOf(kits.keySet()),
+              "%default_kit%",
+              String.valueOf(getConfig().getString("session.default-kit")),
+              "%default_difficulty%",
+              String.valueOf(getConfig().getString("session.default-difficulty")));
+          if (session == null) {
+            messages.send(sender, "commands.status-no-match");
+          } else {
+            messages.send(
+                sender,
+                "commands.status-match",
+                "%player%",
+                session.owner.getName(),
+                "%round%",
+                String.valueOf(session.match.round()),
+                "%wins%",
+                String.valueOf(session.match.playerWins()),
+                "%losses%",
+                String.valueOf(session.match.botWins()));
+          }
           try {
             Arena a = arena();
             messages.send(sender, "arena.ready", "%radius%", String.valueOf((int) a.radius()));
