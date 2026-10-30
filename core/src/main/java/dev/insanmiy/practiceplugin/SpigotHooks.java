@@ -24,7 +24,7 @@ final class SpigotHooks implements Listener {
     if (!(event.getDamager() instanceof Player attacker)) return;
     var session = plugin.sessionFor(attacker);
     if (session != null && session.fighting() && attacker.equals(session.owner)
-        && session.bot != null && event.getEntity().equals(session.bot.player())
+        && session.isBotPlayer(event.getEntity())
         && session.lastContactTick != session.tick) {
       session.lastContactTick = session.tick;
       session.round.contact();

@@ -265,6 +265,8 @@ final class PracticeMenu implements Listener {
                 case MATCH -> Material.GOLDEN_SWORD;
                 case DUEL -> Material.IRON_SWORD;
                 case ENDLESS -> Material.TARGET;
+                case V2_1 -> Material.DIAMOND_SWORD;
+                case V3_1 -> Material.NETHERITE_SWORD;
               };
           card =
               icon(
@@ -277,7 +279,11 @@ final class PracticeMenu implements Listener {
                       ? "Best Of " + choice.bestOf() + "; First To " + (choice.bestOf() / 2 + 1) + " Wins"
                       : mode == PracticeMode.DUEL
                           ? "Single 1v1 Duel To Knockout"
-                          : "Continuous Rounds With Score Tracking",
+                          : mode == PracticeMode.V2_1
+                              ? "Best Of " + choice.bestOf() + "; 2 Bots vs 1 Player"
+                              : mode == PracticeMode.V3_1
+                                  ? "Best Of " + choice.bestOf() + "; 3 Bots vs 1 Player"
+                                  : "Continuous Rounds With Score Tracking",
                   "Click To Select");
         } else {
           card =
@@ -323,6 +329,8 @@ final class PracticeMenu implements Listener {
           case MATCH -> Material.GOLDEN_SWORD;
           case DUEL -> Material.IRON_SWORD;
           case ENDLESS -> Material.TARGET;
+          case V2_1 -> Material.DIAMOND_SWORD;
+          case V3_1 -> Material.NETHERITE_SWORD;
         };
 
     inventory.setItem(
@@ -363,7 +371,7 @@ final class PracticeMenu implements Listener {
             "Series: Best Of " + choice.bestOf(),
             NamedTextColor.YELLOW,
             false,
-            "For Match Mode Only",
+            "For Match & Outnumbered Modes",
             "",
             "Left Click: +2 Rounds",
             "Right Click: -2 Rounds"));
@@ -579,7 +587,7 @@ final class PracticeMenu implements Listener {
                         0);
                   } else if (view.screen == Screen.MODES) {
                     PracticeMode chosenMode = PracticeMode.parse(name);
-                    int bestOf = chosenMode == PracticeMode.MATCH
+                    int bestOf = (chosenMode == PracticeMode.MATCH || chosenMode.isOutnumbered())
                         ? Math.max(3, choice.bestOf() % 2 == 0 ? choice.bestOf() + 1 : choice.bestOf())
                         : choice.bestOf();
                     show(

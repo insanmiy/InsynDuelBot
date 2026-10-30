@@ -26,6 +26,8 @@ session:
   # - endless: Continuous fight where the bot respawns upon defeat
   # - match:   Best-of series with rounds and score tracking
   # - duel:    Single 1v1 round to the death
+  # - 2v1:     Best-of series against 2 bots
+  # - 3v1:     Best-of series against 3 bots
   default-mode: match
 
   # Series round count for "match" mode (e.g. 5 = best of 5, first to 3 wins).

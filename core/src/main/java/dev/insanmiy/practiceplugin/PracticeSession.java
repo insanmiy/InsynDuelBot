@@ -14,6 +14,7 @@ import org.bukkit.*;
 import org.bukkit.attribute.Attribute;
 import org.bukkit.attribute.AttributeInstance;
 import org.bukkit.attribute.AttributeModifier;
+import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.util.Vector;
@@ -33,6 +34,9 @@ public final class PracticeSession {
   final int startingSaturation;
   BotPlatform bot;
   UUID botId;
+  final List<BotPlatform> bots = new ArrayList<>();
+  final Set<UUID> botIds = new HashSet<>();
+  final List<BotPlatform> aliveBots = new ArrayList<>();
   CombatStats round = new CombatStats(), total = new CombatStats();
   long tick, fightStart, totalFightTicks;
   long lastContactTick = -1;
@@ -46,7 +50,6 @@ public final class PracticeSession {
   private final List<PausedState> pausedStates = new ArrayList<>();
   private final BossBar bar =
       Bukkit.createBossBar("DuelBot", org.bukkit.boss.BarColor.RED, org.bukkit.boss.BarStyle.SOLID);
-
 
   PracticeSession(
       PracticePlugin plugin,
@@ -70,23 +73,16 @@ public final class PracticeSession {
         new Match(
             plugin.settings().number(owner.getUniqueId(), "countdown") * 20,
             plugin.settings().number(owner.getUniqueId(), "between-rounds") * 20,
-            mode == PracticeMode.MATCH ? Math.max(3, bestOf % 2 == 0 ? bestOf + 1 : bestOf) : mode == PracticeMode.DUEL ? 1 : 0);
+            mode == PracticeMode.MATCH || mode.isOutnumbered()
+                ? Math.max(3, bestOf % 2 == 0 ? bestOf + 1 : bestOf)
+                : mode == PracticeMode.DUEL ? 1 : 0);
   }
 
   void begin() {
     internalTeleport = true;
     try {
       stripModifiers(owner, true);
-      bot =
-          BotAdapters.getAdapter().createBot(
-              owner,
-              arena.botSpawn(),
-              plugin.botName(),
-              id -> {
-                botId = id;
-                plugin.registerBot(id);
-              });
-      bot.configure(options, kit.regeneration());
+      spawnAllBots();
       resetRound();
     } finally {
       internalTeleport = false;
@@ -94,19 +90,164 @@ public final class PracticeSession {
     if (hud) bar.addPlayer(owner);
   }
 
+  Location spawnForBot(int index, int total) {
+    Location base = arena.botSpawn().clone();
+    if (total <= 1) return base;
+    Location playerSp = arena.playerSpawn();
+    double dx = playerSp.getX() - base.getX();
+    double dz = playerSp.getZ() - base.getZ();
+    Vector perp = new Vector(-dz, 0, dx);
+    if (perp.lengthSquared() < 0.001) perp = new Vector(1, 0, 0);
+    else perp.normalize();
+
+    double spacing = 1.6;
+    double multiplier = (index - (total - 1) / 2.0) * spacing;
+    Location candidate = base.clone().add(perp.clone().multiply(multiplier));
+    candidate.setYaw(base.getYaw());
+    candidate.setPitch(base.getPitch());
+    if (Arena.safe(candidate)) return candidate;
+    return base;
+  }
+
+  private void updatePrimaryBot() {
+    if (!aliveBots.isEmpty()) {
+      bot = aliveBots.get(0);
+      botId = bot.player() != null ? bot.player().getUniqueId() : null;
+    } else if (!bots.isEmpty()) {
+      bot = bots.get(0);
+      botId = bot.player() != null ? bot.player().getUniqueId() : null;
+    } else {
+      bot = null;
+      botId = null;
+    }
+  }
+
+  void spawnAllBots() {
+    clearBots();
+    int count = mode.botCount();
+    for (int i = 0; i < count; i++) {
+      Location sp = spawnForBot(i, count);
+      BotPlatform created =
+          BotAdapters.getAdapter().createBot(
+              owner,
+              sp,
+              plugin.botName(),
+              id -> {
+                botIds.add(id);
+                plugin.registerBot(id);
+              });
+      created.configure(options, kit.regeneration());
+      bots.add(created);
+      aliveBots.add(created);
+    }
+    updatePrimaryBot();
+  }
+
+  void clearBots() {
+    for (BotPlatform b : bots) {
+      if (b != null) {
+        try {
+          b.close();
+        } catch (Exception ignored) {}
+      }
+    }
+    for (UUID id : botIds) {
+      plugin.unregisterBot(id);
+    }
+    bots.clear();
+    aliveBots.clear();
+    botIds.clear();
+    bot = null;
+    botId = null;
+  }
+
+  void ensureBots(int targetCount) {
+    Iterator<BotPlatform> it = bots.iterator();
+    while (it.hasNext()) {
+      BotPlatform b = it.next();
+      if (b == null || b.player() == null || !b.player().isOnline()) {
+        if (b != null) {
+          try {
+            b.close();
+          } catch (Exception ignored) {}
+          if (b.player() != null) {
+            botIds.remove(b.player().getUniqueId());
+            plugin.unregisterBot(b.player().getUniqueId());
+          }
+        }
+        it.remove();
+      }
+    }
+
+    while (bots.size() < targetCount) {
+      int index = bots.size();
+      Location sp = spawnForBot(index, targetCount);
+      BotPlatform created =
+          BotAdapters.getAdapter().createBot(
+              owner,
+              sp,
+              plugin.botName(),
+              id -> {
+                botIds.add(id);
+                plugin.registerBot(id);
+              });
+      created.configure(options, kit.regeneration());
+      bots.add(created);
+    }
+    updatePrimaryBot();
+  }
+
   void replaceDeadBot() {
-    if (bot != null) bot.close();
-    plugin.unregisterBot(botId);
-    bot = BotAdapters.getAdapter().createBot(owner, arena.botSpawn(), plugin.botName(), id -> {
-      botId = id;
-      plugin.registerBot(id);
-    });
-    bot.configure(options, kit.regeneration());
+    clearBots();
+    spawnAllBots();
+  }
+
+  public int aliveBotCount() {
+    return (int) aliveBots.stream()
+        .filter(b -> b != null && b.player() != null && b.player().isOnline() && !b.player().isDead())
+        .count();
+  }
+
+  public void eliminateBot(BotPlatform deadBot) {
+    if (deadBot != null) {
+      aliveBots.remove(deadBot);
+      updatePrimaryBot();
+    }
+  }
+
+  public void removeEliminatedBot(BotPlatform deadBot) {
+    if (deadBot != null) {
+      aliveBots.remove(deadBot);
+      bots.remove(deadBot);
+      if (deadBot.player() != null) {
+        botIds.remove(deadBot.player().getUniqueId());
+        plugin.unregisterBot(deadBot.player().getUniqueId());
+      }
+      try {
+        deadBot.close();
+      } catch (Exception ignored) {}
+      updatePrimaryBot();
+    }
+  }
+
+  public boolean isBotPlayer(Entity entity) {
+    if (!(entity instanceof Player p)) return false;
+    return botIds.contains(p.getUniqueId())
+        || bots.stream().anyMatch(b -> b != null && b.player() != null && b.player().getUniqueId().equals(p.getUniqueId()));
+  }
+
+  public BotPlatform findBot(Player p) {
+    if (p == null) return null;
+    for (BotPlatform b : bots) {
+      if (b != null && b.player() != null && b.player().getUniqueId().equals(p.getUniqueId())) {
+        return b;
+      }
+    }
+    return null;
   }
 
   public boolean participant(Player p) {
-    return p.getUniqueId().equals(owner.getUniqueId())
-        || bot != null && p.getUniqueId().equals(bot.player().getUniqueId());
+    return p != null && (p.getUniqueId().equals(owner.getUniqueId()) || isBotPlayer(p));
   }
 
   public boolean fighting() {
@@ -131,26 +272,43 @@ public final class PracticeSession {
       if (arena.error() != null) throw new IllegalStateException(arena.error());
       if (!owner.teleport(arena.playerSpawn()))
         throw new IllegalStateException("Player Teleport Cancelled");
-      bot.reset(arena.botSpawn());
 
-      for (Attribute attribute :
-          new Attribute[] {
-            Attributes.ATTACK_DAMAGE,
-            Attributes.ATTACK_SPEED,
-            Attributes.ARMOR,
-            Attributes.ARMOR_TOUGHNESS,
-            Attributes.KNOCKBACK_RESISTANCE,
-            Attributes.MOVEMENT_SPEED,
-            Attributes.ATTACK_KNOCKBACK
-          }) {
-        if (attribute == null) continue;
-        var source = owner.getAttribute(attribute);
-        var target = bot.player().getAttribute(attribute);
-        if (source != null && target != null) target.setBaseValue(source.getBaseValue());
+      int count = mode.botCount();
+      ensureBots(count);
+      aliveBots.clear();
+      aliveBots.addAll(bots);
+
+      for (int i = 0; i < bots.size(); i++) {
+        BotPlatform b = bots.get(i);
+        b.reset(spawnForBot(i, bots.size()));
       }
+
+      List<Player> participants = new ArrayList<>();
+      participants.add(owner);
+      for (BotPlatform b : bots) {
+        if (b != null && b.player() != null) {
+          participants.add(b.player());
+        }
+      }
+
       KitLayout ownerLayout =
           plugin.layouts().getLayout(owner.getUniqueId(), difficulty.name(), kit.name());
-      for (Player p : new Player[] {owner, bot.player()}) {
+      for (Player p : participants) {
+        for (Attribute attribute :
+            new Attribute[] {
+              Attributes.ATTACK_DAMAGE,
+              Attributes.ATTACK_SPEED,
+              Attributes.ARMOR,
+              Attributes.ARMOR_TOUGHNESS,
+              Attributes.KNOCKBACK_RESISTANCE,
+              Attributes.MOVEMENT_SPEED,
+              Attributes.ATTACK_KNOCKBACK
+            }) {
+          if (attribute == null) continue;
+          var source = owner.getAttribute(attribute);
+          var target = p.getAttribute(attribute);
+          if (source != null && target != null && !p.equals(owner)) target.setBaseValue(source.getBaseValue());
+        }
         p.getActivePotionEffects().forEach(e -> p.removePotionEffect(e.getType()));
         stripModifiers(p, false);
         AttributeInstance maxHealthAttr = Attributes.get(p, Attributes.MAX_HEALTH);
@@ -191,35 +349,60 @@ public final class PracticeSession {
 
   void tick() {
     if (closing) return;
-    if (!owner.isOnline() || bot == null || !bot.player().isOnline()) {
+    if (!owner.isOnline() || bots.isEmpty() || bots.stream().noneMatch(b -> b.player() != null && b.player().isOnline())) {
       plugin.stop(this, plugin.messages().get("session.fighter-disconnected"));
       return;
     }
-    if (owner.isDead() || bot.player().isDead()) return;
+    if (owner.isDead()) return;
 
-    if (!owner.getWorld().equals(bot.player().getWorld())) {
-      Location destination = nearbySafe(owner.getLocation());
-      if (destination != null) relocateBot(destination);
-      else return;
-    }
     boolean ownerFell = owner.getLocation().getY() < owner.getWorld().getMinHeight() + 2;
-    if (ownerFell || bot.player().getLocation().getY() < bot.player().getWorld().getMinHeight() + 2) {
-      if (fighting() && !endingRound) win(!ownerFell);
+    if (ownerFell) {
+      if (fighting() && !endingRound) win(false);
       resetRound();
-    }
-    if (match.paused()) {
-      bot.tick(owner, difficulty, arena, false);
       return;
     }
-    tick++;
-    if (fighting()) totalFightTicks++;
-    bot.tick(owner, difficulty, arena, fighting());
+
+    for (BotPlatform b : new ArrayList<>(aliveBots)) {
+      if (b == null || b.player() == null || !b.player().isOnline()) continue;
+      if (b.player().isDead()) continue;
+
+      if (!owner.getWorld().equals(b.player().getWorld())) {
+        Location destination = nearbySafe(owner.getLocation());
+        if (destination != null) relocateBot(b, destination);
+        else continue;
+      }
+
+      boolean botFell = b.player().getLocation().getY() < b.player().getWorld().getMinHeight() + 2;
+      if (botFell) {
+        eliminateBot(b);
+        if (aliveBotCount() <= 0) {
+          if (fighting() && !endingRound) win(true);
+          resetRound();
+          return;
+        } else {
+          plugin.messages().send(owner, "combat.bot-eliminated", "%remaining%", String.valueOf(aliveBotCount()));
+          removeEliminatedBot(b);
+        }
+        continue;
+      }
+
+      if (match.paused()) {
+        b.tick(owner, difficulty, arena, false);
+      } else {
+        b.tick(owner, difficulty, arena, fighting());
+      }
+    }
+
     if (closing) return;
     if (roundTimeoutSeconds > 0 && fighting() && tick - fightStart >= roundTimeoutSeconds * 20L) {
       plugin.messages().send(owner, "combat.round-timed-out");
       fightStart = tick;
       resetRound();
+      return;
     }
+
+    tick++;
+    if (fighting()) totalFightTicks++;
 
     if (match.phase() == Match.Phase.COUNTDOWN) {
       int remaining = match.remaining();
@@ -261,15 +444,37 @@ public final class PracticeSession {
     }
 
     if (tick % 5 == 0 && hud) {
-      bar.setTitle(TextUI.legacy(
-          Component.text(
-              "Bot "
-                  + Math.round(bot.player().getHealth())
-                  + "/"
-                  + kit.health()
-                  + " HP | Apples "
-                  + countApples(bot.player()))));
-      bar.setProgress((float) Math.clamp(bot.player().getHealth() / kit.health(), 0.0, 1.0));
+      if (mode.isOutnumbered()) {
+        int alive = aliveBotCount();
+        int totalBots = mode.botCount();
+        double totalHp = aliveBots.stream()
+            .filter(b -> b != null && b.player() != null && !b.player().isDead())
+            .mapToDouble(b -> b.player().getHealth())
+            .sum();
+        double maxHp = kit.health() * totalBots;
+        bar.setTitle(TextUI.legacy(
+            Component.text(
+                mode.id().toUpperCase(java.util.Locale.ROOT)
+                    + " | Bots Alive: "
+                    + alive
+                    + "/"
+                    + totalBots
+                    + " | HP: "
+                    + Math.round(totalHp)
+                    + "/"
+                    + Math.round(maxHp))));
+        bar.setProgress((float) Math.clamp(totalHp / Math.max(1.0, maxHp), 0.0, 1.0));
+      } else if (bot != null && bot.player() != null) {
+        bar.setTitle(TextUI.legacy(
+            Component.text(
+                "Bot "
+                    + Math.round(bot.player().getHealth())
+                    + "/"
+                    + kit.health()
+                    + " HP | Apples "
+                    + countApples(bot.player()))));
+        bar.setProgress((float) Math.clamp(bot.player().getHealth() / kit.health(), 0.0, 1.0));
+      }
       TextUI.actionBar(owner,
           Component.text(
               mode.id()
@@ -279,7 +484,7 @@ public final class PracticeSession {
                   + match.playerWins()
                   + " : "
                   + match.botWins()
-                  + " Bot | "
+                  + (mode.isOutnumbered() ? " Bots | " : " Bot | ")
                   + difficulty.prettyDisplayName()
                   + " | "
                   + (match.phase() == Match.Phase.FINISHED
@@ -291,8 +496,6 @@ public final class PracticeSession {
                   + String.format(java.util.Locale.ROOT, "%.1f", owner.getSaturation())));
     }
   }
-
-
 
   static int countApples(Player player) {
     return Arrays.stream(player.getInventory().getContents())
@@ -315,28 +518,30 @@ public final class PracticeSession {
   }
 
   void followTeleport(Location destination) {
-    if (bot == null || closing || internalTeleport || !fighting()) return;
+    if (closing || internalTeleport || !fighting()) return;
     if (arena.contains(destination)) return;
-    if (bot.player().getWorld().equals(destination.getWorld())
-        && bot.player().getLocation().distanceSquared(destination) < 32 * 32) return;
-    Location safe = nearbySafe(destination);
-    if (safe != null) relocateBot(safe);
-    else
-      plugin.messages().send(owner, "session.safe-ground-waiting");
+    for (BotPlatform b : aliveBots) {
+      if (b == null || b.player() == null) continue;
+      if (b.player().getWorld().equals(destination.getWorld())
+          && b.player().getLocation().distanceSquared(destination) < 32 * 32) continue;
+      Location safe = nearbySafe(destination);
+      if (safe != null) relocateBot(b, safe);
+      else
+        plugin.messages().send(owner, "session.safe-ground-waiting");
+    }
   }
 
-  private void relocateBot(Location destination) {
+  private void relocateBot(BotPlatform b, Location destination) {
     internalTeleport = true;
     try {
-      double health = bot.player().getHealth();
-      bot.relocate(destination);
-      double maxAllowedHealth = Attributes.getValue(bot.player(), Attributes.MAX_HEALTH, 20.0);
-      bot.player().setHealth(Math.min(health, maxAllowedHealth));
+      double health = b.player().getHealth();
+      b.relocate(destination);
+      double maxAllowedHealth = Attributes.getValue(b.player(), Attributes.MAX_HEALTH, 20.0);
+      b.player().setHealth(Math.min(health, maxAllowedHealth));
     } finally {
       internalTeleport = false;
     }
   }
-
 
   public Kit kit() { return kit; }
   public Difficulty difficulty() { return difficulty; }
@@ -346,13 +551,21 @@ public final class PracticeSession {
   public boolean isPaused() { return match.paused(); }
   public boolean isFighting() { return fighting(); }
   public BotPlatform bot() { return bot; }
+  public List<BotPlatform> bots() { return Collections.unmodifiableList(bots); }
+  public List<BotPlatform> aliveBots() { return Collections.unmodifiableList(aliveBots); }
+  public Set<UUID> botIds() { return Collections.unmodifiableSet(botIds); }
 
   void setPaused(boolean paused) {
     if (match.paused() == paused)
       throw new IllegalArgumentException(plugin.messages().get(paused ? "combat.already-paused" : "combat.not-paused"));
     if (paused) {
       plugin.clearUtilities(this);
-      for (Player p : new Player[] {owner, bot.player()}) {
+      List<Player> participants = new ArrayList<>();
+      participants.add(owner);
+      for (BotPlatform b : aliveBots) {
+        if (b != null && b.player() != null) participants.add(b.player());
+      }
+      for (Player p : participants) {
         BotAdapters.getAdapter().stopUsing(p);
         p.setVelocity(new Vector());
         pausedStates.add(
@@ -415,19 +628,24 @@ public final class PracticeSession {
       boolean duel = mode == PracticeMode.DUEL;
       String score = match.playerWins() + "-" + match.botWins();
       String result;
-      if (duel || mode == PracticeMode.MATCH) {
-        String kind = duel ? "Duel" : "Match";
+      if (duel || mode == PracticeMode.MATCH || mode.isOutnumbered()) {
         if (duel) {
           result = plugin.messages().get(playerWonSeries ? "combat.player-won-duel" : "combat.bot-won-duel");
           plugin.messages().send(owner, "combat.duel-finished", "%result%", result);
+        } else if (mode == PracticeMode.V2_1) {
+          result = plugin.messages().get(playerWonSeries ? "combat.player-won-2v1" : "combat.bot-won-2v1", "%score%", score);
+          plugin.messages().send(owner, "combat.v21-finished", "%result%", result);
+        } else if (mode == PracticeMode.V3_1) {
+          result = plugin.messages().get(playerWonSeries ? "combat.player-won-3v1" : "combat.bot-won-3v1", "%score%", score);
+          plugin.messages().send(owner, "combat.v31-finished", "%result%", result);
         } else {
           result = plugin.messages().get(playerWonSeries ? "combat.player-won-match" : "combat.bot-won-match", "%score%", score);
           plugin.messages().send(owner, "combat.match-finished", "%result%", result);
         }
+        String victoryTitle = (mode == PracticeMode.V2_1 ? "2v1 " : mode == PracticeMode.V3_1 ? "3v1 " : duel ? "" : "MATCH ")
+            + (playerWonSeries ? "VICTORY!" : "DEFEAT!");
         owner.showTitle(Title.title(
-            Component.text(
-                (duel ? "" : "MATCH ") + (playerWonSeries ? "VICTORY!" : "DEFEAT!"),
-                playerWonSeries ? NamedTextColor.GREEN : NamedTextColor.RED),
+            Component.text(victoryTitle, playerWonSeries ? NamedTextColor.GREEN : NamedTextColor.RED),
             duel
                 ? Component.text(result, NamedTextColor.GRAY)
                 : Component.text("Final Score: " + score, NamedTextColor.GOLD)));
@@ -460,7 +678,7 @@ public final class PracticeSession {
       try {
         plugin.clearUtilities(this);
       } finally {
-        if (bot != null) bot.close();
+        clearBots();
       }
     } finally {
       restoreModifiers();

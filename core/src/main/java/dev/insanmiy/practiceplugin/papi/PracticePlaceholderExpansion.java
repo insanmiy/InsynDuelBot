@@ -64,6 +64,10 @@ public final class PracticePlaceholderExpansion extends PlaceholderExpansion {
       case "duel_losses" -> String.valueOf(plugin.progress().roundsLost(offlinePlayer.getUniqueId(), PracticeMode.DUEL));
       case "endless_wins" -> String.valueOf(plugin.progress().roundsWon(offlinePlayer.getUniqueId(), PracticeMode.ENDLESS));
       case "endless_losses" -> String.valueOf(plugin.progress().roundsLost(offlinePlayer.getUniqueId(), PracticeMode.ENDLESS));
+      case "2v1_wins" -> String.valueOf(plugin.progress().roundsWon(offlinePlayer.getUniqueId(), PracticeMode.V2_1));
+      case "2v1_losses" -> String.valueOf(plugin.progress().roundsLost(offlinePlayer.getUniqueId(), PracticeMode.V2_1));
+      case "3v1_wins" -> String.valueOf(plugin.progress().roundsWon(offlinePlayer.getUniqueId(), PracticeMode.V3_1));
+      case "3v1_losses" -> String.valueOf(plugin.progress().roundsLost(offlinePlayer.getUniqueId(), PracticeMode.V3_1));
       default -> null;
     };
   }

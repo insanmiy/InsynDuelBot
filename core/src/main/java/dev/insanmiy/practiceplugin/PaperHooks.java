@@ -27,6 +27,8 @@ final class PaperHooks implements Listener {
     if ((attacker != null || victim != null)
         && (attacker != victim || !attacker.fighting() || attacker.endingRound))
       e.setCancelled(true);
+    if (attacker != null && attacker == victim && attacker.isBotPlayer(e.getPlayer()) && attacker.isBotPlayer(target))
+      e.setCancelled(true);
   }
 
   @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
@@ -46,8 +48,7 @@ final class PaperHooks implements Listener {
     if (session != null
         && session.fighting()
         && e.getPlayer().equals(session.owner)
-        && session.bot != null
-        && e.getAttacked().equals(session.bot.player())
+        && session.isBotPlayer(e.getAttacked())
         && e.willAttack()
         && session.lastContactTick != session.tick) {
       session.lastContactTick = session.tick;
@@ -58,17 +59,16 @@ final class PaperHooks implements Listener {
 
   @EventHandler
   public void pickupXp(com.destroystokyo.paper.event.player.PlayerPickupExperienceEvent e) {
-    if (plugin.participant(e.getPlayer())) e.setCancelled(true);
-  }
-
-  @EventHandler(priority = EventPriority.HIGHEST)
-  public void respawn(org.bukkit.event.player.PlayerRespawnEvent event) {
-    PracticeSession session = plugin.sessionFor(event.getPlayer());
-    if (session != null) event.setRespawnLocation(session.arena.playerSpawn());
-  }
-
-  @EventHandler(priority = EventPriority.HIGHEST)
-  public void experience(org.bukkit.event.player.PlayerExpChangeEvent event) {
-    if (plugin.participant(event.getPlayer())) event.setAmount(0);
+    if (!plugin.participant(e.getPlayer())) return;
+    PracticeSession s = plugin.sessionFor(e.getPlayer());
+    if (s == null) return;
+    int exp = e.getExperienceOrb().getExperience();
+    int leftover = dev.insanmiy.practiceplugin.bot.BotAdapters.getAdapter().mend(e.getPlayer(), exp);
+    if (leftover <= 0) {
+      e.getExperienceOrb().remove();
+      e.setCancelled(true);
+    } else {
+      e.getExperienceOrb().setExperience(leftover);
+    }
   }
 }

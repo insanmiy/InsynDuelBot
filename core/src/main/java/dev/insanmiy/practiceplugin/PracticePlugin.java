@@ -1,6 +1,7 @@
 package dev.insanmiy.practiceplugin;
 
 import dev.insanmiy.practiceplugin.bot.BotAdapters;
+import dev.insanmiy.practiceplugin.bot.BotPlatform;
 import dev.insanmiy.practiceplugin.config.*;
 import dev.insanmiy.practiceplugin.config.Difficulty;
 import dev.insanmiy.practiceplugin.model.PracticeMode;
@@ -345,6 +346,7 @@ public final class PracticePlugin extends JavaPlugin implements Listener {
         old.owner.sendMessage(Messages.color(message));
       }
       sessions.remove(old.owner.getUniqueId(), old);
+      for (UUID id : old.botIds()) bots.remove(id);
       if (old.botId != null) bots.remove(old.botId);
     }
   }
@@ -927,24 +929,20 @@ public final class PracticePlugin extends JavaPlugin implements Listener {
 
   @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
   public void healingPressure(EntityDamageByEntityEvent event) {
-    PracticeSession session = sessionFor(event.getEntity());
-    if (session == null
-        || !session.fighting()
-        || session.bot == null
-        || !event.getEntity().equals(session.bot.player())) return;
-
-    session.bot.onIncomingDamage(event.getFinalDamage());
+    if (!(event.getEntity() instanceof Player p)) return;
+    PracticeSession session = sessionFor(p);
+    if (session == null || !session.fighting()) return;
+    BotPlatform b = session.findBot(p);
+    if (b != null) b.onIncomingDamage(event.getFinalDamage());
   }
 
   @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
   public void resurrect(EntityResurrectEvent e) {
-    PracticeSession session = sessionFor(e.getEntity());
-    if (session == null
-        || !session.fighting()
-        || session.bot == null
-        || !e.getEntity().equals(session.bot.player())) return;
-
-    session.bot.onTotemPopped();
+    if (!(e.getEntity() instanceof Player p)) return;
+    PracticeSession session = sessionFor(p);
+    if (session == null || !session.fighting()) return;
+    BotPlatform b = session.findBot(p);
+    if (b != null) b.onTotemPopped();
   }
 
   @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
@@ -958,6 +956,12 @@ public final class PracticePlugin extends JavaPlugin implements Listener {
     if (attackSession != null && attackSession != victimSession) {
       e.setCancelled(true);
       return;
+    }
+    if (source instanceof Player attacker && e.getEntity() instanceof Player target) {
+      if (victimSession.isBotPlayer(attacker) && victimSession.isBotPlayer(target)) {
+        e.setCancelled(true);
+        return;
+      }
     }
     if (!victimSession.fighting() || victimSession.endingRound) {
       e.setCancelled(true);
@@ -973,7 +977,9 @@ public final class PracticePlugin extends JavaPlugin implements Listener {
       victimSession.round.hit(amount, victimSession.tick);
       victimSession.total.hit(amount, victimSession.tick);
       if (amount > 0 && source != null && source.equals(victimSession.owner)) {
-        victimSession.bot.onOpponentHit();
+        BotPlatform b = victimSession.findBot(damaged);
+        if (b != null) b.onOpponentHit();
+        else if (victimSession.bot != null) victimSession.bot.onOpponentHit();
       }
     }
 
@@ -1044,11 +1050,16 @@ public final class PracticePlugin extends JavaPlugin implements Listener {
   public void teleport(PlayerTeleportEvent e) {
     PracticeSession session = sessionFor(e.getPlayer());
     if (participant(e.getPlayer()) && !session.internalTeleport && !session.closing) {
-      if (isBot(e.getPlayer()) && session.bot != null && session.bot.isTeleporting()) return;
+      if (isBot(e.getPlayer())) {
+        BotPlatform b = session.findBot(e.getPlayer());
+        if (b != null && b.isTeleporting()) return;
+      }
       if (e.getCause() == PlayerTeleportEvent.TeleportCause.ENDER_PEARL
           || e.getCause() == PlayerTeleportEvent.TeleportCause.CHORUS_FRUIT) {
-        if (session.fighting() && session.bot != null && e.getPlayer().equals(session.owner)) {
-          session.bot.onOpponentPearled(session.owner);
+        if (session.fighting() && e.getPlayer().equals(session.owner)) {
+          for (BotPlatform b : session.aliveBots()) {
+            if (b != null) b.onOpponentPearled(session.owner);
+          }
         }
         return;
       }
@@ -1180,8 +1191,9 @@ public final class PracticePlugin extends JavaPlugin implements Listener {
         && participant(p)) {
       long before = MendingExperience.equippedDamage(p);
       MendingExperience.award(p, xp);
-      if (session.bot != null && session.bot.player().equals(p))
-        session.bot.onRepairImpact(MendingExperience.equippedDamage(p) < before);
+      BotPlatform b = session.findBot(p);
+      if (b != null)
+        b.onRepairImpact(MendingExperience.equippedDamage(p) < before);
     }
   }
 
@@ -1540,26 +1552,56 @@ public final class PracticePlugin extends JavaPlugin implements Listener {
       e.deathMessage(null);
       if (session != null && session.fighting() && !session.endingRound) {
         session.captureLayout();
-        boolean playerWon = !e.getEntity().equals(session.owner);
+        boolean isOwner = e.getEntity().equals(session.owner);
 
         boolean revived = ServerFeatures.revive(e);
         e.setKeepInventory(true);
         e.setKeepLevel(true);
-        session.endingRound = true;
-        messages.send(session.owner, "combat.lethal-hit", "%target%", playerWon ? "Bot" : "You");
-        getServer()
-            .getScheduler()
-            .runTask(
-                this,
-                () -> {
-                  if (sessions.get(session.owner.getUniqueId()) != session) return;
-                  if (!revived) {
-                    if (playerWon) session.replaceDeadBot();
-                    else session.owner.spigot().respawn();
-                  }
-                  session.endingRound = false;
-                  session.win(playerWon);
-                });
+
+        if (isOwner) {
+          session.endingRound = true;
+          messages.send(session.owner, "combat.lethal-hit", "%target%", "You");
+          getServer()
+              .getScheduler()
+              .runTask(
+                  this,
+                  () -> {
+                    if (sessions.get(session.owner.getUniqueId()) != session) return;
+                    if (!revived) {
+                      session.owner.spigot().respawn();
+                    }
+                    session.endingRound = false;
+                    session.win(false);
+                  });
+        } else {
+          BotPlatform deadBot = session.findBot((Player) e.getEntity());
+          session.eliminateBot(deadBot);
+          boolean allDead = session.aliveBotCount() <= 0;
+          if (allDead) {
+            session.endingRound = true;
+            messages.send(session.owner, "combat.lethal-hit", "%target%", "Bot");
+            getServer()
+                .getScheduler()
+                .runTask(
+                    this,
+                    () -> {
+                      if (sessions.get(session.owner.getUniqueId()) != session) return;
+                      session.endingRound = false;
+                      session.win(true);
+                    });
+          } else {
+            messages.send(session.owner, "combat.bot-eliminated",
+                "%remaining%", String.valueOf(session.aliveBotCount()));
+            getServer()
+                .getScheduler()
+                .runTask(
+                    this,
+                    () -> {
+                      if (sessions.get(session.owner.getUniqueId()) != session) return;
+                      session.removeEliminatedBot(deadBot);
+                    });
+          }
+        }
         return;
       }
       getServer()

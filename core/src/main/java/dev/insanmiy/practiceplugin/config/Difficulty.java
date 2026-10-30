@@ -222,6 +222,9 @@ public record Difficulty(
 			if (lower.equals("smp") || lower.equals("uhc") || lower.equals("pvp")) {
 				sb.append(lower.toUpperCase(Locale.ROOT));
 			}
+			else if (lower.matches("\\d+v\\d+")) {
+				sb.append(lower);
+			}
 			else {
 				sb.append(Character.toUpperCase(w.charAt(0)));
 				if (w.length() > 1) {

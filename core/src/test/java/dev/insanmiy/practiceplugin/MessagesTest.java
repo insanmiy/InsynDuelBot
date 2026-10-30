@@ -53,4 +53,15 @@ class MessagesTest {
     assertNotNull(comp);
     assertFalse(comp.equals(Component.empty()));
   }
+
+  @Test
+  void testOutnumberedMessagesFormatting() {
+    String eliminated = Messages.color("&9InsynPracticeBot &r&eA Bot Was Eliminated! &7(&a2&7 Remaining)");
+    assertNotNull(eliminated);
+    assertTrue(eliminated.contains("\u00A7eA Bot Was Eliminated!"));
+
+    Component finishComp = Messages.toComponent("&9InsynPracticeBot &r&62v1 Match Finished! You Won The 2v1 Match 3-1!");
+    assertNotNull(finishComp);
+    assertFalse(finishComp.equals(Component.empty()));
+  }
 }
