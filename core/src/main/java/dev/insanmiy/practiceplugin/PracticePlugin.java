@@ -429,7 +429,6 @@ public final class PracticePlugin extends JavaPlugin implements Listener {
   private void start(Player p, Selection choice) throws java.io.IOException {
     if (sessions.containsKey(p.getUniqueId()))
       throw new IllegalArgumentException(messages.get("session.already-in-match"));
-    p.closeInventory();
     if (recovery.pending(p)) {
       recovery.restore(p);
       if (recovery.pending(p))
@@ -437,12 +436,6 @@ public final class PracticePlugin extends JavaPlugin implements Listener {
     }
     if (p.isDead())
       throw new IllegalArgumentException(messages.get("session.respawn-before-practice"));
-    if (p.isInsideVehicle()) {
-      p.leaveVehicle();
-    }
-    if (p.isInvulnerable()) {
-      p.setInvulnerable(false);
-    }
     Kit kit = kits.get(choice.kit());
     Difficulty difficulty = difficulties.get(choice.difficulty());
     if (kit == null || difficulty == null)
@@ -455,14 +448,17 @@ public final class PracticePlugin extends JavaPlugin implements Listener {
             this, p, assigned.getValue(), kit, difficulty, choice.mode(), choice.bestOf());
     session.arenaName = assigned.getKey();
     recovery.capture(p);
-    p.getInventory().clear();
-    p.setItemOnCursor(null);
-    p.setGameMode(GameMode.SURVIVAL);
-    p.getActivePotionEffects().forEach(e -> p.removePotionEffect(e.getType()));
-    p.setAbsorptionAmount(0);
-
     sessions.put(p.getUniqueId(), session);
     try {
+      p.closeInventory();
+      if (p.isInsideVehicle() && !p.leaveVehicle())
+        throw new IllegalStateException("Could Not Leave Vehicle For Practice");
+      p.setInvulnerable(false);
+      p.getInventory().clear();
+      p.setItemOnCursor(null);
+      p.setGameMode(GameMode.SURVIVAL);
+      p.getActivePotionEffects().forEach(e -> p.removePotionEffect(e.getType()));
+      p.setAbsorptionAmount(0);
       session.begin();
       if (!dev.insanmiy.practiceplugin.bot.BotAdapters.getAdapter().criticalsEnabled(p))
         messages.send(p, "session.paper-criticals-warning");

@@ -51,6 +51,8 @@ public final class RecoveryStore {
     c.set("xp-total", p.getTotalExperience());
     c.set("pearl-cooldown", p.getCooldown(Material.ENDER_PEARL));
     c.set("gamemode", p.getGameMode().name());
+    c.set("invulnerable", p.isInvulnerable());
+    if (p.getVehicle() != null) c.set("vehicle", p.getVehicle().getUniqueId().toString());
     c.set("absorption", p.getAbsorptionAmount());
 
     List<Map<String, Object>> effectsList = new ArrayList<>();
@@ -153,6 +155,17 @@ public final class RecoveryStore {
       }
 
       if (!p.teleport(location)) throw new IOException("Return Teleport Was Cancelled");
+      p.setInvulnerable(c.getBoolean("invulnerable", false));
+      String vehicleId = c.getString("vehicle");
+      if (vehicleId != null) {
+        try {
+          org.bukkit.entity.Entity vehicle = Bukkit.getEntity(UUID.fromString(vehicleId));
+          if (vehicle != null && vehicle.isValid() && vehicle.getWorld().equals(p.getWorld()))
+            vehicle.addPassenger(p);
+        } catch (IllegalArgumentException ignored) {
+          // A missing or invalid vehicle must not prevent player recovery.
+        }
+      }
       p.saveData();
       Files.delete(file.toPath());
       return true;
