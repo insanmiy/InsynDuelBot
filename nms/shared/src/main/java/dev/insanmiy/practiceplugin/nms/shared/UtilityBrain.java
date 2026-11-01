@@ -1489,6 +1489,7 @@ final class UtilityBrain {
           nextBlockPlace = tick + 1;
           return true;
         } else if (here.getY() - Math.floor(here.getY()) >= 0.75 && handle.getDeltaMovement().y > -0.2) {
+          if (!here.getBlock().getRelative(0, -1, 0).getType().isSolid()) return false;
           int selectSlot = select(blockSlot);
           handle.setXRot(90.0f);
           BotLook.publish(handle);
