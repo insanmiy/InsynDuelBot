@@ -1,4 +1,4 @@
-package dev.insanmiy.practiceplugin.nms.v1_21_R3;
+package dev.insanmiy.practiceplugin.nms.shared;
 
 import dev.insanmiy.practiceplugin.Attributes;
 import dev.insanmiy.practiceplugin.bot.*;
@@ -7,9 +7,11 @@ import dev.insanmiy.practiceplugin.config.Difficulty;
 import dev.insanmiy.practiceplugin.model.DamagePressure;
 import dev.insanmiy.practiceplugin.model.HandTiming;
 import dev.insanmiy.practiceplugin.model.HealingPlan;
+import dev.insanmiy.practiceplugin.model.MiningProgress;
 import dev.insanmiy.practiceplugin.model.RepairCadence;
 import dev.insanmiy.practiceplugin.model.SplashPlan;
 import dev.insanmiy.practiceplugin.model.WebCadence;
+import dev.insanmiy.practiceplugin.model.WebEscapeTiming;
 import java.util.*;
 import java.util.function.Predicate;
 import net.minecraft.core.BlockPos;
@@ -41,12 +43,14 @@ final class UtilityBrain {
       dev.insanmiy.practiceplugin.model.BotOptions.defaults();
   private final RepairCadence repair = new RepairCadence();
   private final WebCadence webs = new WebCadence();
+  private final WebEscapeTiming webEscape = new WebEscapeTiming();
   private int lastHit = -1000;
   private BlockPos mining;
   private BlockPos targetMiningBlock;
   private int targetMiningSince;
   private boolean targetMiningStopSent;
   private int miningSince;
+  private final MiningProgress webMining = new MiningProgress();
   private boolean miningStopSent;
   private int preparingSplash = -1, splashUntil, pendingPotion = -1;
   private Vector splashDirection;
@@ -102,6 +106,7 @@ final class UtilityBrain {
     splashDirection = null;
     placedWater = null;
     retrieveWater = 0;
+    webEscape.reset();
     prepared = null;
     handTiming.reset();
     opponent = null;
@@ -193,6 +198,7 @@ final class UtilityBrain {
     repairWorking = false;
     opponent = target;
     Player self = player();
+    webEscape.observe(tick, inWeb(self) && !inWater(self));
     double distance = self.getLocation().distance(target.getLocation());
     double fraction =
         self.getHealth() / Attributes.getValue(self, Attributes.MAX_HEALTH, 20.0);
@@ -579,7 +585,7 @@ final class UtilityBrain {
     if (placedWater != null
         && tick >= retrieveWater
         && self.getFireTicks() <= 0
-        && self.getFallDistance() <= 1.0f
+        && NativeAccess.fallDistance(handle) <= 1.0
         && !inWeb(self)) {
       int bucket = find(i -> i.getType() == Material.BUCKET);
       if (bucket >= 0
@@ -597,7 +603,7 @@ final class UtilityBrain {
         handle.setYRot(look.getYaw());
         handle.setXRot(look.getPitch());
         BotLook.publish(handle);
-        Location source = placedWater.clone();
+		Location source = placedWater.clone();
         prepare(
             bucket,
             tick,
@@ -627,11 +633,12 @@ final class UtilityBrain {
       }
     }
     boolean trappedInWeb = inWeb(self) && !inWater(self);
+    boolean emergencyWater =
+        (self.getFireTicks() > 0 && !self.hasPotionEffect(PotionEffectType.FIRE_RESISTANCE))
+            || NativeAccess.fallDistance(handle) > 3;
     if (tick < nextWater
         || self.getWorld().getEnvironment() == World.Environment.NETHER
-        || !(self.getFireTicks() > 0 && !self.hasPotionEffect(PotionEffectType.FIRE_RESISTANCE)
-            || self.getFallDistance() > 3
-            || trappedInWeb)) return false;
+        || !(emergencyWater || trappedInWeb)) return false;
     int bucket = find(i -> i.getType() == Material.WATER_BUCKET);
     if (bucket < 0) return false;
     var hit =
@@ -643,6 +650,9 @@ final class UtilityBrain {
         || hit.getHitBlockFace() != org.bukkit.block.BlockFace.UP) return false;
     var destination = hit.getHitBlock().getRelative(org.bukkit.block.BlockFace.UP);
     if (!(destination.getType().isAir() || destination.getType() == Material.COBWEB)) return false;
+    if (trappedInWeb && !emergencyWater && !webEscape.ready(tick)) {
+      return true;
+    }
     handle.setXRot(90);
     BotLook.publish(handle);
     prepare(
@@ -665,7 +675,8 @@ final class UtilityBrain {
           retrieveWater = currentTick + 4;
         },
         () ->
-            destination.getLocation().distanceSquared(player().getEyeLocation()) <= 20.25
+            (emergencyWater || (inWeb(player()) && !inWater(player())))
+                && destination.getLocation().distanceSquared(player().getEyeLocation()) <= 20.25
                 && (destination.getType().isAir()
                     || destination.getType() == Material.COBWEB
                     || destination.getType() == Material.WATER));
@@ -711,6 +722,15 @@ final class UtilityBrain {
   }
 
   private boolean escapeWeb(int tick) {
+    if (mining != null) {
+      var current = player().getWorld().getBlockAt(mining.getX(), mining.getY(), mining.getZ());
+      if (current.getType() == Material.COBWEB
+          && current.getLocation().add(.5, .5, .5).distanceSquared(player().getEyeLocation()) <= 9
+          && clearWeb(current, tick)) {
+        return true;
+      }
+      abortMining();
+    }
     org.bukkit.block.Block web = null;
     var body = player().getBoundingBox();
     for (int x = (int) Math.floor(body.getMinX() + .001);
@@ -726,13 +746,6 @@ final class UtilityBrain {
           if (candidate.getType() == Material.COBWEB) web = candidate;
         }
     if (web == null) {
-      if (mining != null) {
-        var current = player().getWorld().getBlockAt(mining.getX(), mining.getY(), mining.getZ());
-        if (current.getType() == Material.COBWEB
-            && current.getLocation().add(.5, .5, .5).distanceSquared(player().getEyeLocation())
-                <= 9) return clearWeb(current, tick);
-        abortMining();
-      }
       return false;
     }
     if (water(tick)) {
@@ -757,17 +770,17 @@ final class UtilityBrain {
                 player(), direction.clone().normalize(), Math.min(3, direction.length()));
     if (first == null || first.getType() != Material.COBWEB) {
       abortMining();
-      return true;
+      return false;
     }
     web = first;
     direction =
         web.getLocation().add(.5, .5, .5).toVector().subtract(player().getEyeLocation().toVector());
-    int sword = find(i -> i.getType() == Material.SHEARS);
-    if (sword < 0) sword = find(i -> i.getType().name().endsWith("_SWORD"));
-    if (sword < 0) sword = find(i -> i.getType().name().endsWith("_AXE"));
+    int toolSlot = find(i -> i.getType() == Material.SHEARS);
+    if (toolSlot < 0) toolSlot = find(i -> i.getType().name().endsWith("_SWORD"));
+    if (toolSlot < 0) toolSlot = find(i -> i.getType().name().endsWith("_AXE"));
 
-    if (sword < 0) return true;
-    int tool = select(sword);
+    if (toolSlot < 0) toolSlot = player().getInventory().getHeldItemSlot();
+    int tool = select(toolSlot);
     handTiming.equip(handIdentity(tool), tick);
     Location look = player().getEyeLocation().setDirection(direction);
     handle.setYRot(look.getYaw());
@@ -784,22 +797,29 @@ final class UtilityBrain {
       abortMining();
       mining = pos;
       miningSince = tick;
+      webMining.start(tick);
       miningStopSent = false;
       handle.gameMode.handleBlockBreakAction(
           pos,
           ServerboundPlayerActionPacket.Action.START_DESTROY_BLOCK,
           Direction.UP,
-          handle.level().getMaxY(),
+          NativeAccess.maxBuildHeight(handle),
           0);
-    } else if (!miningStopSent && tick - miningSince >= miningTicks(pos)) {
+    } else if (!miningStopSent && webMining.advance(tick,
+        ((net.minecraft.server.level.ServerLevel) handle.level()).getBlockState(pos)
+            .getDestroyProgress(handle, ((net.minecraft.server.level.ServerLevel) handle.level()), pos))) {
       handle.gameMode.handleBlockBreakAction(
           pos,
           ServerboundPlayerActionPacket.Action.STOP_DESTROY_BLOCK,
           Direction.UP,
-          handle.level().getMaxY(),
+          NativeAccess.maxBuildHeight(handle),
           0);
+      if (web.getType() == Material.COBWEB) {
+        handle.gameMode.destroyBlock(pos);
+      }
       miningStopSent = true;
-    } else if (miningStopSent && tick - miningSince > miningTicks(pos) + 40) {
+      miningSince = tick;
+    } else if (miningStopSent && tick - miningSince > 40) {
 
       abortMining();
     }
@@ -816,7 +836,7 @@ final class UtilityBrain {
           mining,
           ServerboundPlayerActionPacket.Action.ABORT_DESTROY_BLOCK,
           Direction.UP,
-          handle.level().getMaxY(),
+          NativeAccess.maxBuildHeight(handle),
           0);
     mining = null;
     miningStopSent = false;
@@ -1394,7 +1414,7 @@ final class UtilityBrain {
     // 1. Wind Charge: Propels bot 8-10 blocks upward
     // Only use if clear headroom overhead AND either enclosed in pit or close to ledge (horizontalDist <= 5.0)
     Material windMat = Material.getMaterial("WIND_CHARGE");
-    if (windMat != null && tick >= nextWindCharge && (pitEnclosed || horizontalDist <= 5.0)) {
+    if (NativeAccess.supportsWindCharge() && windMat != null && tick >= nextWindCharge && (pitEnclosed || horizontalDist <= 5.0)) {
       int headX = here.getBlockX();
       int headY = here.getBlockY() + 2;
       int headZ = here.getBlockZ();
@@ -1510,7 +1530,7 @@ final class UtilityBrain {
           targetMiningBlock,
           ServerboundPlayerActionPacket.Action.ABORT_DESTROY_BLOCK,
           Direction.UP,
-          handle.level().getMaxY(),
+          NativeAccess.maxBuildHeight(handle),
           0);
     targetMiningBlock = null;
     targetMiningStopSent = false;
@@ -1730,7 +1750,7 @@ final class UtilityBrain {
           pos,
           ServerboundPlayerActionPacket.Action.START_DESTROY_BLOCK,
           Direction.UP,
-          handle.level().getMaxY(),
+          NativeAccess.maxBuildHeight(handle),
           0);
     }
 
@@ -1739,7 +1759,7 @@ final class UtilityBrain {
           pos,
           ServerboundPlayerActionPacket.Action.STOP_DESTROY_BLOCK,
           Direction.UP,
-          handle.level().getMaxY(),
+          NativeAccess.maxBuildHeight(handle),
           0);
       handle.gameMode.destroyBlock(pos);
       targetMiningStopSent = true;

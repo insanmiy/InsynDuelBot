@@ -45,7 +45,7 @@ public final class TacticalMovement {
 
   public static boolean clearPath(Location from, Vector direction, double distance) {
     World world = from.getWorld();
-    if (world == null) return false;
+    if (world == null || distance <= 0 || !Double.isFinite(distance)) return false;
     double fromX = from.getX(), fromY = from.getY(), fromZ = from.getZ();
 
     Vector dir = direction.clone().setY(0);
@@ -55,7 +55,9 @@ public final class TacticalMovement {
 
     double currentY = fromY;
 
-    for (double step = .35; step <= distance + .01; step += .35) {
+    int samples = (int) Math.ceil(distance / .25);
+    for (int sample = 1; sample <= samples; sample++) {
+      double step = Math.min(sample * .25, distance);
       double atX = fromX + dirX * step;
       double atZ = fromZ + dirZ * step;
       double maxSupportedY = -Double.MAX_VALUE;
@@ -87,7 +89,7 @@ public final class TacticalMovement {
     int blockZ = Location.locToBlock(edgeZ);
 
     Block edgeBlock = getBlock(world, blockX, Location.locToBlock(currentY), blockZ);
-    if (edgeBlock == null) return null;
+    if (edgeBlock == null || hazardous(edgeBlock.getType())) return null;
 
     double edgeMaxY = getCollisionMaxY(edgeBlock);
     // Fence/wall (height 1.5) cannot be jumped over
@@ -99,7 +101,7 @@ public final class TacticalMovement {
         // Step-up without jump (e.g. carpet, slab)
         Block headroom = getBlock(world, blockX, Location.locToBlock(currentY + 1.0), blockZ);
         if (clear(headroom)) {
-          return currentY + edgeMaxY;
+          return edgeBlock.getY() + edgeMaxY;
         }
         return null;
       } else {
@@ -110,16 +112,17 @@ public final class TacticalMovement {
         if (clear(stepFeet)
             && clear(stepHead)
             && clear(jumpHeadroom)) {
-          return currentY + 1.0;
+          return edgeBlock.getY() + 1.0;
         }
         // When swimming in 2+ deep water near the surface, feet may be just below the upper water
         // block while the shoreline bank is at currentY + 1.0 with dry air at currentY + 2.0..3.0.
-        if (stepFeet != null
+        if (water(getBlock(world, blockX, Location.locToBlock(currentY), blockZ))
+            && stepFeet != null
             && getCollisionMaxY(stepFeet) <= 1.0
             && !hazardous(stepFeet.getType())
             && clear(stepHead)
             && clear(getBlock(world, blockX, Location.locToBlock(currentY + 3.0), blockZ))) {
-          return currentY + 2.0;
+          return edgeBlock.getY() + 2.0;
         }
         return null;
       }
@@ -161,6 +164,25 @@ public final class TacticalMovement {
     if (block == null) return false;
     Material type = block.getType();
     return (water(block) || block.isPassable()) && !hazardous(type);
+  }
+
+  public static Vector approachDirection(Location self, Location target) {
+    if (self.getWorld() == null || !self.getWorld().equals(target.getWorld())) return null;
+    Vector toward = target.toVector().subtract(self.toVector()).setY(0);
+    if (toward.lengthSquared() < .001) return null;
+    toward.normalize();
+    Vector best = null;
+    double bestScore = -Double.MAX_VALUE;
+    for (double angle : ANGLES) {
+      Vector candidate = toward.clone().rotateAroundY(angle);
+      if (!clearPath(self, candidate, 1.2)) continue;
+      double score = candidate.dot(toward) + (clearPath(self, candidate, 2.4) ? .5 : 0);
+      if (score > bestScore) {
+        bestScore = score;
+        best = candidate;
+      }
+    }
+    return best;
   }
 
   public static boolean hazardous(Material material) {

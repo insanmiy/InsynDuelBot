@@ -1,4 +1,4 @@
-package dev.insanmiy.practiceplugin.nms.v1_21_R3;
+package dev.insanmiy.practiceplugin.nms.shared;
 
 import dev.insanmiy.practiceplugin.Attributes;
 import dev.insanmiy.practiceplugin.bot.*;
@@ -67,7 +67,7 @@ public final class NmsBot implements BotPlatform {
     server = ((CraftServer) Bukkit.getServer()).getServer();
     UUID botId = UUID.randomUUID();
     GameProfile profile =
-        createBotProfile(
+        NativeAccess.createBotProfile(
             botId,
             name,
             owner != null ? ((CraftPlayer) owner).getHandle().getGameProfile() : null);
@@ -80,7 +80,7 @@ public final class NmsBot implements BotPlatform {
     utility = new UtilityBrain(handle);
     register.accept(botId);
     handle.getBukkitEntity().setPersistent(false);
-    moveToLocation(handle, spawn);
+    NativeAccess.moveToLocation(handle, spawn);
     connection = new DummyConnection();
     CommonListenerCookie cookie = CommonListenerCookie.createInitial(profile, false);
     try {
@@ -93,9 +93,9 @@ public final class NmsBot implements BotPlatform {
 
               if (packet instanceof ClientboundSetEntityMotionPacket motion
                   && motion.getId() == handle.getId())
-                pendingVelocity = extractMotion(motion);
+                pendingVelocity = NativeAccess.extractMotion(motion);
               if (packet instanceof ClientboundPlayerPositionPacket teleport)
-                pendingTeleport = teleport.id();
+                pendingTeleport = NativeAccess.teleportId(teleport);
             }
 
             @Override
@@ -105,126 +105,11 @@ public final class NmsBot implements BotPlatform {
           };
       handle.getBukkitEntity().setGameMode(GameMode.SURVIVAL);
       handle.getBukkitEntity().setCanPickupItems(false);
-      setClientLoadedSafe(handle);
+      NativeAccess.setClientLoadedSafe(handle);
       reset(spawn);
     } catch (RuntimeException | Error e) {
       close();
       throw e;
-    }
-  }
-
-  private static void moveToLocation(ServerPlayer player, Location loc) {
-    double x = loc.getX(), y = loc.getY(), z = loc.getZ();
-    float yaw = loc.getYaw(), pitch = loc.getPitch();
-    // 1. Try absSnapTo (MC 1.21.4+ / Paper 1.21.11)
-    try {
-      java.lang.reflect.Method m =
-          player.getClass().getMethod("absSnapTo", double.class, double.class, double.class, float.class, float.class);
-      m.invoke(player, x, y, z, yaw, pitch);
-      return;
-    } catch (Throwable ignored) {
-    }
-    // 2. Try absMoveTo (MC 1.21.2 - 1.21.3)
-    try {
-      java.lang.reflect.Method m =
-          player.getClass().getMethod("absMoveTo", double.class, double.class, double.class, float.class, float.class);
-      m.invoke(player, x, y, z, yaw, pitch);
-      return;
-    } catch (Throwable ignored) {
-    }
-    // 3. Fallback: snapTo
-    try {
-      java.lang.reflect.Method m =
-          player.getClass().getMethod("snapTo", double.class, double.class, double.class, float.class, float.class);
-      m.invoke(player, x, y, z, yaw, pitch);
-      return;
-    } catch (Throwable ignored) {
-    }
-    // 4. Safe fallback: setPos + rotations
-    player.setPos(x, y, z);
-    player.setYRot(yaw);
-    player.setXRot(pitch);
-    player.yRotO = yaw;
-    player.xRotO = pitch;
-  }
-
-  private static void setClientLoadedSafe(ServerPlayer player) {
-    try {
-      java.lang.reflect.Method m = player.getClass().getMethod("setClientLoaded", boolean.class);
-      m.invoke(player, true);
-    } catch (Throwable ignored) {
-    }
-  }
-
-  private static Vec3 extractMotion(ClientboundSetEntityMotionPacket motion) {
-    try {
-      java.lang.reflect.Method m = motion.getClass().getMethod("getMovement");
-      return (Vec3) m.invoke(motion);
-    } catch (Throwable ignored) {
-    }
-    try {
-      java.lang.reflect.Method x = motion.getClass().getMethod("getXa");
-      java.lang.reflect.Method y = motion.getClass().getMethod("getYa");
-      java.lang.reflect.Method z = motion.getClass().getMethod("getZa");
-      double dx = ((Number) x.invoke(motion)).doubleValue();
-      double dy = ((Number) y.invoke(motion)).doubleValue();
-      double dz = ((Number) z.invoke(motion)).doubleValue();
-      return new Vec3(dx, dy, dz);
-    } catch (Throwable ignored) {
-    }
-    return Vec3.ZERO;
-  }
-
-  private static GameProfile createBotProfile(UUID botId, String name, GameProfile ownerProfile) {
-    Object ownerProps = getProfileProperties(ownerProfile);
-    if (ownerProps != null) {
-      // 1. Try 3-arg constructor for modern AuthLib 7+ (Record GameProfile(UUID, String, PropertyMap))
-      for (java.lang.reflect.Constructor<?> ctor : GameProfile.class.getConstructors()) {
-        Class<?>[] paramTypes = ctor.getParameterTypes();
-        if (paramTypes.length == 3
-            && paramTypes[0] == UUID.class
-            && paramTypes[1] == String.class
-            && paramTypes[2].isAssignableFrom(ownerProps.getClass())) {
-          try {
-            return (GameProfile) ctor.newInstance(botId, name, ownerProps);
-          } catch (Throwable ignored) {
-          }
-        }
-      }
-    }
-    // 2. Fallback to 2-arg constructor for legacy AuthLib 6 (GameProfile(UUID, String))
-    GameProfile profile = new GameProfile(botId, name);
-    if (ownerProps != null) {
-      try {
-        Object botProps = getProfileProperties(profile);
-        if (botProps != null) {
-          for (java.lang.reflect.Method m : botProps.getClass().getMethods()) {
-            if ("putAll".equals(m.getName()) && m.getParameterCount() == 1) {
-              if (m.getParameterTypes()[0].isAssignableFrom(ownerProps.getClass())) {
-                m.invoke(botProps, ownerProps);
-                break;
-              }
-            }
-          }
-        }
-      } catch (Throwable ignored) {
-      }
-    }
-    return profile;
-  }
-
-  private static Object getProfileProperties(GameProfile profile) {
-    if (profile == null) return null;
-    try {
-      java.lang.reflect.Method m;
-      try {
-        m = profile.getClass().getMethod("properties");
-      } catch (NoSuchMethodException e) {
-        m = profile.getClass().getMethod("getProperties");
-      }
-      return m.invoke(profile);
-    } catch (Throwable t) {
-      return null;
     }
   }
 
@@ -247,18 +132,7 @@ public final class NmsBot implements BotPlatform {
   }
 
   public static void synchronizeEquipment(Player player) {
-    ServerPlayer handle = ((CraftPlayer) player).getHandle();
-    try {
-      java.lang.reflect.Method m = handle.getClass().getMethod("detectEquipmentUpdates");
-      m.invoke(handle);
-      return;
-    } catch (Throwable ignored) {
-    }
-    try {
-      java.lang.reflect.Method m = handle.getClass().getMethod("detectEquipmentUpdatesPublic");
-      m.invoke(handle);
-    } catch (Throwable ignored) {
-    }
+    NativeAccess.synchronizeEquipment(player);
   }
 
   public static boolean criticalsEnabled(Player player) {
@@ -309,7 +183,7 @@ public final class NmsBot implements BotPlatform {
       teleporting = false;
     }
     acknowledgeTeleport();
-    setClientLoadedSafe(handle);
+    NativeAccess.setClientLoadedSafe(handle);
     handle.setHealth(handle.getMaxHealth());
     handle.resetAttackStrengthTicker();
     history.clear();
@@ -510,6 +384,7 @@ public final class NmsBot implements BotPlatform {
     if (stuck >= 25) {
       strafe *= -1;
       currentPath = null;
+      stuck = 0;
     }
 
     // Switch to axe against shields
@@ -583,15 +458,16 @@ public final class NmsBot implements BotPlatform {
       handle.setSprinting(canSprint);
     } else {
       Location navGoal = (inWater && waterExit != null) ? waterExit : target.getLocation();
-      if (currentPath == null
-          || ticks - lastPathTick > 12
-          || lastPathTarget == null
-          || lastPathTarget.distanceSquared(navGoal) > 3.0
-          || waypointIndex >= currentPath.size()) {
+      if ((currentPath == null && (lastPathTarget == null || ticks - lastPathTick >= 6))
+          || (currentPath != null && (handle.onGround() || inWater)
+              && (ticks - lastPathTick > 20
+                  || lastPathTarget == null
+                  || lastPathTarget.distanceSquared(navGoal) > 3.0
+                  || waypointIndex >= currentPath.size()))) {
         lastPathTick = ticks;
         lastPathTarget = navGoal.clone();
         currentPath = TacticalPathfinder.findPath(player().getWorld(), here, navGoal, 1200);
-        waypointIndex = 0;
+        waypointIndex = currentPath != null && currentPath.size() > 1 ? 1 : 0;
       }
 
       if (currentPath != null && !currentPath.isEmpty() && waypointIndex < currentPath.size()) {
@@ -601,7 +477,8 @@ public final class NmsBot implements BotPlatform {
         double wz = wp.z() + 0.5 - here.getZ();
         double wDistSq = wx * wx + wz * wz;
 
-        if (wDistSq < 0.40 && Math.abs(wy) < 1.0) {
+        if (wDistSq < 0.25 && Math.abs(wy) < 0.6
+            && (wp.action() != TacticalPathfinder.ActionType.PARKOUR || handle.onGround() || inWater)) {
           waypointIndex++;
           if (waypointIndex < currentPath.size()) {
             wp = currentPath.get(waypointIndex);
@@ -617,7 +494,9 @@ public final class NmsBot implements BotPlatform {
           TacticalPathfinder.Waypoint nextWp = currentPath.get(waypointIndex + 1);
           Vector toNext = new Vector(nextWp.x() + 0.5 - here.getX(), 0, nextWp.z() + 0.5 - here.getZ());
           double nextDist = toNext.length();
-          if (nextDist > 0.1 && Math.abs(nextWp.y() - here.getY()) <= 1.2
+          if (wp.action() == TacticalPathfinder.ActionType.WALK
+              && nextWp.action() == TacticalPathfinder.ActionType.WALK
+              && nextDist > 0.1 && Math.abs(nextWp.y() - here.getY()) < .1
               && TacticalMovement.clearPath(here, toNext.clone().normalize(), nextDist)) {
             waypointIndex++;
             wp = nextWp;
@@ -629,7 +508,8 @@ public final class NmsBot implements BotPlatform {
         }
 
         float wpYaw = (float) Math.toDegrees(Math.atan2(-wx, wz));
-        boolean seeTarget = !inWater && player().hasLineOfSight(target);
+        boolean seeTarget = !inWater && wp.action() == TacticalPathfinder.ActionType.WALK
+            && Math.abs(wy) < .1 && player().hasLineOfSight(target);
         float aimYaw = (distance < 7.0 && seeTarget)
             ? player().getEyeLocation().setDirection(perceived.location().clone().add(0, target.getHeight() * .65, 0).toVector().subtract(player().getEyeLocation().toVector())).getYaw()
             : wpYaw;
@@ -651,6 +531,7 @@ public final class NmsBot implements BotPlatform {
         }
 
         if (((wp.action() == TacticalPathfinder.ActionType.JUMP_UP || wy > 0.35) && wDistSq <= 1.8
+                || (wp.action() == TacticalPathfinder.ActionType.PARKOUR && wDistSq <= 6.25)
                 || handle.horizontalCollision)
             && (handle.onGround() || inWater)) {
           boostOutOfWater();
@@ -658,26 +539,15 @@ public final class NmsBot implements BotPlatform {
           handle.zza = 1.0f;
         }
       } else {
-        // No path found (wall / pit / obstruction)
-        if (verticalDiff < -1.5 && horizontalDist > 1.8) {
-          Vector toAbove = new Vector(target.getLocation().getX() - here.getX(), 0, target.getLocation().getZ() - here.getZ());
-          if (toAbove.lengthSquared() > 0.01) {
-            float walkYaw = (float) Math.toDegrees(Math.atan2(-toAbove.getX(), toAbove.getZ()));
-            BotLook.towards(handle, walkYaw, 25f, 180f);
-            handle.zza = 1.0f;
-            handle.xxa = 0;
-            handle.setSprinting(true);
-            if (handle.horizontalCollision && (handle.onGround() || inWater)) {
-              boostOutOfWater();
-            }
-          }
-        } else {
-          combatLook(target, perceived, d);
+        Vector approach = TacticalMovement.approachDirection(here, navGoal);
+        handle.zza = 0;
+        handle.xxa = 0;
+        handle.setSprinting(false);
+        if (approach != null) {
+          float walkYaw = (float) Math.toDegrees(Math.atan2(-approach.getX(), approach.getZ()));
+          BotLook.towards(handle, walkYaw, 0, 180f);
           handle.zza = 0.7f;
-          handle.xxa = 0;
-          if (handle.horizontalCollision && (handle.onGround() || inWater)) {
-            boostOutOfWater();
-          }
+          if (handle.horizontalCollision && (handle.onGround() || inWater)) boostOutOfWater();
         }
       }
       return;
@@ -725,9 +595,9 @@ public final class NmsBot implements BotPlatform {
 
     boolean falling = !handle.onGround()
         && handle.getDeltaMovement().y < 0
-        && (player().getFallDistance() > 0 || handle.getDeltaMovement().y < -0.05);
-    if (falling && player().getFallDistance() <= 0.0f) {
-      player().setFallDistance((float) Math.max(0.1, -handle.getDeltaMovement().y));
+        && (NativeAccess.fallDistance(handle) > 0 || handle.getDeltaMovement().y < -0.05);
+    if (falling && NativeAccess.fallDistance(handle) <= 0.0f) {
+      NativeAccess.setFallDistance(handle, (float) Math.max(0.1, -handle.getDeltaMovement().y));
     }
 
     // Check if critical jump is ready
@@ -799,8 +669,8 @@ public final class NmsBot implements BotPlatform {
         || handle.hasEffect(net.minecraft.world.effect.MobEffects.BLINDNESS)
         || handle.level().paperConfig().entities.behavior.disablePlayerCrits
         || !Kit.melee(player().getInventory().getItemInMainHand().getType())) return;
-    if (player().getFallDistance() <= 0.0f) {
-      player().setFallDistance((float) Math.max(0.1, -handle.getDeltaMovement().y));
+    if (NativeAccess.fallDistance(handle) <= 0.0f) {
+      NativeAccess.setFallDistance(handle, (float) Math.max(0.1, -handle.getDeltaMovement().y));
     }
     double charge = handle.getAttackStrengthScale(0);
     double minCharge = currentDifficulty != null ? currentDifficulty.attackCharge() : 1.0;

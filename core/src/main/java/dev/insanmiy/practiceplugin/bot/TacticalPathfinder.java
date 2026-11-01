@@ -23,7 +23,10 @@ public final class TacticalPathfinder {
     }
   }
 
-  public record Path(List<Waypoint> waypoints) {
+  public record Path(List<Waypoint> waypoints, boolean reachesGoal) {
+    public Path {
+      waypoints = List.copyOf(waypoints);
+    }
     public boolean isEmpty() {
       return waypoints == null || waypoints.isEmpty();
     }
@@ -74,12 +77,12 @@ public final class TacticalPathfinder {
 
   public static boolean hasWalkablePath(World world, Location start, Location destination) {
     Path p = findPath(world, start, destination, 400);
-    return p != null && !p.isEmpty();
+    return p != null && p.reachesGoal();
   }
 
   public static Path findPath(World world, Location start, Location destination, int maxNodes) {
     if (world == null || start == null || destination == null) return null;
-    if (!world.equals(destination.getWorld())) return null;
+    if (!world.equals(start.getWorld()) || !world.equals(destination.getWorld()) || maxNodes <= 0) return null;
 
     int sx = start.getBlockX();
     int sy = findStandingY(world, sx, Location.locToBlock(start.getY()), start.getBlockZ());
@@ -91,7 +94,7 @@ public final class TacticalPathfinder {
 
     // Already at goal
     if (sx == dx && sy == dy && sz == dz) {
-      return new Path(List.of(new Waypoint(dx, dy, dz, ActionType.WALK)));
+      return new Path(List.of(new Waypoint(dx, dy, dz, ActionType.WALK)), true);
     }
 
     PriorityQueue<Node> openSet = new PriorityQueue<>();
@@ -121,13 +124,7 @@ public final class TacticalPathfinder {
 
       // Check if goal reached (or adjacent with line of sight)
       if (current.x == dx && current.y == dy && current.z == dz) {
-        return buildPath(world, current);
-      }
-      if (Math.abs(current.x - dx) <= 1 && Math.abs(current.z - dz) <= 1 && Math.abs(current.y - dy) <= 1) {
-        if (canDirectStep(world, current.x, current.y, current.z, dx, dy, dz)) {
-          Node goalNode = new Node(dx, dy, dz, ActionType.WALK, current, current.gScore + 1.0, 0.0, 0.0);
-          return buildPath(world, goalNode);
-        }
+        return buildPath(world, current, true);
       }
 
       // Expand cardinal directions
@@ -150,7 +147,7 @@ public final class TacticalPathfinder {
 
     // If goal not strictly reached, return best partial path if it made progress towards the target
     if (bestNode != startNode && (bestNode.hScore < initialH - 0.75 || bestNode.y != startNode.y)) {
-      return buildPath(world, bestNode);
+      return buildPath(world, bestNode, false);
     }
 
     return null;
@@ -205,10 +202,10 @@ public final class TacticalPathfinder {
       tryAddNode(current, nx, cy + 1, nz, ActionType.JUMP_UP, cost, targetX, targetY, targetZ, openSet, gScores);
     }
 
-    // 3. Safe drop down (cy - 1 to cy - 5)
+    // Safe Drops Stay Within Three Blocks On Dry Ground
     if (isPassable(TacticalMovement.getBlock(world, nx, cy, nz))
         && isPassable(TacticalMovement.getBlock(world, nx, cy + 1, nz))) {
-      for (int drop = 1; drop <= 5; drop++) {
+      for (int drop = 1; drop <= 3; drop++) {
         int dropY = cy - drop;
         Block dropBlock = TacticalMovement.getBlock(world, nx, dropY, nz);
         if (!isPassable(dropBlock)) break;
@@ -230,13 +227,16 @@ public final class TacticalPathfinder {
     if (!isDiagonal) {
       Block gapAir = TacticalMovement.getBlock(world, nx, cy - 1, nz);
       if (!isFloor(gapAir)
+          && isPassable(TacticalMovement.getBlock(world, current.x, cy + 2, current.z))
           && isPassable(TacticalMovement.getBlock(world, nx, cy, nz))
-          && isPassable(TacticalMovement.getBlock(world, nx, cy + 1, nz))) {
+          && isPassable(TacticalMovement.getBlock(world, nx, cy + 1, nz))
+          && isPassable(TacticalMovement.getBlock(world, nx, cy + 2, nz))) {
         int landingX = current.x + dx * 2;
         int landingZ = current.z + dz * 2;
         if (isFloor(TacticalMovement.getBlock(world, landingX, cy - 1, landingZ))
             && isPassable(TacticalMovement.getBlock(world, landingX, cy, landingZ))
-            && isPassable(TacticalMovement.getBlock(world, landingX, cy + 1, landingZ))) {
+            && isPassable(TacticalMovement.getBlock(world, landingX, cy + 1, landingZ))
+            && isPassable(TacticalMovement.getBlock(world, landingX, cy + 2, landingZ))) {
           double cost = current.gScore + 2.2;
           tryAddNode(current, landingX, cy, landingZ, ActionType.PARKOUR, cost, targetX, targetY, targetZ, openSet, gScores);
         }
@@ -329,13 +329,7 @@ public final class TacticalPathfinder {
     return y;
   }
 
-  private static boolean canDirectStep(World world, int x1, int y1, int z1, int x2, int y2, int z2) {
-    return isPassable(TacticalMovement.getBlock(world, x2, y2, z2))
-        && isPassable(TacticalMovement.getBlock(world, x2, y2 + 1, z2))
-        && isFloor(TacticalMovement.getBlock(world, x2, y2 - 1, z2));
-  }
-
-  private static Path buildPath(World world, Node endNode) {
+  private static Path buildPath(World world, Node endNode, boolean reachesGoal) {
     List<Waypoint> list = new ArrayList<>();
     Node curr = endNode;
     while (curr != null) {
@@ -346,7 +340,7 @@ public final class TacticalPathfinder {
 
     // Path smoothing: remove redundant intermediate waypoints with clear line of sight
     List<Waypoint> smoothed = smoothPath(world, list);
-    return new Path(smoothed);
+    return new Path(smoothed, reachesGoal);
   }
 
   private static List<Waypoint> smoothPath(World world, List<Waypoint> raw) {
@@ -359,7 +353,11 @@ public final class TacticalPathfinder {
       for (int test = Math.min(raw.size() - 1, current + 4); test > current + 1; test--) {
         Waypoint from = raw.get(current);
         Waypoint to = raw.get(test);
-        if (Math.abs(from.y() - to.y()) <= 1) {
+        boolean walking = from.y() == to.y();
+        for (int index = current + 1; index <= test && walking; index++) {
+          walking = raw.get(index).action() == ActionType.WALK && raw.get(index).y() == from.y();
+        }
+        if (walking) {
           Location fromLoc = from.toLocation(world);
           Location toLoc = to.toLocation(world);
           Vector dir = toLoc.toVector().subtract(fromLoc.toVector());

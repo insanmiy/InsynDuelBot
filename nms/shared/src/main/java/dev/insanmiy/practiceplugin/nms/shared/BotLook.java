@@ -1,4 +1,6 @@
-package dev.insanmiy.practiceplugin.nms.v1_21_R1;
+package dev.insanmiy.practiceplugin.nms.shared;
+
+import dev.insanmiy.practiceplugin.bot.*;
 
 import net.minecraft.network.protocol.game.ClientboundMoveEntityPacket;
 import net.minecraft.network.protocol.game.ClientboundRotateHeadPacket;
@@ -19,15 +21,14 @@ final class BotLook {
     bot.setYHeadRot(bot.getYRot());
     bot.setYBodyRot(
         dev.insanmiy.practiceplugin.model.LookMotion.turn(bot.yBodyRot, bot.getYRot(), 18));
-    var viewers = ((net.minecraft.server.level.ServerLevel) bot.level()).getChunkSource();
-    viewers.broadcastAndSend(
+    NativeAccess.broadcast(
         bot,
         new ClientboundMoveEntityPacket.Rot(
             bot.getId(),
             (byte) (bot.getYRot() * 256 / 360),
             (byte) (bot.getXRot() * 256 / 360),
             bot.onGround()));
-    viewers.broadcastAndSend(
+    NativeAccess.broadcast(
         bot, new ClientboundRotateHeadPacket(bot, (byte) (bot.getYRot() * 256 / 360)));
   }
 }

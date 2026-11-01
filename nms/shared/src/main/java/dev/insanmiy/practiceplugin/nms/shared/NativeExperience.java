@@ -1,4 +1,4 @@
-package dev.insanmiy.practiceplugin.nms.v1_20_R4;
+package dev.insanmiy.practiceplugin.nms.shared;
 
 import dev.insanmiy.practiceplugin.bot.*;
 
