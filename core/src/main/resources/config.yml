@@ -146,7 +146,7 @@ difficulties:
     pearl-chance: 0.25
 
   ht4:
-    display-name: "HT4 "
+    display-name: "HT4"
     icon: IRON_SWORD
     description: "Top Of The Middle"
     decision-ticks: 3
