@@ -17,6 +17,7 @@ import org.jetbrains.annotations.NotNull;
 
 final class PracticeMenu implements Listener {
   private enum Screen {
+    HOME,
     KITS,
     PREVIEW,
     DIFFICULTIES,
@@ -60,7 +61,8 @@ final class PracticeMenu implements Listener {
 
     static String titleFor(Screen screen, Selection choice) {
       return switch (screen) {
-        case KITS -> "Practice / Select Kit";
+        case HOME -> "Practice / Setup";
+        case KITS -> "Practice / Choose Your Kit";
         case PREVIEW -> "Preview / " + pretty(choice.kit());
         case DIFFICULTIES -> "Practice / Select Difficulty";
         case MODES -> "Practice / Select Mode";
@@ -74,16 +76,23 @@ final class PracticeMenu implements Listener {
     }
 
     public int[] decorativeSlots() {
-      return new int[0];
+      if (screen == Screen.PREVIEW) {
+        return new int[] {46, 47, 48, 50, 51, 52};
+      }
+      return new int[] {
+        0, 1, 2, 3, 5, 6, 7, 8,
+        9, 17, 18, 26, 27, 35,
+        46, 47, 48, 50, 51, 52
+      };
     }
 
     public int pulseSlot() {
-      return screen == Screen.KITS || screen == Screen.PREVIEW ? 49 : -1;
+      return -1;
     }
   }
 
   void open(Player player, Selection choice) {
-    show(player, drafts.getOrDefault(player.getUniqueId(), choice), Screen.KITS, 0);
+    show(player, drafts.getOrDefault(player.getUniqueId(), choice), Screen.HOME, 0);
   }
 
   private Set<String> favorites(Player player) {
@@ -137,21 +146,23 @@ final class PracticeMenu implements Listener {
     inventory.clear();
 
     ItemStack divider = icon(Material.GRAY_STAINED_GLASS_PANE, " ", NamedTextColor.DARK_GRAY, false);
-    for (int slot : new int[] {9, 17, 18, 26, 27, 35}) {
-      inventory.setItem(slot, divider);
+    ItemStack background = icon(Material.BLACK_STAINED_GLASS_PANE, " ", NamedTextColor.DARK_GRAY, false);
+    for (int slot = 0; slot < inventory.getSize(); slot++) {
+      boolean border = slot < 9 || slot >= 45 || slot % 9 == 0 || slot % 9 == 8;
+      inventory.setItem(slot, border || slot >= 36 ? divider : background);
     }
-    for (int slot = 36; slot <= 44; slot++) {
-      inventory.setItem(slot, divider);
-    }
+    ItemStack accent = icon(Material.CYAN_STAINED_GLASS_PANE, " ", NamedTextColor.DARK_AQUA, false);
+    inventory.setItem(0, accent);
+    inventory.setItem(8, accent);
 
     Kit selected = plugin.kits().get(choice.kit());
 
     boolean canKitEditor = player.hasPermission("practice.kits.editor")
         || player.hasPermission("practice.admin")
         || player.hasPermission("practice.*");
-    if (screen == Screen.KITS) {
+    if (screen == Screen.HOME) {
       inventory.setItem(
-          0,
+          29,
           icon(
               canKitEditor ? Material.KNOWLEDGE_BOOK : Material.BARRIER,
               "Custom Kit Editor",
@@ -163,12 +174,41 @@ final class PracticeMenu implements Listener {
         4,
         icon(
             Material.NETHER_STAR,
-            pretty(screen.name()),
+            screen == Screen.HOME ? "Ready To Practice?" : pretty(screen.name()),
             NamedTextColor.GOLD,
-            true,
+            false,
+            screen == Screen.HOME ? "Use The Current Setup Or Change A Choice Below"
+                : screen == Screen.STATS ? "Your Results For Each Practice Mode"
+                : "Click A Choice To Return To Practice Setup",
             "Your Selection Is Kept While Navigating"));
 
-    if (screen == Screen.PREVIEW) {
+    if (screen == Screen.HOME) {
+      Difficulty difficulty = plugin.difficulties().get(choice.difficulty());
+      inventory.setItem(11, icon(selected.icon() == null || selected.icon().isAir()
+              ? Material.IRON_SWORD : selected.icon(),
+          "Kit: " + pretty(choice.kit()), NamedTextColor.AQUA, false,
+          "The Equipment You And The Bot Will Use", "Click To Choose A Kit"));
+      inventory.setItem(13, icon(difficulty.effectiveIcon(),
+          "Difficulty: " + difficulty.prettyDisplayName(), NamedTextColor.GOLD, false,
+          "Choose How Challenging The Bot Is", "Click To Choose A Difficulty"));
+      inventory.setItem(15, icon(Material.TARGET,
+          "Mode: " + pretty(choice.mode().id()), NamedTextColor.AQUA, false,
+          choice.mode().description(), "Click To Choose A Mode"));
+      inventory.setItem(22, icon(Material.CHEST, "Preview Your Kit", NamedTextColor.AQUA,
+          false, "See Equipment Before Starting", "Click To Preview"));
+      boolean canSettings = player.hasPermission("practice.settings")
+          || player.hasPermission("practice.admin") || player.hasPermission("practice.*");
+      inventory.setItem(31, icon(canSettings ? Material.REPEATER : Material.BARRIER,
+          "Optional Settings", canSettings ? NamedTextColor.AQUA : NamedTextColor.RED, false,
+          "Match Options And Bot Abilities",
+          canSettings ? "Click To Open" : "Locked: Missing practice.settings"));
+      boolean canStats = player.hasPermission("practice.stats")
+          || player.hasPermission("practice.admin") || player.hasPermission("practice.*");
+      inventory.setItem(33, icon(canStats ? Material.BOOK : Material.BARRIER,
+          "Your Progress", canStats ? NamedTextColor.GOLD : NamedTextColor.RED, false,
+          canStats ? "Click To View Your Results" : "Locked: Missing practice.stats"));
+    }
+    else if (screen == Screen.PREVIEW) {
       for (int slot = 0; slot < 41; slot++) {
         inventory.setItem(slot, null);
       }
@@ -226,10 +266,7 @@ final class PracticeMenu implements Listener {
                   kit != null ? kit.description() : "",
                   "",
                   kit != null ? (kit.health() + " HP | Regen: " + (kit.regeneration() ? "Enabled" : "Disabled")) : "",
-                  kit != null ? (kit.count(Material.GOLDEN_APPLE) + " Apples | " + kit.count(Material.SPLASH_POTION) + " Potions") : "",
-                  kit != null ? (kit.count(Material.COBWEB) + " Webs | " + kit.count(Material.EXPERIENCE_BOTTLE) + " XP Bottles") : "",
-                  "",
-                  choice.kit().equals(name) ? "» Selected «" : "Left Click: Select",
+                  choice.kit().equals(name) ? "Selected | Click To Keep This Kit" : "Click To Use This Kit",
                   "Right Click: Preview | Shift Click: Favorite");
         } else if (screen == Screen.DIFFICULTIES) {
           var d = plugin.difficulties().get(name);
@@ -241,13 +278,13 @@ final class PracticeMenu implements Listener {
             lore.add("");
           }
           if (d != null) {
-            lore.add("Decision Interval: " + d.decisionTicks() + " Ticks");
-            lore.add("Perception Delay: " + d.perceptionTicks() + " Ticks");
-            lore.add("Aim Error: " + String.format(Locale.ROOT, "%.1f", d.aimError()) + " Degrees");
-            lore.add("Shield Defense: " + Math.round(d.shieldChance() * 100) + "%");
-            lore.add("Sprint Reset: " + Math.round(d.sprintResetChance() * 100) + "%");
-            lore.add("Strafe Dodge: " + Math.round(d.strafeStrength() * 100) + "%");
-            lore.add("Heal Urgency: " + Math.round(d.healThreshold() * 100) + "% HP");
+            lore.add(!d.attacksEnabled() ? "Target Practice: This Bot Does Not Attack"
+                : d.decisionTicks() >= 6 ? "Slower Reactions For Learning The Basics"
+                : d.decisionTicks() >= 3 ? "Steady Reactions For Regular Practice"
+                : "Fast Reactions For A Tougher Challenge");
+          }
+          if (plugin.settings().hasBotOverrides(player.getUniqueId())) {
+            lore.add("Your Custom Bot Settings Also Apply");
           }
           lore.add("");
           lore.add(choice.difficulty().equals(name) ? "» Selected «" : "Click To Select");
@@ -301,7 +338,7 @@ final class PracticeMenu implements Listener {
       }
     }
 
-    if (screen != Screen.PREVIEW) {
+    if (screen != Screen.PREVIEW && screen != Screen.HOME) {
       if (page > 0) {
         inventory.setItem(36, icon(Material.ARROW, "Previous Page", NamedTextColor.AQUA, false));
       }
@@ -321,60 +358,34 @@ final class PracticeMenu implements Listener {
 
     Difficulty selectedDiff = plugin.difficulties().get(choice.difficulty());
     String diffDisplayName = selectedDiff != null ? selectedDiff.prettyDisplayName() : pretty(choice.difficulty());
-    Material diffIcon = selectedDiff != null ? selectedDiff.effectiveIcon() : Material.COMPARATOR;
 
     PracticeMode currentMode = choice.mode();
-    Material modeIcon =
-        switch (currentMode) {
-          case MATCH -> Material.GOLDEN_SWORD;
-          case DUEL -> Material.IRON_SWORD;
-          case ENDLESS -> Material.TARGET;
-          case V2_1 -> Material.DIAMOND_SWORD;
-          case V3_1 -> Material.NETHERITE_SWORD;
-        };
 
-    inventory.setItem(
+    if (screen != Screen.HOME) {
+      inventory.setItem(
         45,
         icon(
-            Material.COMPASS,
-            screen == Screen.KITS ? "Select Kit" : "Back To Kits",
+            Material.ARROW,
+            "Back To Practice Setup",
             NamedTextColor.AQUA,
-            screen == Screen.KITS,
-            screen == Screen.KITS ? "Current: " + pretty(choice.kit()) : "Return To Kit Selection"));
-
-    inventory.setItem(
-        46,
-        icon(
-            diffIcon,
-            "Difficulty: " + diffDisplayName,
-            NamedTextColor.GOLD,
-            screen == Screen.DIFFICULTIES,
-            "Current: " + diffDisplayName,
-            "",
-            "Click To Change Difficulty"));
-
-    inventory.setItem(
-        47,
-        icon(
-            modeIcon,
-            "Mode: " + pretty(currentMode.id()),
-            NamedTextColor.AQUA,
-            screen == Screen.MODES,
-            currentMode.description(),
-            "",
-            "Click To Change Mode"));
-
-    inventory.setItem(
-        48,
-        icon(
-            Material.COMPARATOR,
-            "Series: Best Of " + choice.bestOf(),
-            NamedTextColor.YELLOW,
             false,
-            "For Match & Outnumbered Modes",
-            "",
-            "Left Click: +2 Rounds",
-            "Right Click: -2 Rounds"));
+            "Keep Your Choices And Return"));
+    }
+
+    if ((screen == Screen.HOME || screen == Screen.MODES)
+        && (currentMode == PracticeMode.MATCH || currentMode.isOutnumbered())) {
+      inventory.setItem(
+          40,
+          icon(
+              Material.COMPARATOR,
+              "Match Length: Best Of " + choice.bestOf(),
+              NamedTextColor.YELLOW,
+              false,
+              "First To " + (choice.bestOf() / 2 + 1) + " Round Wins",
+              "",
+              "Left Click: +2 Rounds",
+              "Right Click: Reduce By 2 Rounds"));
+    }
 
     boolean canStart = player.hasPermission("practice.start")
         || player.hasPermission("practice.admin")
@@ -384,13 +395,16 @@ final class PracticeMenu implements Listener {
     if (!canStart) {
       startLore.add("Locked: Missing practice.start");
     } else if (!arenaAvailable) {
-      startLore.add("No arena configured on this server.");
-      startLore.add("Ask an admin to configure spawns:");
+      startLore.add("No Arena Configured On This Server.");
+      startLore.add("Ask An Admin To Configure Spawns:");
       startLore.add("/practice arena setplayer & setbot");
     } else {
       startLore.add("Kit: " + pretty(choice.kit()));
       startLore.add("Difficulty: " + diffDisplayName);
       startLore.add("Mode: " + pretty(currentMode.id()));
+      if (currentMode == PracticeMode.MATCH || currentMode.isOutnumbered()) {
+        startLore.add("First To " + (choice.bestOf() / 2 + 1) + " Round Wins");
+      }
       if (plugin.settings().hasBotOverrides(player.getUniqueId())) {
         startLore.add("");
         startLore.add("! Custom Bot Tuning Active");
@@ -408,44 +422,8 @@ final class PracticeMenu implements Listener {
             canStart && arenaAvailable,
             startLore.toArray(String[]::new)));
 
-    inventory.setItem(
-        50,
-        icon(
-            Material.CHEST,
-            "Inspect Loadout",
-            NamedTextColor.AQUA,
-            screen == Screen.PREVIEW,
-            "View Full Inventory And Enchants",
-            "",
-            "Click To Inspect"));
-
-    boolean canSettings = player.hasPermission("practice.settings")
-        || player.hasPermission("practice.admin")
-        || player.hasPermission("practice.*");
-    inventory.setItem(
-        51,
-        icon(
-            canSettings ? Material.REPEATER : Material.BARRIER,
-            "Bot Settings",
-            canSettings ? NamedTextColor.AQUA : NamedTextColor.RED,
-            false,
-            canSettings ? "Customize Bot Behavior And Rules" : "Locked: Missing practice.settings",
-            "",
-            canSettings ? "Click To Open Settings" : "No Permission"));
-
-    boolean canStats = player.hasPermission("practice.stats")
-        || player.hasPermission("practice.admin")
-        || player.hasPermission("practice.*");
-    inventory.setItem(
-        52,
-        icon(
-            canStats ? Material.BOOK : Material.BARRIER,
-            "Your Progress",
-            canStats ? NamedTextColor.GOLD : NamedTextColor.RED,
-            screen == Screen.STATS,
-            canStats ? "View Match And Duel Record" : "Locked: Missing practice.stats",
-            "",
-            canStats ? "Click To View Stats" : "No Permission"));
+    inventory.setItem(53, icon(Material.BARRIER, "Close", NamedTextColor.RED, false,
+        "You Can Return With /practice"));
 
 
     if (!canReuse) {
@@ -509,6 +487,9 @@ final class PracticeMenu implements Listener {
       return;
     }
     boolean right = event.isRightClick(), shift = event.isShiftClick();
+    if (!event.isLeftClick() && !right) {
+      return;
+    }
     Bukkit.getScheduler()
         .runTask(
             plugin,
@@ -533,8 +514,8 @@ final class PracticeMenu implements Listener {
               try {
                 player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, .35f, 1.1f);
 
-                // Actions on KITS screen
-                if (view.screen == Screen.KITS && slot == 0) {
+                // Setup Actions
+                if (view.screen == Screen.HOME && slot == 29) {
                   if (!player.hasPermission("practice.kits.editor")
                       && !player.hasPermission("practice.admin")
                       && !player.hasPermission("practice.*")) {
@@ -543,10 +524,31 @@ final class PracticeMenu implements Listener {
                   Bukkit.dispatchCommand(player, "practice kit editor");
                   return;
                 }
+                if (view.screen == Screen.HOME) {
+                  switch (slot) {
+                    case 11 -> show(player, choice, Screen.KITS, 0);
+                    case 13 -> show(player, choice, Screen.DIFFICULTIES, 0);
+                    case 15 -> show(player, choice, Screen.MODES, 0);
+                    case 22 -> show(player, choice, Screen.PREVIEW, 0);
+                    case 31 -> plugin.openSettings(player);
+                    case 33 -> {
+                      if (!player.hasPermission("practice.stats")
+                          && !player.hasPermission("practice.admin")
+                          && !player.hasPermission("practice.*")) {
+                        throw new IllegalArgumentException("Missing Permission: practice.stats");
+                      }
+                      show(player, choice, Screen.STATS, 0);
+                    }
+                    default -> {}
+                  }
+                  if (slot != 40 && slot != 49 && slot != 53) {
+                    return;
+                  }
+                }
 
                 // Middle area selections (kits, difficulties, modes)
                 int index = MenuPaging.index(slot);
-                if (view.screen != Screen.PREVIEW
+                if (view.screen != Screen.PREVIEW && view.screen != Screen.HOME
                     && index >= 0
                     && view.page * MenuPaging.PAGE_SIZE + index < view.entries.size()) {
                   String name = view.entries.get(view.page * MenuPaging.PAGE_SIZE + index);
@@ -576,14 +578,14 @@ final class PracticeMenu implements Listener {
                       show(
                           player,
                           new Selection(name, choice.difficulty(), choice.mode(), choice.bestOf()),
-                          Screen.KITS,
-                          view.page);
+                          Screen.HOME,
+                          0);
                     }
                   } else if (view.screen == Screen.DIFFICULTIES) {
                     show(
                         player,
                         new Selection(choice.kit(), name, choice.mode(), choice.bestOf()),
-                        Screen.KITS,
+                        Screen.HOME,
                         0);
                   } else if (view.screen == Screen.MODES) {
                     PracticeMode chosenMode = PracticeMode.parse(name);
@@ -597,7 +599,7 @@ final class PracticeMenu implements Listener {
                             choice.difficulty(),
                             chosenMode,
                             bestOf),
-                        Screen.KITS,
+                        Screen.HOME,
                         0);
                   }
                   return;
@@ -606,34 +608,22 @@ final class PracticeMenu implements Listener {
                 // navigation and action bar
                 switch (slot) {
                   case 36 -> {
-                    if (view.screen != Screen.PREVIEW && view.page > 0) {
+                    if (view.screen != Screen.PREVIEW && view.screen != Screen.HOME && view.page > 0) {
                       show(player, choice, view.screen, view.page - 1);
                     }
                   }
                   case 44 -> {
-                    if (view.screen != Screen.PREVIEW && view.page + 1 < MenuPaging.pages(view.entries.size())) {
+                    if (view.screen != Screen.PREVIEW && view.screen != Screen.HOME && view.page + 1 < MenuPaging.pages(view.entries.size())) {
                       show(player, choice, view.screen, view.page + 1);
                     }
                   }
-                  case 45 -> show(player, choice, Screen.KITS, 0);
-                  case 46 -> {
-                    if (view.screen == Screen.DIFFICULTIES) {
-                      show(player, choice, Screen.KITS, 0);
-                    } else {
-                      show(player, choice, Screen.DIFFICULTIES, 0);
+                  case 45 -> show(player, choice, Screen.HOME, 0);
+                  case 40 -> {
+                    if ((view.screen != Screen.HOME && view.screen != Screen.MODES)
+                        || (choice.mode() != PracticeMode.MATCH && !choice.mode().isOutnumbered())) {
+                      return;
                     }
-                  }
-                  case 47 -> {
-                    if (view.screen == Screen.MODES) {
-                      show(player, choice, Screen.KITS, 0);
-                    } else {
-                      show(player, choice, Screen.MODES, 0);
-                    }
-                  }
-                  case 48 -> {
-                    int nextBestOf = right
-                        ? (choice.bestOf() <= 3 ? 11 : choice.bestOf() - 2)
-                        : (choice.bestOf() >= 11 ? 3 : choice.bestOf() + 2);
+                    int nextBestOf = Math.clamp(choice.bestOf() + (right ? -2 : 2), 3, 99);
                     show(
                         player,
                         new Selection(choice.kit(), choice.difficulty(), choice.mode(), nextBestOf),
@@ -646,36 +636,13 @@ final class PracticeMenu implements Listener {
                         && !player.hasPermission("practice.*")) {
                       throw new IllegalArgumentException("Missing Permission: practice.start");
                     }
+                    if (!plugin.hasConfiguredArena()) {
+                      return;
+                    }
                     player.closeInventory();
                     plugin.startFromMenu(player, choice);
                   }
-                  case 50 -> {
-                    if (view.screen == Screen.PREVIEW) {
-                      show(player, choice, Screen.KITS, view.page);
-                    } else {
-                      show(player, choice, Screen.PREVIEW, view.page);
-                    }
-                  }
-                  case 51 -> {
-                    if (!player.hasPermission("practice.settings")
-                        && !player.hasPermission("practice.admin")
-                        && !player.hasPermission("practice.*")) {
-                      throw new IllegalArgumentException("Missing Permission: practice.settings");
-                    }
-                    plugin.openSettings(player);
-                  }
-                  case 52 -> {
-                    if (!player.hasPermission("practice.stats")
-                        && !player.hasPermission("practice.admin")
-                        && !player.hasPermission("practice.*")) {
-                      throw new IllegalArgumentException("Missing Permission: practice.stats");
-                    }
-                    if (view.screen == Screen.STATS) {
-                      show(player, choice, Screen.KITS, 0);
-                    } else {
-                      show(player, choice, Screen.STATS, 0);
-                    }
-                  }
+                  case 53 -> player.closeInventory();
                   default -> {}
                 }
               } catch (IllegalArgumentException e) {

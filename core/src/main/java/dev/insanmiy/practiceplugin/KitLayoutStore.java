@@ -112,6 +112,7 @@ final class KitLayoutStore {
       YamlConfiguration yaml, UUID playerId, String diff, String kitName, KitLayout layout) {
     String path = playerId + "." + (diff.isEmpty() ? "__any__" : diff) + "." + kitName;
     yaml.set(path + ".held", layout.heldSlot());
+    yaml.set(path + ".slots", null);
     for (Map.Entry<Integer, Integer> entry : layout.slots().entrySet()) {
       yaml.set(path + ".slots." + entry.getKey(), entry.getValue());
     }

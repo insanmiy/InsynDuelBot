@@ -79,15 +79,21 @@ final class UtilityBrain {
   }
 
   void reset(boolean newRound) {
-    nextPotion = nextPearl = nextBow = nextTotem = 0;
-    nextFood = 0;
-    nextHeal = 0;
+    if (newRound) {
+      nextPotion = nextPearl = nextBow = nextTotem = 0;
+      nextFood = nextHeal = nextWater = nextPitEscape = nextBlockPlace = 0;
+      nextRepairSeek = nextArmorSwap = 0;
+      postTotemRecoveryUntil = 0;
+      totemPoppedTick = lastEscapePearlTick = -1000;
+      escapePearlWindowUntil = 0;
+      escapePearlAllowedInWindow = false;
+      pressure.reset();
+      repair.reset();
+      webs.reset();
+      lastHit = -1000;
+    }
     seekingSpaceSince = -1;
     pendingHeal = false;
-    pressure.reset();
-    if (newRound) repair.reset();
-    webs.reset();
-    lastHit = -1000;
     abortMining();
     abortTargetMining();
     preparingSplash = -1;
@@ -95,7 +101,7 @@ final class UtilityBrain {
     splashUntil = 0;
     splashDirection = null;
     placedWater = null;
-    nextWater = retrieveWater = 0;
+    retrieveWater = 0;
     prepared = null;
     handTiming.reset();
     opponent = null;
@@ -104,16 +110,10 @@ final class UtilityBrain {
     nextEscapeCheck = 0;
     repairWorking = false;
     repairSeekingSince = -1;
-    postTotemRecoveryUntil = 0;
-    totemPoppedTick = -1000;
-    lastEscapePearlTick = -1000;
-    escapePearlWindowUntil = 0;
-    escapePearlAllowedInWindow = false;
-    nextPitEscape = nextBlockPlace = pitStuckTicks = 0;
+    pitStuckTicks = 0;
     lastPitCheckLoc = null;
     digStuckTicks = 0;
     lastDigCheckLoc = null;
-    nextRepairSeek = nextArmorSwap = 0;
   }
 
   private Player player() {

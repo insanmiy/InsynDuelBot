@@ -62,6 +62,10 @@ final class CustomKitStore {
     name = name(name);
     var yaml = read();
     var old = yaml.getConfigurationSection(name);
+    if (old != null && expected == null)
+      throw new IllegalArgumentException("Name Already Used. Choose A New Name.");
+    if (!Objects.equals(expected, revision(old)))
+      throw new IllegalArgumentException("This Kit Changed. Reopen The Editor Before Saving It.");
     if (old != null) {
       if (!editable(old, player, admin))
         throw new IllegalArgumentException("You Can Only Edit Your Own Custom Kits.");
@@ -89,6 +93,8 @@ final class CustomKitStore {
     var yaml = read();
     var old = yaml.getConfigurationSection(name);
     if (old == null) throw new IllegalArgumentException("Custom Kit No Longer Exists.");
+    if (expected != null && !Objects.equals(expected, revision(old)))
+      throw new IllegalArgumentException("This Kit Changed. Reopen The Editor Before Deleting It.");
     if (!editable(old, player, admin))
       throw new IllegalArgumentException("You Can Only Edit Your Own Custom Kits.");
     yaml.set(name, null);

@@ -15,6 +15,18 @@ import org.jetbrains.annotations.NotNull;
 final class SettingsMenu implements Listener {
   private final PracticePlugin plugin;
 
+  private enum Page {
+    MATCH("Match Settings"),
+    BOT("Bot Abilities"),
+    ADVANCED("Advanced Bot Tuning");
+
+    final String title;
+
+    Page(String title) {
+      this.title = title;
+    }
+  }
+
   private record BotSettingDef(
       String key,
       Material icon,
@@ -28,20 +40,20 @@ final class SettingsMenu implements Listener {
           new BotSettingDef(
               "bot-attack-charge",
               Material.DIAMOND_SWORD,
-              "Attack Speed (CPS)",
-              "Attack Cooldown Charge Threshold Before Striking",
+              "Attack Timing",
+              "How Long The Bot Waits Before Swinging",
               new String[] {
                 "Full Power (100% / Vanilla)",
                 "Fast (95% Charge)",
-                "Rapid (90% Charge / High CPS)",
-                "Furious (85% Charge / Max CPS)"
+                "Rapid (90% Charge)",
+                "Very Rapid (85% Charge)"
               }),
           11,
           new BotSettingDef(
               "bot-aim",
               Material.BOW,
               "Aim Accuracy",
-              "Crosshair Tracking Precision And Aim Spread",
+              "How Precisely The Bot Aims At You",
               new String[] {
                 "Godlike (0.0° / 100% Accurate)",
                 "Master (0.2° Error)",
@@ -55,7 +67,7 @@ final class SettingsMenu implements Listener {
               "bot-reaction",
               Material.FEATHER,
               "Reaction Speed",
-              "Decision Tick Interval And Perception Reaction Time",
+              "How Often The Bot Chooses Its Next Action",
               new String[] {
                 "Instant (1t / 50ms)",
                 "Very Fast (2t / 100ms)",
@@ -68,10 +80,10 @@ final class SettingsMenu implements Listener {
           new BotSettingDef(
               "bot-sprint-reset",
               Material.LEATHER_BOOTS,
-              "Sprint-Reset (W-Tap)",
-              "Frequency Of Sprint-Resetting After Landing Hits",
+              "Sprint Reset",
+              "How Often The Bot Restarts Its Sprint After Hits",
               new String[] {
-                "Always (100% Combos)",
+                "Always (100%)",
                 "High (80%)",
                 "Medium (50%)",
                 "Low (20%)",
@@ -84,7 +96,7 @@ final class SettingsMenu implements Listener {
               "Shield Defense",
               "How Consistently The Bot Blocks Incoming Attacks",
               new String[] {
-                "Always (100% Perfect Blocks)",
+                "Always (100%)",
                 "High (85%)",
                 "Medium (60%)",
                 "Low (30%)",
@@ -107,8 +119,8 @@ final class SettingsMenu implements Listener {
           new BotSettingDef(
               "bot-heal-threshold",
               Material.SPLASH_POTION,
-              "Heal Urgency",
-              "Health Threshold When The Bot Uses Potions/Food",
+              "Healing Threshold",
+              "Health Level Where The Bot Starts Healing",
               new String[] {
                 "Aggressive (75% HP)",
                 "High (65% HP)",
@@ -132,11 +144,13 @@ final class SettingsMenu implements Listener {
 
   private static final class View implements AnimatedMenu {
     final UUID owner;
+    final Page page;
     final Inventory inventory;
 
-    View(Player p) {
+    View(Player p, Page page) {
       owner = p.getUniqueId();
-      inventory = TextUI.inventory(this, 54, Component.text("INSYN / BOT & MATCH SETTINGS"));
+      this.page = page;
+      inventory = TextUI.inventory(this, 54, Component.text("Settings / " + page.title));
     }
 
     @Override
@@ -146,17 +160,14 @@ final class SettingsMenu implements Listener {
 
     public int[] decorativeSlots() {
       return new int[] {
-        0, 1, 2, 3, 5, 6, 7, 8,
-        9, 17,
-        18, 25, 26,
-        27, 35,
-        36, 37, 38, 39, 40, 41, 42, 43, 44,
-        46, 47, 48, 50, 51, 52, 53
+        0, 1, 3, 5, 7, 8,
+        9, 17, 18, 26, 27, 35, 36, 44,
+        46, 47, 48, 50, 51, 52
       };
     }
 
     public int pulseSlot() {
-      return 4;
+      return -1;
     }
   }
 
@@ -165,6 +176,10 @@ final class SettingsMenu implements Listener {
   }
 
   void open(Player p) {
+    open(p, Page.MATCH);
+  }
+
+  private void open(Player p, Page page) {
     if (!p.hasPermission("practice.settings") && !p.hasPermission("practice.admin") && !p.hasPermission("practice.*"))
       throw new IllegalArgumentException(plugin.messages().get("general.no-permission", "%permission%", "practice.settings"));
     if (plugin.sessionFor(p) != null)
@@ -173,30 +188,40 @@ final class SettingsMenu implements Listener {
     boolean canReuse = false;
     View view;
     if (p.getOpenInventory().getTopInventory().getHolder() instanceof View currentView
-        && currentView.owner.equals(p.getUniqueId())) {
+        && currentView.owner.equals(p.getUniqueId())
+        && currentView.page == page) {
       canReuse = true;
       view = currentView;
     } else {
-      view = new View(p);
+      view = new View(p, page);
     }
 
-    for (int i = 0; i < 54; i++)
-      view.inventory.setItem(i, item(Material.GRAY_STAINED_GLASS_PANE, " "));
+    for (int slot = 0; slot < view.inventory.getSize(); slot++) {
+      boolean border = slot < 9 || slot >= 36 || slot % 9 == 0 || slot % 9 == 8;
+      view.inventory.setItem(slot, item(border ? Material.GRAY_STAINED_GLASS_PANE
+          : Material.BLACK_STAINED_GLASS_PANE, " "));
+    }
+    view.inventory.setItem(0, item(Material.CYAN_STAINED_GLASS_PANE, " "));
+    view.inventory.setItem(8, item(Material.CYAN_STAINED_GLASS_PANE, " "));
     PlayerSettings prefs = plugin.settings();
     UUID id = p.getUniqueId();
 
-    view.inventory.setItem(
-        4,
-        item(
-            Material.NETHER_STAR,
-            "INSYN PRACTICE SETTINGS",
-            "Configure Bot Combat Behavior, Reaction Times,",
-            "Movement, Tactics, And Match Rules In-Game.",
-            "No Config.yml Editing Required!"));
+    view.inventory.setItem(2, item(Material.CLOCK,
+        "Match Settings" + (page == Page.MATCH ? " (Selected)" : ""),
+        "Countdown, Food, And Display Options", "Click To Open"));
+    view.inventory.setItem(4, item(Material.IRON_SWORD,
+        "Bot Abilities" + (page == Page.BOT ? " (Selected)" : ""),
+        "Choose Which Actions The Bot Can Use", "Click To Open"));
+    view.inventory.setItem(6, item(Material.COMPARATOR,
+        "Advanced Tuning" + (page == Page.ADVANCED ? " (Selected)" : ""),
+        "Override Individual Difficulty Settings", "Click To Open"));
 
     View targetView = view;
     BOT_SETTINGS.forEach(
         (slot, def) -> {
+          if (page != Page.ADVANCED) {
+            return;
+          }
           int currentLevel = prefs.botSetting(id, def.key());
           String currentDisplay =
               currentLevel < 0 || currentLevel >= def.levelNames().length
@@ -207,66 +232,88 @@ final class SettingsMenu implements Listener {
               slot,
               item(
                   def.icon(),
-                  def.displayName() + ": " + currentDisplay,
+                  def.displayName(),
+                  "Current: " + currentDisplay,
                   def.description(),
                   "",
                   isCustom ? "[Custom Override Active]" : "[Using Difficulty Default]",
                   "",
-                  "Left-Click: Next | Right-Click: Previous"));
+                  "Left Click: Next | Right Click: Previous",
+                  "Shift Click: Use Difficulty Default"));
         });
 
     FLAGS.forEach(
         (slot, key) -> {
+          if ((page == Page.MATCH && slot < 31)
+              || (page == Page.BOT && slot >= 31)
+              || page == Page.ADVANCED) {
+            return;
+          }
           boolean on = prefs.flag(id, key);
           targetView.inventory.setItem(
               slot,
               item(
                   on ? Material.LIME_DYE : Material.GRAY_DYE,
-                  title(key) + ": " + (on ? "ON" : "OFF"),
+                  title(key) + ": " + (on ? "On" : "Off"),
                   flagDescription(key),
                   "Click To Toggle",
                   "Saved For Your Sessions"));
         });
 
-    NUMBERS.forEach(
-        (slot, key) ->
-            targetView.inventory.setItem(
-                slot,
-                item(
-                    slot == 28 ? Material.CLOCK : slot == 29 ? Material.COMPASS : Material.COOKED_BEEF,
-                    title(key) + ": " + prefs.number(id, key) + (key.equals("saturation") ? "" : "s"),
-                    "Left: Increase | Right: Decrease (Shift: ±5)",
-                    key.equals("saturation")
-                        ? "Starting Saturation For Both Fighters"
-                        : "Seconds; Applies Next Session")));
+    if (page == Page.MATCH) {
+      NUMBERS.forEach(
+          (slot, key) ->
+              targetView.inventory.setItem(
+                  slot,
+                  item(
+                      slot == 28 ? Material.CLOCK : slot == 29 ? Material.COMPASS : Material.COOKED_BEEF,
+                      title(key) + ": " + prefs.number(id, key) + (key.equals("saturation") ? "" : "s"),
+                      "Left Click: +1 | Right Click: Reduce By 1",
+                      "Shift Click: Change By 5",
+                      key.equals("saturation")
+                          ? "Stored Food Energy For Both Fighters"
+                          : "Seconds; Applies Next Session")));
+    }
 
-    view.inventory.setItem(
-        33,
-        item(
-            Material.REDSTONE,
-            "Damage Diagnostics",
-            "Detailed Hit And Knockback Diagnostics In Chat",
-            "Click To Toggle (/practice damage)"));
+    if (page == Page.ADVANCED) {
+      view.inventory.setItem(
+          33,
+          item(
+              Material.REDSTONE,
+              "Damage Diagnostics",
+              "Advanced Debug Readout For All Active Matches",
+              "Click To Toggle (/practice damage)"));
+    }
 
-    view.inventory.setItem(
-        34,
-        item(
-            Material.BOOK,
-            "Match Rules",
-            "Mode And Best-Of: Choose In Practice Menu",
-            "Native Damage And Cooldowns Stay 1:1",
-            "Movement Never Ends A Round",
-            "Only Lethal Hits Score; /practice Stop Exits"));
+    if (page == Page.MATCH) {
+      view.inventory.setItem(
+          22,
+          item(
+              Material.BOOK,
+              "Match Rules",
+              "Choose Your Mode In Practice Setup",
+              "Win A Round By Defeating The Bot",
+              "Use /practice Stop To Leave A Match"));
+    }
 
-    view.inventory.setItem(45, item(Material.ARROW, "Back To Practice Menu", "Click To Return To Kit Selection"));
-    view.inventory.setItem(
-        49,
-        item(
-            Material.BLAZE_POWDER,
-            "Reset Bot Tuning to Defaults",
-            "Restores All 7 Combat Settings Above To",
-            "Their Default Values From Difficulty Tier.",
-            "Click To Reset"));
+    if (page == Page.BOT) {
+      view.inventory.setItem(31, item(Material.COMPARATOR, "Advanced Bot Tuning",
+          "Want More Control Over Aim Or Reactions?", "Click To Open Advanced Tuning"));
+    }
+
+    view.inventory.setItem(45, item(Material.ARROW, "Back To Practice Setup", "Your Match Selection Is Kept"));
+    view.inventory.setItem(53, item(Material.BARRIER, "Close", "Changes Are Already Saved"));
+    if (page == Page.ADVANCED) {
+      view.inventory.setItem(
+          49,
+          item(
+              Material.BLAZE_POWDER,
+              "Reset Advanced Tuning",
+              "Restores All 7 Combat Settings Above To",
+              "Their Default Values From Difficulty Tier.",
+              "Ability Toggles Stay As You Set Them",
+              "Click To Reset"));
+    }
 
     if (!canReuse) {
       p.openInventory(view.inventory);
@@ -275,11 +322,11 @@ final class SettingsMenu implements Listener {
 
   private static String flagDescription(String key) {
     return switch (key) {
-      case "healing" -> "Bot Potion And Food Consumption";
-      case "utilities" -> "Offensive Cobwebs, Ender Pearls And Bows";
-      case "criticals" -> "Bot Jump-Resets To Land Critical Hits";
-      case "shields" -> "Bot Off-Hand Shield Usage";
-      case "strafing" -> "Circling And Dodging Movement";
+      case "healing" -> "Allow The Bot To Use Healing Items";
+      case "utilities" -> "Allow The Bot To Use Webs, Pearls, And Bows";
+      case "criticals" -> "Allow The Bot To Jump For Critical Hits";
+      case "shields" -> "Allow The Bot To Block With A Shield";
+      case "strafing" -> "Allow The Bot To Move Sideways And Dodge";
       case "counters" -> "Bot Switches To Axe When You Block With Shield";
       case "hud" -> "Real-Time Health And Round BossBar";
       case "animations" -> "Pulsing Borders And UI Effects";
@@ -288,16 +335,28 @@ final class SettingsMenu implements Listener {
   }
 
   private static String title(String text) {
-    return Difficulty.formatName(text);
+    return switch (text) {
+      case "countdown" -> "Starting Countdown";
+      case "between-rounds" -> "Break Between Rounds";
+      case "saturation" -> "Starting Food Saturation";
+      case "hud" -> "Match Health Bar";
+      case "animations" -> "Menu Animations";
+      case "counters" -> "Shield Counters";
+      default -> Difficulty.formatName(text);
+    };
   }
 
   private static ItemStack item(Material type, String name, String... lore) {
     ItemStack item = new ItemStack(type);
     dev.insanmiy.practiceplugin.ItemMetadata.edit(item,
         meta -> {
-          TextUI.name(meta, Component.text(name, NamedTextColor.AQUA));
+          TextUI.name(meta, Component.text(name, NamedTextColor.AQUA)
+              .decoration(net.kyori.adventure.text.format.TextDecoration.ITALIC, false));
           TextUI.lore(meta,
-              Arrays.stream(lore).map(line -> Component.text(line, NamedTextColor.GRAY)).toList());
+              Arrays.stream(lore).map(line -> Component.text(line, NamedTextColor.GRAY)
+                  .decoration(net.kyori.adventure.text.format.TextDecoration.ITALIC, false)).toList());
+          meta.addItemFlags(ItemFlag.HIDE_ATTRIBUTES, ItemFlag.HIDE_ADDITIONAL_TOOLTIP);
+          meta.setEnchantmentGlintOverride(name.endsWith("(Selected)"));
         });
     return item;
   }
@@ -313,6 +372,9 @@ final class SettingsMenu implements Listener {
     int slot = e.getRawSlot();
     boolean right = e.isRightClick();
     boolean shift = e.isShiftClick();
+    if (!e.isLeftClick() && !right) {
+      return;
+    }
     Bukkit.getScheduler()
         .runTask(
             plugin,
@@ -326,37 +388,52 @@ final class SettingsMenu implements Listener {
                 p.closeInventory();
                 return;
               }
-              apply(p, slot, right, shift);
+              apply(p, view, slot, right, shift);
             });
   }
 
-  private void apply(Player p, int slot, boolean right, boolean shift) {
+  private void apply(Player p, View view, int slot, boolean right, boolean shift) {
     PlayerSettings prefs = plugin.settings();
     UUID id = p.getUniqueId();
     try {
+      if (slot == 2 || slot == 4 || slot == 6) {
+        open(p, Page.values()[slot / 2 - 1]);
+        return;
+      }
+      if (slot == 53) {
+        p.closeInventory();
+        return;
+      }
+      if (view.page == Page.BOT && slot == 31) {
+        open(p, Page.ADVANCED);
+        return;
+      }
       if (slot == 45) {
         p.closeInventory();
         p.performCommand("practice menu");
         return;
       }
-      if (slot == 49) {
+      if (view.page == Page.ADVANCED && slot == 49) {
         prefs.resetBotSettings(id);
         p.playSound(p.getLocation(), Sound.BLOCK_ANVIL_USE, 0.4f, 1.2f);
         plugin.messages().send(p, "settings.reset-defaults");
-        open(p);
+        open(p, view.page);
         return;
       }
-      if (slot == 33) {
+      if (view.page == Page.ADVANCED && slot == 33) {
         p.performCommand("practice damage");
         p.playSound(p.getLocation(), Sound.UI_BUTTON_CLICK, 0.4f, 1.0f);
         return;
       }
-      if (BOT_SETTINGS.containsKey(slot)) {
+      if (view.page == Page.ADVANCED && BOT_SETTINGS.containsKey(slot)) {
         BotSettingDef def = BOT_SETTINGS.get(slot);
         int total = def.levelNames().length;
         int current = prefs.botSetting(id, def.key());
         int next;
-        if (right) {
+        if (shift) {
+          next = -1;
+        }
+        else if (right) {
           if (current <= -1) next = total - 1;
           else next = current - 1;
         } else {
@@ -365,20 +442,22 @@ final class SettingsMenu implements Listener {
         }
         prefs.set(id, def.key(), next);
         p.playSound(p.getLocation(), Sound.UI_BUTTON_CLICK, 0.4f, 1.2f);
-      } else if (FLAGS.containsKey(slot)) {
+      } else if (FLAGS.containsKey(slot)
+          && ((view.page == Page.MATCH && slot >= 31)
+              || (view.page == Page.BOT && slot < 31))) {
         String key = FLAGS.get(slot);
         boolean next = !prefs.flag(id, key);
         prefs.set(id, key, next);
         p.playSound(p.getLocation(), Sound.BLOCK_NOTE_BLOCK_PLING, 0.4f, next ? 1.5f : 0.8f);
-      } else if (NUMBERS.containsKey(slot)) {
+      } else if (view.page == Page.MATCH && NUMBERS.containsKey(slot)) {
         String key = NUMBERS.get(slot);
-        int max = key.equals("saturation") ? 20 : 60, min = key.equals("saturation") ? 0 : 1;
+        int max = key.equals("saturation") ? 20 : 600, min = key.equals("saturation") ? 0 : 1;
         int step = shift ? 5 : 1;
         int delta = right ? -step : step;
         prefs.set(id, key, Math.clamp(prefs.number(id, key) + delta, min, max));
         p.playSound(p.getLocation(), Sound.UI_BUTTON_CLICK, 0.4f, 1.0f);
       } else return;
-      open(p);
+      open(p, view.page);
     } catch (IOException failure) {
       plugin.messages().send(p, "settings.save-error");
     }

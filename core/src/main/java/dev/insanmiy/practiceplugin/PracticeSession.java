@@ -41,7 +41,7 @@ public final class PracticeSession {
   long tick, fightStart, totalFightTicks;
   long lastContactTick = -1;
   int roundsWon, roundsLost, seriesWon, seriesLost;
-  boolean internalTeleport, closing;
+  boolean internalTeleport, internalGameMode, closing;
   final Set<org.bukkit.entity.Projectile> projectiles = new HashSet<>();
   final DamageDiagnostics damageDiagnostics = new DamageDiagnostics();
   org.bukkit.event.entity.EntityDamageEvent finishingBlow;

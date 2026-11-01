@@ -30,8 +30,9 @@ class CustomKitStoreTest {
     assertEquals(player.toString(), loaded.getString("testkit.owner"));
 
     // Overwrite existing kit
+    String revision = CustomKitStore.revision(loaded.getConfigurationSection("testkit"));
     candidate.set("health", 40.0);
-    store.save("testkit", candidate, null, player, false, Set.of());
+    store.save("testkit", candidate, revision, player, false, Set.of());
     assertEquals(40.0, store.read().getDouble("testkit.health"));
 
     // Non-owner cannot delete
@@ -58,5 +59,33 @@ class CustomKitStoreTest {
 
     store.delete("legacykit", null, player, false);
     assertNull(store.read().getConfigurationSection("legacykit"));
+  }
+
+  @Test
+  void staleEditorCannotOverwriteOrDeleteChangedKit(@TempDir Path tempDir) throws IOException {
+    CustomKitStore store = new CustomKitStore(tempDir.resolve("customkits.yml"));
+    UUID player = UUID.randomUUID();
+    YamlConfiguration candidate = new YamlConfiguration();
+    candidate.set("health", 20.0);
+    store.save("testkit", candidate, null, player, false, Set.of());
+
+    String staleRevision = CustomKitStore.revision(store.read().getConfigurationSection("testkit"));
+    candidate.set("health", 40.0);
+    store.save("testkit", candidate, staleRevision, player, false, Set.of());
+
+    candidate.set("health", 60.0);
+    assertThrows(IllegalArgumentException.class,
+        () -> store.save("testkit", candidate, null, player, false, Set.of()));
+    assertThrows(IllegalArgumentException.class,
+        () -> store.save("testkit", candidate, staleRevision, player, false, Set.of()));
+    assertThrows(IllegalArgumentException.class,
+        () -> store.delete("testkit", staleRevision, player, false));
+    assertEquals(40.0, store.read().getDouble("testkit.health"));
+
+    String latestRevision = CustomKitStore.revision(store.read().getConfigurationSection("testkit"));
+    store.delete("testkit", latestRevision, player, false);
+    assertThrows(IllegalArgumentException.class,
+        () -> store.save("testkit", candidate, latestRevision, player, false, Set.of()));
+    assertNull(store.read().getConfigurationSection("testkit"));
   }
 }

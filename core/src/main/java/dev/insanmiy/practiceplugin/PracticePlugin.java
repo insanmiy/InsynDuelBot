@@ -456,7 +456,12 @@ public final class PracticePlugin extends JavaPlugin implements Listener {
       p.setInvulnerable(false);
       p.getInventory().clear();
       p.setItemOnCursor(null);
-      p.setGameMode(GameMode.SURVIVAL);
+      session.internalGameMode = true;
+      try {
+        p.setGameMode(GameMode.SURVIVAL);
+      } finally {
+        session.internalGameMode = false;
+      }
       p.getActivePotionEffects().forEach(e -> p.removePotionEffect(e.getType()));
       p.setAbsorptionAmount(0);
       session.begin();
@@ -948,11 +953,11 @@ public final class PracticePlugin extends JavaPlugin implements Listener {
         && projectile.getShooter() instanceof Entity shooter) source = shooter;
     PracticeSession victimSession = sessionFor(e.getEntity());
     PracticeSession attackSession = sessionFor(source);
-    if (victimSession == null) return;
-    if (attackSession != null && attackSession != victimSession) {
+    if (e instanceof EntityDamageByEntityEvent && attackSession != victimSession) {
       e.setCancelled(true);
       return;
     }
+    if (victimSession == null) return;
     if (source instanceof Player attacker && e.getEntity() instanceof Player target) {
       if (victimSession.isBotPlayer(attacker) && victimSession.isBotPlayer(target)) {
         e.setCancelled(true);
@@ -1090,7 +1095,9 @@ public final class PracticePlugin extends JavaPlugin implements Listener {
 
   @EventHandler
   public void gameMode(PlayerGameModeChangeEvent e) {
-    if (participant(e.getPlayer()) && !isBot(e.getPlayer())) e.setCancelled(true);
+    PracticeSession session = sessionFor(e.getPlayer());
+    if (session != null && !isBot(e.getPlayer())
+        && !session.internalGameMode && !session.closing) e.setCancelled(true);
   }
 
   @EventHandler
