@@ -18,7 +18,8 @@ final class SettingsMenu implements Listener {
   private enum Page {
     MATCH("Match Settings"),
     BOT("Bot Abilities"),
-    ADVANCED("Advanced Bot Tuning");
+    ADVANCED("Advanced Bot Tuning"),
+    PRESETS("Bot Presets");
 
     final String title;
 
@@ -146,6 +147,8 @@ final class SettingsMenu implements Listener {
     final UUID owner;
     final Page page;
     final Inventory inventory;
+    final Map<Integer, String> presetNames = new HashMap<>();
+    boolean clickPending;
 
     View(Player p, Page page) {
       owner = p.getUniqueId();
@@ -160,7 +163,7 @@ final class SettingsMenu implements Listener {
 
     public int[] decorativeSlots() {
       return new int[] {
-        0, 1, 3, 5, 7, 8,
+        0, 1, 3, 5, 8,
         9, 17, 18, 26, 27, 35, 36, 44,
         46, 47, 48, 50, 51, 52
       };
@@ -177,6 +180,10 @@ final class SettingsMenu implements Listener {
 
   void open(Player p) {
     open(p, Page.MATCH);
+  }
+
+  void openPresets(Player p) {
+    open(p, Page.PRESETS);
   }
 
   private void open(Player p, Page page) {
@@ -205,6 +212,7 @@ final class SettingsMenu implements Listener {
     view.inventory.setItem(8, item(Material.CYAN_STAINED_GLASS_PANE, " "));
     PlayerSettings prefs = plugin.settings();
     UUID id = p.getUniqueId();
+    view.presetNames.clear();
 
     view.inventory.setItem(2, item(Material.CLOCK,
         "Match Settings" + (page == Page.MATCH ? " (Selected)" : ""),
@@ -215,6 +223,9 @@ final class SettingsMenu implements Listener {
     view.inventory.setItem(6, item(Material.COMPARATOR,
         "Advanced Tuning" + (page == Page.ADVANCED ? " (Selected)" : ""),
         "Override Individual Difficulty Settings", "Click To Open"));
+    view.inventory.setItem(7, item(Material.KNOWLEDGE_BOOK,
+        plugin.messages().get("settings.preset-tab") + (page == Page.PRESETS ? " (Selected)" : ""),
+        plugin.messages().get("settings.preset-tab-description")));
 
     View targetView = view;
     BOT_SETTINGS.forEach(
@@ -246,7 +257,7 @@ final class SettingsMenu implements Listener {
         (slot, key) -> {
           if ((page == Page.MATCH && slot < 31)
               || (page == Page.BOT && slot >= 31)
-              || page == Page.ADVANCED) {
+              || page == Page.ADVANCED || page == Page.PRESETS) {
             return;
           }
           boolean on = prefs.flag(id, key);
@@ -299,6 +310,23 @@ final class SettingsMenu implements Listener {
     if (page == Page.BOT) {
       view.inventory.setItem(31, item(Material.COMPARATOR, "Advanced Bot Tuning",
           "Want More Control Over Aim Or Reactions?", "Click To Open Advanced Tuning"));
+    }
+
+    if (page == Page.PRESETS) {
+      List<String> names = prefs.presets(id);
+      for (int index = 0; index < Math.min(names.size(), PlayerSettings.MAX_PRESETS); index++) {
+        int slot = 10 + (index / 7) * 9 + index % 7;
+        String name = names.get(index);
+        view.presetNames.put(slot, name);
+        view.inventory.setItem(slot, item(Material.BOOK, Difficulty.formatName(name),
+            plugin.messages().get("settings.preset-load-help"),
+            plugin.messages().get("settings.preset-update-help"),
+            plugin.messages().get("settings.preset-delete-help")));
+      }
+      view.inventory.setItem(49, item(Material.WRITABLE_BOOK,
+          plugin.messages().get("settings.preset-save-title"),
+          plugin.messages().get("settings.preset-save-help"),
+          plugin.messages().get("settings.preset-scope")));
     }
 
     view.inventory.setItem(45, item(Material.ARROW, "Back To Practice Setup", "Your Match Selection Is Kept"));
@@ -375,20 +403,26 @@ final class SettingsMenu implements Listener {
     if (!e.isLeftClick() && !right) {
       return;
     }
+    if (view.clickPending) return;
+    view.clickPending = true;
     Bukkit.getScheduler()
         .runTask(
             plugin,
             () -> {
-              if (!p.isOnline() || p.getOpenInventory().getTopInventory().getHolder() != view)
-                return;
-              if (plugin.sessionFor(p) != null
-                  || (!p.hasPermission("practice.settings")
-                      && !p.hasPermission("practice.admin")
-                      && !p.hasPermission("practice.*"))) {
-                p.closeInventory();
-                return;
+              try {
+                if (!p.isOnline() || p.getOpenInventory().getTopInventory().getHolder() != view)
+                  return;
+                if (plugin.sessionFor(p) != null
+                    || (!p.hasPermission("practice.settings")
+                        && !p.hasPermission("practice.admin")
+                        && !p.hasPermission("practice.*"))) {
+                  p.closeInventory();
+                  return;
+                }
+                apply(p, view, slot, right, shift);
+              } finally {
+                view.clickPending = false;
               }
-              apply(p, view, slot, right, shift);
             });
   }
 
@@ -398,6 +432,10 @@ final class SettingsMenu implements Listener {
     try {
       if (slot == 2 || slot == 4 || slot == 6) {
         open(p, Page.values()[slot / 2 - 1]);
+        return;
+      }
+      if (slot == 7) {
+        openPresets(p);
         return;
       }
       if (slot == 53) {
@@ -411,6 +449,30 @@ final class SettingsMenu implements Listener {
       if (slot == 45) {
         p.closeInventory();
         p.performCommand("practice menu");
+        return;
+      }
+      if (view.page == Page.PRESETS) {
+        if (slot == 49) {
+          p.closeInventory();
+          plugin.messages().send(p, "settings.preset-usage");
+          return;
+        }
+        String name = view.presetNames.get(slot);
+        if (name == null || !prefs.presets(id).contains(name)) return;
+        if (right && shift) {
+          prefs.deletePreset(id, name);
+          plugin.messages().send(p, "settings.preset-deleted", "%name%", name);
+        }
+        else if (shift) {
+          prefs.savePreset(id, name);
+          plugin.messages().send(p, "settings.preset-saved", "%name%", name);
+        }
+        else if (!right) {
+          prefs.loadPreset(id, name);
+          plugin.messages().send(p, "settings.preset-loaded", "%name%", name);
+        }
+        else return;
+        openPresets(p);
         return;
       }
       if (view.page == Page.ADVANCED && slot == 49) {
@@ -460,6 +522,8 @@ final class SettingsMenu implements Listener {
       open(p, view.page);
     } catch (IOException failure) {
       plugin.messages().send(p, "settings.save-error");
+    } catch (IllegalArgumentException failure) {
+      plugin.messages().send(p, "settings.preset-error", "%error%", failure.getMessage());
     }
   }
 

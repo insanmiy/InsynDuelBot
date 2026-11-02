@@ -119,6 +119,45 @@ class TacticalPathfinderTest {
     assertNull(TacticalPathfinder.findPath(grid.world, grid.at(0, 1, 0), grid.at(1, 1, 0), 0));
   }
 
+  @Test
+  void recoveryBacksOutOfDeadEndWithoutWalkingThroughWalls() {
+    Grid grid = new Grid();
+    grid.wall(1, 0);
+    for (int x = -3; x <= 1; x++) {
+      grid.wall(x, 1);
+      grid.wall(x, -1);
+    }
+    Location self = grid.at(0, 1, 0);
+    Location target = grid.at(5, 1, 0);
+    var arena = new dev.insanmiy.practiceplugin.config.Arena(self, target, 20);
+    Vector recovery = TacticalMovement.recoveryDirection(self, target, arena, 1);
+    assertNotNull(recovery);
+    assertTrue(recovery.getX() < -.9);
+    assertTrue(TacticalMovement.clearPath(self, recovery, 2));
+  }
+
+  @Test
+  void recoveryRejectsHazardsAndStaysInsideArena() {
+    Grid grid = new Grid();
+    Location self = grid.at(0, 1, 0);
+    Location target = grid.at(5, 1, 0);
+    var arena = new dev.insanmiy.practiceplugin.config.Arena(self, target, 20);
+    grid.set(0, 1, -1, Material.LAVA);
+    grid.set(0, 1, 1, Material.COBWEB);
+    Vector recovery = TacticalMovement.recoveryDirection(self, target, arena, -1);
+    assertNotNull(recovery);
+    assertTrue(TacticalMovement.clearPath(self, recovery, 2));
+    assertTrue(arena.contains(self.clone().add(recovery.clone().multiply(2))));
+    var tinyArena = new dev.insanmiy.practiceplugin.config.Arena(self, self, .5);
+    assertNull(TacticalMovement.recoveryDirection(self, target, tinyArena, 1));
+    for (int x = -1; x <= 1; x++) {
+      for (int z = -1; z <= 1; z++) {
+        if (x != 0 || z != 0) grid.wall(x, z);
+      }
+    }
+    assertNull(TacticalMovement.recoveryDirection(self, target, arena, 1));
+  }
+
   private static final class Grid {
     private final Map<String, Material> blocks = new HashMap<>();
     private final World world = proxy(World.class, (instance, method, arguments) -> switch (method.getName()) {

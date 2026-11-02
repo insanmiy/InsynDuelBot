@@ -534,6 +534,44 @@ public final class PracticePlugin extends JavaPlugin implements Listener {
           checkPerm(sender, "practice.settings");
           settingsMenu.open(player(sender));
         }
+        case "preset" -> {
+          checkPerm(sender, "practice.settings");
+          Player p = player(sender);
+          if (session != null)
+            throw new IllegalArgumentException(messages.get("session.stop-before-menu"));
+          if (args.length == 1) {
+            settingsMenu.openPresets(p);
+            break;
+          }
+          String action = args[1].toLowerCase(Locale.ROOT);
+          if (action.equals("list") && args.length == 2) {
+            List<String> names = settings.presets(p.getUniqueId());
+            messages.send(p, names.isEmpty() ? "settings.preset-empty" : "settings.preset-list",
+                "%names%", String.join(", ", names));
+            break;
+          }
+          if (args.length != 3 || !Set.of("save", "load", "delete").contains(action)) {
+            messages.send(p, "settings.preset-usage");
+            break;
+          }
+          String name = PlayerSettings.presetName(args[2]);
+          try {
+            switch (action) {
+              case "save" -> settings.savePreset(p.getUniqueId(), name);
+              case "load" -> settings.loadPreset(p.getUniqueId(), name);
+              case "delete" -> settings.deletePreset(p.getUniqueId(), name);
+            }
+            String message = switch (action) {
+              case "save" -> "settings.preset-saved";
+              case "load" -> "settings.preset-loaded";
+              default -> "settings.preset-deleted";
+            };
+            messages.send(p, message, "%name%", name);
+          } catch (java.io.IOException failure) {
+            getLogger().log(java.util.logging.Level.WARNING, "Could Not Save Bot Preset Settings", failure);
+            messages.send(p, "settings.save-error");
+          }
+        }
         case "menu" -> {
           checkPerm(sender, "practice.menu");
           Player p = player(sender);
@@ -828,6 +866,7 @@ public final class PracticePlugin extends JavaPlugin implements Listener {
             List<String> subs = new ArrayList<>();
             if (hasPerm(s, "practice.menu")) subs.add("menu");
             if (hasPerm(s, "practice.settings")) subs.add("settings");
+            if (hasPerm(s, "practice.settings")) subs.add("preset");
             if (hasPerm(s, "practice.start")) subs.add("start");
             if (hasPerm(s, "practice.stop")) subs.add("stop");
             if (hasPerm(s, "practice.pause")) {
@@ -854,6 +893,8 @@ public final class PracticePlugin extends JavaPlugin implements Listener {
           }
           case 2 ->
               switch (a[0]) {
+                case "preset" -> hasPerm(s, "practice.settings")
+                    ? List.of("save", "load", "delete", "list") : List.of();
                 case "start" -> kits.keySet();
                 case "kit" -> {
                   List<String> kitSubs = new ArrayList<>();
@@ -875,7 +916,10 @@ public final class PracticePlugin extends JavaPlugin implements Listener {
                 default -> List.of();
               };
           case 3 ->
-              a[0].equals("arena")
+              a[0].equals("preset") && s instanceof Player player && hasPerm(s, "practice.settings")
+                  && Set.of("save", "load", "delete").contains(a[1].toLowerCase(Locale.ROOT))
+                  ? settings.presets(player.getUniqueId())
+                  : a[0].equals("arena")
                   ? (a[1].equalsIgnoreCase("setradius")
                       ? List.of("16", "24", "32", "64", "128", "256")
                       : a[1].equalsIgnoreCase("list") ? List.of() : arenaNames())

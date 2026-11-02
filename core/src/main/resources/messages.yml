@@ -122,7 +122,6 @@ kit:
     inventory-saved: "%prefix%&aImported Your Inventory Into %name% And Saved Successfully!"
     armor-enchants-copied: "%prefix%&aCopied Compatible Enchantments To Equipped Armor."
     reserve-filled: "%prefix%&aFilled %count% Empty Reserve Slots. Existing Items Kept."
-    enchantment-applied: "%prefix%&aApplied %enchant% %level% To %item%."
     quick-enchant-applied: "%prefix%&aApplied %count% Enchantment Upgrades; Incompatible/Conflicting Choices Skipped."
     action-error: "%prefix%&cCould Not Complete The Kit Action. Check The Server Log Before Retrying."
     naming-error: "%prefix%&cAn Unexpected Error Occurred While Naming Kit."
@@ -132,6 +131,21 @@ settings:
     # Player Settings Messages
     reset-defaults: "%prefix%&aReset Bot Combat Settings To Difficulty Defaults."
     save-error: "%prefix%&cSettings Could Not Be Saved; Previous Value Retained."
+    preset-tab: "Bot Presets"
+    preset-tab-description: "Save And Restore Bot Abilities And Advanced Tuning"
+    preset-load-help: "Left Click: Load This Preset"
+    preset-update-help: "Shift Left Click: Replace With Current Bot Settings"
+    preset-delete-help: "Shift Right Click: Delete This Preset"
+    preset-save-title: "Save A Named Preset"
+    preset-save-help: "/practice preset save <Name>"
+    preset-scope: "Match And Display Settings Are Kept Separately"
+    preset-usage: "%prefix%&e/practice preset <save|load|delete> <Name>, Or /practice preset list. Saving An Existing Name Replaces It."
+    preset-saved: "%prefix%&aSaved Bot Preset '%name%'."
+    preset-loaded: "%prefix%&aLoaded Bot Preset '%name%'. Applies To Your Next Session."
+    preset-deleted: "%prefix%&eDeleted Bot Preset '%name%'."
+    preset-empty: "%prefix%&7No Saved Bot Presets. Use /practice preset save <Name>."
+    preset-list: "%prefix%&7Your Bot Presets: &f%names%"
+    preset-error: "%prefix%&c%error%"
 
 commands:
     # Command Usage And Status Messages
@@ -144,6 +158,7 @@ commands:
         - "&e/practice Pause &7/ &e/practice Resume &7- Pause Or Resume Match"
         - "&e/practice Rematch &7- Rematch Previous Opponent"
         - "&e/practice Settings &7- Open Practice Settings GUI"
+        - "&e/practice Preset &7- Save And Load Named Bot Settings"
         - "&e/practice Hud &7- Toggle BossBar HUD Display"
         - "&e/practice Damage &7- Toggle Combat Damage Diagnostics"
         - "&e/practice Stats &7- View Win/Loss Statistics"

@@ -185,6 +185,31 @@ public final class TacticalMovement {
     return best;
   }
 
+  public static Vector recoveryDirection(
+      Location self, Location target, dev.insanmiy.practiceplugin.config.Arena arena, int preferredSide) {
+    if (self.getWorld() == null || !self.getWorld().equals(target.getWorld())) return null;
+    Vector toward = target.toVector().subtract(self.toVector()).setY(0);
+    if (toward.lengthSquared() < .001) toward = self.getDirection().setY(0);
+    if (toward.lengthSquared() < .001) toward = new Vector(1, 0, 0);
+    toward.normalize();
+    Vector side = toward.clone().rotateAroundY(preferredSide < 0 ? -Math.PI / 2 : Math.PI / 2);
+    Vector best = null;
+    double bestScore = -Double.MAX_VALUE;
+    double[] detours = {Math.PI / 3, -Math.PI / 3, Math.PI / 2, -Math.PI / 2,
+        2 * Math.PI / 3, -2 * Math.PI / 3, Math.PI};
+    for (double angle : detours) {
+      Vector candidate = toward.clone().rotateAroundY(angle);
+      Location end = self.clone().add(candidate.clone().multiply(2));
+      if (!arena.contains(end) || !clearPath(self, candidate, 2)) continue;
+      double score = candidate.dot(side) + candidate.dot(toward) * .25;
+      if (score > bestScore) {
+        bestScore = score;
+        best = candidate;
+      }
+    }
+    return best;
+  }
+
   public static boolean hazardous(Material material) {
     return material == Material.COBWEB
         || material == Material.LAVA

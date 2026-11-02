@@ -10,7 +10,7 @@ commands:
   practice:
     description: PvP Bot Practice
     aliases: [p, prac]
-    usage: /practice <Menu|Settings|Start|Stop|Pause|Resume|Rematch|HUD|Damage|Stats|Kits|Difficulties|Kit [Editor|Info|Create|Import|Edit|Save|Copy|Rename|Delete]|Status|Arena|Reload>
+    usage: /practice <Menu|Settings|Preset [Save|Load|Delete|List]|Start|Stop|Pause|Resume|Rematch|HUD|Damage|Stats|Kits|Difficulties|Kit [Editor|Info|Create|Import|Edit|Save|Copy|Rename|Delete]|Status|Arena|Reload>
     permission: practice.use
 permissions:
   practice.*:
@@ -82,7 +82,7 @@ permissions:
     default: true
 
   practice.settings:
-    description: Allows Opening And Configuring Player Practice Settings (/practice Settings)
+    description: Allows Configuring Practice Settings And Managing Personal Bot Presets (/practice Settings, /practice Preset)
     default: true
 
   practice.hud:
