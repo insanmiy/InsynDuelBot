@@ -6,6 +6,10 @@ Practice Minecraft PvP Against A Custom Bot On Your Paper Server. Choose A Kit, 
 ![Java](https://img.shields.io/badge/Java-21-orange)
 ![Paper](https://img.shields.io/badge/Paper-1.20.5--1.21.11-blue)
 
+## Documentation
+
+See The [GitHub Wiki](https://github.com/insanmiy/InsynDuelBot/wiki) For Setup, Commands, Bot Settings, Presets, And Troubleshooting. Documentation Sources Are In [docs/](docs/README.md).
+
 ## Features
 
 * Combat Movement With Strafing, Sprint Resetting, Shield Use, And Critical Hits.
