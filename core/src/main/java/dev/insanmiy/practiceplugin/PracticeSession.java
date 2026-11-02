@@ -197,11 +197,6 @@ public final class PracticeSession {
     updatePrimaryBot();
   }
 
-  void replaceDeadBot() {
-    clearBots();
-    spawnAllBots();
-  }
-
   public int aliveBotCount() {
     return (int) aliveBots.stream()
         .filter(b -> b != null && b.player() != null && b.player().isOnline() && !b.player().isDead())

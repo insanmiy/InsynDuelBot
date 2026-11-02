@@ -265,27 +265,6 @@ public record Difficulty(
 			parsedIcon);
 	}
 
-	public Difficulty passive() {
-		return new Difficulty(
-			name,
-			decisionTicks,
-			perceptionTicks,
-			aimError,
-			attackCharge,
-			shieldChance,
-			counters,
-			sprintResetChance,
-			strafeStrength,
-			healThreshold,
-			shieldTicks,
-			false,
-			0.0,
-			0.0,
-			displayName,
-			description,
-			icon);
-	}
-
 	public Difficulty withOptions(dev.insanmiy.practiceplugin.model.BotOptions options) {
 		int dec = options.decisionTicks() > 0 ? options.decisionTicks() : decisionTicks;
 		int per = options.perceptionTicks() >= 0 ? options.perceptionTicks() : perceptionTicks;

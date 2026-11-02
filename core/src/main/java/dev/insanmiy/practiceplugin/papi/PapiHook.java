@@ -35,10 +35,6 @@ public final class PapiHook {
     }
   }
 
-  public static boolean isEnabled() {
-    return enabled;
-  }
-
   public static String parse(OfflinePlayer player, String text) {
     if (!enabled || text == null || text.isEmpty()) {
       return text;

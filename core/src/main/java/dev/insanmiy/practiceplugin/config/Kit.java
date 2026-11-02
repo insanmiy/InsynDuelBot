@@ -213,23 +213,11 @@ public final class Kit {
     return !type.isLegacy() && !type.isAir() && type.isItem() && allowed(type);
   }
 
-  public static boolean supported(Material type, World world) {
-    return supported(type);
-  }
-
   public static boolean tool(Material type) {
     return type == Material.SHEARS
         || type.name().endsWith("_PICKAXE")
         || type.name().endsWith("_SHOVEL")
         || type.name().endsWith("_HOE");
-  }
-
-  public static boolean armorItem(Material type) {
-    String n = type.name();
-    return n.endsWith("_BOOTS")
-        || n.endsWith("_LEGGINGS")
-        || n.endsWith("_CHESTPLATE")
-        || n.endsWith("_HELMET");
   }
 
   public static boolean allowed(Material type) {
@@ -253,10 +241,6 @@ public final class Kit {
     return type == Material.ARROW
         || type == Material.SPECTRAL_ARROW
         || type == Material.TIPPED_ARROW;
-  }
-
-  public static boolean supportedPotion(PotionType type) {
-    return type != null;
   }
 
   private static ItemStack parseItem(Object raw) {
@@ -348,10 +332,6 @@ public final class Kit {
     } else {
       c.set("offhand", new ItemStack(Material.AIR));
     }
-  }
-
-  public void equip(Player player, NamespacedKey key) {
-    equip(player, key, null, null);
   }
 
   public void equip(Player player, NamespacedKey gearKey, NamespacedKey slotKey, KitLayout layout) {

@@ -71,14 +71,6 @@ public final class Messages {
     this.config = loaded;
   }
 
-  public String prefix() {
-    return color(config.getString("prefix", "&9InsynPracticeBot &r"));
-  }
-
-  public Component prefixComponent() {
-    return toComponent(config.getString("prefix", "&9InsynPracticeBot &r"));
-  }
-
   public String get(String key, String... placeholders) {
     return get((CommandSender) null, key, placeholders);
   }
@@ -95,10 +87,6 @@ public final class Messages {
     return formatLine(sender, raw, placeholders);
   }
 
-  public List<String> getList(String key, String... placeholders) {
-    return getList((CommandSender) null, key, placeholders);
-  }
-
   public List<String> getList(CommandSender sender, String key, String... placeholders) {
     if (!config.isList(key)) {
       String single = get(sender, key, placeholders);
@@ -113,10 +101,6 @@ public final class Messages {
       }
     }
     return formatted;
-  }
-
-  public List<Component> getComponentList(String key, String... placeholders) {
-    return getComponentList((CommandSender) null, key, placeholders);
   }
 
   public List<Component> getComponentList(CommandSender sender, String key, String... placeholders) {
@@ -205,16 +189,8 @@ public final class Messages {
     return formatted;
   }
 
-  public String formatLine(String raw, String... placeholders) {
-    return formatLine((CommandSender) null, raw, placeholders);
-  }
-
   public String formatLine(CommandSender sender, String raw, String... placeholders) {
     return color(formatRaw(sender, raw, placeholders));
-  }
-
-  public Component formatComponent(String raw, String... placeholders) {
-    return formatComponent((CommandSender) null, raw, placeholders);
   }
 
   public Component formatComponent(CommandSender sender, String raw, String... placeholders) {
