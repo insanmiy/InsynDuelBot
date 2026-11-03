@@ -35,6 +35,7 @@ public final class PracticePlugin extends JavaPlugin implements Listener {
   private PracticeMenu menu;
   private KitEditor kitEditor;
   private TemporaryBlocks blocks;
+  private PracticeClouds clouds;
   private final Set<Projectile> projectiles = new HashSet<>();
   private Messages messages;
 
@@ -49,24 +50,11 @@ public final class PracticePlugin extends JavaPlugin implements Listener {
       p.remove();
     });
     session.projectiles.clear();
+    clouds.clear(owner);
     try {
       blocks.restoreOwner(owner);
     } catch (java.io.IOException e) {
       throw new IllegalStateException("Could Not Save Session Cleanup", e);
-    }
-    World world = session.arena.playerSpawn().getWorld();
-    if (world != null) {
-      Location center = session.arena.playerSpawn();
-      double r = Math.min(128.0, Math.max(16.0, session.arena.radius()));
-      for (Entity entity : world.getNearbyEntities(center, r, r, r)) {
-        if ((entity instanceof Item
-                || entity instanceof Projectile
-                || entity instanceof ExperienceOrb
-                || entity instanceof AreaEffectCloud)
-            && session.arena.contains(entity.getLocation())) {
-          entity.remove();
-        }
-      }
     }
   }
 
@@ -76,6 +64,7 @@ public final class PracticePlugin extends JavaPlugin implements Listener {
     }
     projectiles.forEach(Entity::remove);
     projectiles.clear();
+    if (clouds != null) clouds.clearAll();
     if (blocks != null){
       try {
         if (!blocks.restoreAll()){
@@ -92,6 +81,10 @@ public final class PracticePlugin extends JavaPlugin implements Listener {
   public PracticeSession sessionFor(Entity entity) {
     if (entity instanceof Projectile p)
       return p.getShooter() instanceof Entity shooter ? sessionFor(shooter) : null;
+    if (entity instanceof AreaEffectCloud cloud) {
+      UUID owner = clouds == null ? null : clouds.owner(cloud);
+      return owner == null ? null : sessions.get(owner);
+    }
     if (!(entity instanceof Player p)) return null;
     PracticeSession own = sessions.get(p.getUniqueId());
     if (own != null) return own;
@@ -148,19 +141,16 @@ public final class PracticePlugin extends JavaPlugin implements Listener {
   }
 
   private Map.Entry<String, Arena> availableArena() {
-    List<String> errors = new ArrayList<>();
-    for (String name : arenaNames()) {
-      if (sessions.values().stream().anyMatch(s -> s.arenaName.equals(name))) continue;
-      try {
-        Arena candidate = arena(name);
-        if (sessions.values().stream().anyMatch(s -> s.arena.overlaps(candidate))) continue;
-        return Map.entry(name, candidate);
-      } catch (IllegalArgumentException e) {
-        errors.add(name + ": " + e.getMessage());
-      }
-    }
+    ArenaPool.Selection selection = ArenaPool.select(arenaNames(), this::arena, occupiedArenas());
+    if (selection.arena() != null) return selection.arena();
     throw new IllegalArgumentException(
-        messages.get("arena.no-free-arena", "%errors%", String.join("; ", errors)));
+        messages.get("arena.no-free-arena", "%errors%", String.join("; ", selection.errors())));
+  }
+
+  private Map<String, Arena> occupiedArenas() {
+    Map<String, Arena> occupied = new LinkedHashMap<>();
+    for (PracticeSession session : sessions.values()) occupied.put(session.arenaName, session.arena);
+    return occupied;
   }
 
   public ProgressStore progress() {
@@ -216,6 +206,7 @@ public final class PracticePlugin extends JavaPlugin implements Listener {
     }
 
     gearKey = Objects.requireNonNull(NamespacedKey.fromString("practiceplugin:practice_gear"));
+    clouds = new PracticeClouds(gearKey);
     slotKey = Objects.requireNonNull(NamespacedKey.fromString("practiceplugin:kit_slot"));
     layouts = new KitLayoutStore(this);
     recovery = new RecoveryStore(this);
@@ -249,7 +240,8 @@ public final class PracticePlugin extends JavaPlugin implements Listener {
     clearUtilities();
     for (World world : Bukkit.getWorlds())
       for (Entity entity : world.getEntities())
-        if (entity instanceof Projectile && entity.getPersistentDataContainer().has(gearKey))
+        if ((entity instanceof Projectile || entity instanceof AreaEffectCloud)
+            && entity.getPersistentDataContainer().has(gearKey))
           entity.remove();
     settings = new PlayerSettings(this);
     settingsMenu = new SettingsMenu(this);
@@ -272,6 +264,7 @@ public final class PracticePlugin extends JavaPlugin implements Listener {
             this,
             () -> {
               projectiles.removeIf(p -> !p.isValid());
+              clouds.prune();
               for (PracticeSession session : List.copyOf(sessions.values())) {
                 session.projectiles.removeIf(p -> !p.isValid());
                 try {
@@ -740,12 +733,16 @@ public final class PracticePlugin extends JavaPlugin implements Listener {
           switch (arenaSub) {
             case "list" -> {
               messages.send(sender, "arena.header");
+              Map<String, Arena> occupied = occupiedArenas();
               for (String name : arenaNames()) {
                 String status;
                 try {
                   Arena a = arena(name);
-                  boolean busy = sessions.values().stream().anyMatch(s -> s.arenaName.equals(name));
-                  status = busy ? messages.get("arena.status-in-use") : messages.get("arena.status-ready", "%radius%", String.valueOf((int) a.radius()));
+                  status = switch (ArenaPool.status(name, a, occupied)) {
+                    case OCCUPIED -> messages.get("arena.status-in-use");
+                    case OVERLAPPING -> messages.get("arena.status-overlapping");
+                    case AVAILABLE -> messages.get("arena.status-ready", "%radius%", String.valueOf((int) a.radius()));
+                  };
                 } catch (IllegalArgumentException e) {
                   status = messages.get("arena.status-incomplete", "%error%", e.getMessage());
                 }
@@ -1227,6 +1224,26 @@ public final class PracticePlugin extends JavaPlugin implements Listener {
   }
 
   @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
+  public void lingering(LingeringPotionSplashEvent event) {
+    if (!practiceProjectile(event.getEntity())) return;
+    PracticeSession session = sessionFor(event.getEntity());
+    if (session == null || !session.fighting()) {
+      event.setCancelled(true);
+      return;
+    }
+    clouds.register(session.owner.getUniqueId(), event.getAreaEffectCloud());
+  }
+
+  @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
+  public void cloudApply(AreaEffectCloudApplyEvent event) {
+    PracticeSession session = sessionFor(event.getEntity());
+    clouds.filterTargets(event, session != null && session.fighting(), entity -> {
+      PracticeSession target = sessionFor(entity);
+      return target == null ? null : target.owner.getUniqueId();
+    });
+  }
+
+  @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
   public void experienceBottle(ExpBottleEvent e) {
     PracticeSession session = sessionFor(e.getEntity());
     if (!practiceProjectile(e.getEntity())) return;
@@ -1406,6 +1423,8 @@ public final class PracticePlugin extends JavaPlugin implements Listener {
     for (Entity entity : e.getEntities())
       if (entity instanceof Projectile p && practiceProjectile(p) && !projectiles.contains(p))
         p.remove();
+      else if (entity instanceof AreaEffectCloud cloud && clouds.marked(cloud) && clouds.owner(cloud) == null)
+        cloud.remove();
   }
 
   @EventHandler

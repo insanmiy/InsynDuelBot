@@ -105,6 +105,7 @@ arena:
     entry: "&7- &f%arena%&7: %status%"
     status-ready: "&a[Ready (%radius%m)]"
     status-in-use: "&c[In Use]"
+    status-overlapping: "&e[Unavailable: Too Close To An Active Arena]"
     status-incomplete: "&e[Incomplete: %error%]"
     info: "%prefix%&7Player: &f%player% &7| Bot: &f%bot% &7| Radius: &f%radius%"
     ready: "%prefix%&aArena Ready (%radius%m Radius)."
