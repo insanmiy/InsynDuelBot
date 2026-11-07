@@ -49,6 +49,14 @@ final class YamlFiles {
   }
 
   static void write(Path file, YamlConfiguration yaml, Path backup) throws IOException {
+    write(file, yaml.saveToString(), backup);
+  }
+
+  static void write(Path file, String snapshot) throws IOException {
+    write(file, snapshot, null);
+  }
+
+  private static void write(Path file, String snapshot, Path backup) throws IOException {
     Path target = file.toAbsolutePath().normalize();
     if (backup != null && target.equals(backup.toAbsolutePath().normalize()))
       throw new IllegalArgumentException("Backup Must Differ From The Target.");
@@ -56,7 +64,7 @@ final class YamlFiles {
 
     Path temporary = Files.createTempFile(target.getParent(), target.getFileName() + "-", ".tmp");
     try {
-      Files.writeString(temporary, yaml.saveToString(), StandardCharsets.UTF_8);
+      Files.writeString(temporary, snapshot, StandardCharsets.UTF_8);
       if (backup != null && Files.exists(target))
         Files.copy(target, backup, StandardCopyOption.REPLACE_EXISTING);
       try {

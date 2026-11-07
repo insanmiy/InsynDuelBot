@@ -1,34 +1,25 @@
 package dev.insanmiy.practiceplugin;
 
 import dev.insanmiy.practiceplugin.bot.BotAdapters;
-import dev.insanmiy.practiceplugin.bot.BotPlatform;
 import dev.insanmiy.practiceplugin.config.*;
 import dev.insanmiy.practiceplugin.config.Difficulty;
 import dev.insanmiy.practiceplugin.model.PracticeMode;
 import java.io.File;
 import java.util.*;
-import net.kyori.adventure.text.Component;
 import org.bukkit.*;
 import org.bukkit.command.*;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.*;
-import org.bukkit.event.*;
-import org.bukkit.event.block.*;
-import org.bukkit.event.entity.*;
-import org.bukkit.event.inventory.*;
-import org.bukkit.event.player.*;
 import org.bukkit.plugin.java.JavaPlugin;
-import org.jetbrains.annotations.NotNull;
 
-public final class PracticePlugin extends JavaPlugin implements Listener {
-  private final Set<UUID> bots = new HashSet<>();
+public final class PracticePlugin extends JavaPlugin {
   private final Map<String, Kit> kits = new LinkedHashMap<>();
   private final Map<String, Difficulty> difficulties = new LinkedHashMap<>();
   private NamespacedKey gearKey, slotKey;
   private KitLayoutStore layouts;
   private RecoveryStore recovery;
-  private final Map<UUID, PracticeSession> sessions = new LinkedHashMap<>();
+  private final SessionRegistry<PracticeSession> sessions = new SessionRegistry<>();
   private SettingsMenu settingsMenu;
   private PlayerSettings settings;
   private ProgressStore progress;
@@ -38,42 +29,34 @@ public final class PracticePlugin extends JavaPlugin implements Listener {
   private PracticeClouds clouds;
   private final Set<Projectile> projectiles = new HashSet<>();
   private Messages messages;
+  private SnapshotWriter saves;
 
   public Messages messages() {
     return messages;
   }
 
   void clearUtilities(PracticeSession session) {
+    CleanupSteps cleanup = cleanup();
     UUID owner = session.owner.getUniqueId();
-    session.projectiles.forEach(p -> {
-      projectiles.remove(p);
-      p.remove();
-    });
-    session.projectiles.clear();
-    clouds.clear(owner);
-    try {
-      blocks.restoreOwner(owner);
-    } catch (java.io.IOException e) {
-      throw new IllegalStateException("Could Not Save Session Cleanup", e);
+    for (Projectile projectile : List.copyOf(session.projectiles)) {
+      cleanup.run("Could Not Remove A Session Projectile", projectile::remove);
+      projectiles.remove(projectile);
     }
+    session.projectiles.clear();
+    cleanup.run("Could Not Remove Session Clouds", () -> clouds.clear(owner));
+    cleanup.run("Could Not Restore Session Blocks", () -> blocks.restoreOwner(owner));
   }
 
   void clearUtilities() {
-    for (PracticeSession s : sessions.values()) {
-      s.projectiles.clear();
-    }
-    projectiles.forEach(Entity::remove);
+    CleanupSteps cleanup = cleanup();
+    for (PracticeSession session : sessions.values()) session.projectiles.clear();
+    for (Projectile projectile : List.copyOf(projectiles))
+      cleanup.run("Could Not Remove A Practice Projectile", projectile::remove);
     projectiles.clear();
-    if (clouds != null) clouds.clearAll();
-    if (blocks != null){
-      try {
-        if (!blocks.restoreAll()){
-          getLogger().warning("Block Recovery Retained For An Unloaded World.");
-        }
-      } catch (java.io.IOException e) {
-        throw new IllegalStateException("Could Not Save Block Cleanup Journal", e);
-      }
-    }
+    if (clouds != null) cleanup.run("Could Not Remove Practice Clouds", clouds::clearAll);
+    if (blocks != null) cleanup.run("Could Not Restore Practice Blocks", () -> {
+      if (!blocks.restoreAll()) getLogger().warning("Block Recovery Retained For An Unloaded World.");
+    });
   }
 
   private final Map<UUID, Selection> lastSelections = new HashMap<>();
@@ -86,10 +69,7 @@ public final class PracticePlugin extends JavaPlugin implements Listener {
       return owner == null ? null : sessions.get(owner);
     }
     if (!(entity instanceof Player p)) return null;
-    PracticeSession own = sessions.get(p.getUniqueId());
-    if (own != null) return own;
-    if (!bots.contains(p.getUniqueId())) return null;
-    return sessions.values().stream().filter(s -> s.participant(p)).findFirst().orElse(null);
+    return sessions.participant(p.getUniqueId());
   }
 
   PlayerSettings settings() {
@@ -117,7 +97,7 @@ public final class PracticePlugin extends JavaPlugin implements Listener {
     return normalized;
   }
 
-  private String arenaPath(String name) {
+  String arenaPath(String name) {
     return name.equals("default") ? "arena" : "arenas." + validArenaName(name);
   }
 
@@ -147,7 +127,7 @@ public final class PracticePlugin extends JavaPlugin implements Listener {
         messages.get("arena.no-free-arena", "%errors%", String.join("; ", selection.errors())));
   }
 
-  private Map<String, Arena> occupiedArenas() {
+  Map<String, Arena> occupiedArenas() {
     Map<String, Arena> occupied = new LinkedHashMap<>();
     for (PracticeSession session : sessions.values()) occupied.put(session.arenaName, session.arena);
     return occupied;
@@ -222,6 +202,8 @@ public final class PracticePlugin extends JavaPlugin implements Listener {
     }
     messages = new Messages(this);
     dev.insanmiy.practiceplugin.papi.PapiHook.init(this);
+    saves = new SnapshotWriter((file, failure) -> getLogger().log(
+        java.util.logging.Level.SEVERE, "Could Not Save " + file.getFileName() + "; Will Retry", failure));
     progress = new ProgressStore(this);
     blocks = new TemporaryBlocks(this);
     getServer()
@@ -252,11 +234,12 @@ public final class PracticePlugin extends JavaPlugin implements Listener {
     getServer().getPluginManager().registerEvents(kitEditor, this);
     getServer().getPluginManager().registerEvents(menu, this);
     getServer().getPluginManager().registerEvents(settingsMenu, this);
-    getServer().getPluginManager().registerEvents(this, this);
+    getServer().getPluginManager().registerEvents(new PracticeProtection(this), this);
     getServer().getScheduler().runTaskTimer(this, new MenuAnimation(this), 6, 6);
     PluginCommand practiceCmd = Objects.requireNonNull(getCommand("practice"));
-    practiceCmd.setExecutor(this);
-    practiceCmd.setTabCompleter(this);
+    PracticeCommands commands = new PracticeCommands(this);
+    practiceCmd.setExecutor(commands);
+    practiceCmd.setTabCompleter(commands);
     Bukkit.getOnlinePlayers().forEach(recovery::restore);
     getServer()
         .getScheduler()
@@ -277,24 +260,25 @@ public final class PracticePlugin extends JavaPlugin implements Listener {
             },
             1,
             1);
+    if (Boolean.getBoolean("practice.compatibility-test"))
+      getServer().getScheduler().runTask(this, () -> new CompatibilityChecks(this).start());
   }
 
   @Override
   public void onDisable() {
-    dev.insanmiy.practiceplugin.papi.PapiHook.shutdown();
-    for (PracticeSession session : List.copyOf(sessions.values())) stop(session, messages != null ? messages.get("general.internal-error") : "Plugin Stopped.");
-    clearUtilities();
-    if (settingsMenu != null) settingsMenu.closeAll();
-    if (menu != null) menu.closeAll();
-    if (kitEditor != null) kitEditor.closeAll();
-    if (progress != null) progress.save();
-    if (blocks != null) {
-      try {
-        blocks.flush();
-      } catch (java.io.IOException e) {
-        getLogger().log(java.util.logging.Level.SEVERE, "Could Not Save Block Journal", e);
-      }
-    }
+    CleanupSteps cleanup = cleanup();
+    cleanup.run("Could Not Cancel Practice Tasks", () -> getServer().getScheduler().cancelTasks(this));
+    cleanup.run("Could Not Unregister Practice Listeners", () -> org.bukkit.event.HandlerList.unregisterAll(this));
+    cleanup.run("Could Not Stop Placeholders", dev.insanmiy.practiceplugin.papi.PapiHook::shutdown);
+    for (PracticeSession session : List.copyOf(sessions.values()))
+      cleanup.run("Could Not Stop A Practice Session", () -> stop(session, null));
+    cleanup.run("Could Not Clear Practice Utilities", this::clearUtilities);
+    if (settingsMenu != null) cleanup.run("Could Not Close Settings Menus", settingsMenu::closeAll);
+    if (menu != null) cleanup.run("Could Not Close Practice Menus", menu::closeAll);
+    if (kitEditor != null) cleanup.run("Could Not Close Kit Editors", kitEditor::closeAll);
+    if (progress != null) cleanup.run("Could Not Queue Practice Stats", progress::save);
+    if (blocks != null) cleanup.run("Could Not Save Block Journal", blocks::flush);
+    if (saves != null) cleanup.run("Could Not Flush Practice Saves", saves::close);
   }
 
   NamespacedKey gearKey() {
@@ -313,14 +297,14 @@ public final class PracticePlugin extends JavaPlugin implements Listener {
     return recovery;
   }
 
-  void unregisterBot(UUID id) { bots.remove(id); }
+  void unregisterBot(UUID id) { sessions.unregisterBot(id); }
 
-  void registerBot(UUID id) {
-    bots.add(id);
+  void registerBot(UUID id, PracticeSession session) {
+    sessions.registerBot(id, session);
   }
 
   boolean isBot(Player p) {
-    return bots.contains(p.getUniqueId());
+    return sessions.isBot(p.getUniqueId());
   }
 
   boolean participant(Player p) {
@@ -335,16 +319,13 @@ public final class PracticePlugin extends JavaPlugin implements Listener {
       getLogger()
           .log(java.util.logging.Level.SEVERE, "Cleanup Failed; Recovery Record Retained", e);
     } finally {
-      if (message != null && !message.isEmpty()) {
-        old.owner.sendMessage(Messages.color(message));
-      }
       sessions.remove(old.owner.getUniqueId(), old);
-      for (UUID id : old.botIds()) bots.remove(id);
-      if (old.botId != null) bots.remove(old.botId);
+      if (message != null && !message.isEmpty())
+        cleanup().run("Could Not Send Session Result", () -> old.owner.sendMessage(Messages.color(message)));
     }
   }
 
-  private void loadSettings() {
+  void loadSettings() {
     getConfig()
         .setDefaults(new YamlConfiguration());
     kits.clear();
@@ -419,7 +400,7 @@ public final class PracticePlugin extends JavaPlugin implements Listener {
     }
   }
 
-  private void start(Player p, Selection choice) throws java.io.IOException {
+  void start(Player p, Selection choice) throws java.io.IOException {
     if (sessions.containsKey(p.getUniqueId()))
       throw new IllegalArgumentException(messages.get("session.already-in-match"));
     if (recovery.pending(p)) {
@@ -433,7 +414,7 @@ public final class PracticePlugin extends JavaPlugin implements Listener {
     Difficulty difficulty = difficulties.get(choice.difficulty());
     if (kit == null || difficulty == null)
       throw new IllegalArgumentException(messages.get("session.unknown-selection"));
-    if (!hasPerm(p, "practice.start"))
+    if (!PracticeCommands.hasPerm(p, "practice.start"))
       throw new IllegalArgumentException(messages.get("general.no-permission", "%permission%", "practice.start"));
     Map.Entry<String, Arena> assigned = availableArena();
     PracticeSession session =
@@ -478,23 +459,23 @@ public final class PracticePlugin extends JavaPlugin implements Listener {
         "%summary%", kit.summary());
   }
 
-  private PracticeSession ownSession(CommandSender sender) {
+  PracticeSession ownSession(CommandSender sender) {
     if (!(sender instanceof Player p)) throw new IllegalArgumentException(messages.get("general.players-only"));
     PracticeSession session = sessions.get(p.getUniqueId());
     if (session == null) throw new IllegalArgumentException(messages.get("session.no-active-match"));
     return session;
   }
 
-  private Player player(CommandSender sender) {
+  Player player(CommandSender sender) {
     if (!(sender instanceof Player p)) throw new IllegalArgumentException(messages.get("general.players-only"));
     return p;
   }
 
-  private Arena arena() {
+  Arena arena() {
     return arena("default");
   }
 
-  private Arena arena(String name) {
+  Arena arena(String name) {
     String path = arenaPath(name);
     Location player = getConfig().getLocation(path + ".player"),
         bot = getConfig().getLocation(path + ".bot");
@@ -510,1169 +491,19 @@ public final class PracticePlugin extends JavaPlugin implements Listener {
     return arena;
   }
 
-  @Override
-  public boolean onCommand(
-      @NotNull CommandSender sender,
-      @NotNull Command command,
-      @NotNull String label,
-      @NotNull String[] args) {
-    try {
-      PracticeSession session = sender instanceof Player p ? sessions.get(p.getUniqueId()) : null;
-      String sub =
-          args.length == 0
-              ? (sender instanceof Player ? "menu" : "help")
-              : args[0].toLowerCase(Locale.ROOT);
-      switch (sub) {
-        case "settings" -> {
-          checkPerm(sender, "practice.settings");
-          settingsMenu.open(player(sender));
-        }
-        case "preset" -> {
-          checkPerm(sender, "practice.settings");
-          Player p = player(sender);
-          if (session != null)
-            throw new IllegalArgumentException(messages.get("session.stop-before-menu"));
-          if (args.length == 1) {
-            settingsMenu.openPresets(p);
-            break;
-          }
-          String action = args[1].toLowerCase(Locale.ROOT);
-          if (action.equals("list") && args.length == 2) {
-            List<String> names = settings.presets(p.getUniqueId());
-            messages.send(p, names.isEmpty() ? "settings.preset-empty" : "settings.preset-list",
-                "%names%", String.join(", ", names));
-            break;
-          }
-          if (args.length != 3 || !Set.of("save", "load", "delete").contains(action)) {
-            messages.send(p, "settings.preset-usage");
-            break;
-          }
-          String name = PlayerSettings.presetName(args[2]);
-          try {
-            switch (action) {
-              case "save" -> settings.savePreset(p.getUniqueId(), name);
-              case "load" -> settings.loadPreset(p.getUniqueId(), name);
-              case "delete" -> settings.deletePreset(p.getUniqueId(), name);
-            }
-            String message = switch (action) {
-              case "save" -> "settings.preset-saved";
-              case "load" -> "settings.preset-loaded";
-              default -> "settings.preset-deleted";
-            };
-            messages.send(p, message, "%name%", name);
-          } catch (java.io.IOException failure) {
-            getLogger().log(java.util.logging.Level.WARNING, "Could Not Save Bot Preset Settings", failure);
-            messages.send(p, "settings.save-error");
-          }
-        }
-        case "menu" -> {
-          checkPerm(sender, "practice.menu");
-          Player p = player(sender);
-          if (session != null)
-            throw new IllegalArgumentException(messages.get("session.stop-before-menu"));
-          menu.open(p, defaults(p));
-        }
-        case "start" -> {
-          checkPerm(sender, "practice.start");
-          Player p = player(sender);
-          Selection d = defaults(p);
-          start(
-              p,
-              new Selection(
-                  args.length > 1 ? args[1].toLowerCase(Locale.ROOT) : d.kit(),
-                  args.length > 2 ? args[2] : d.difficulty(),
-                  args.length > 3 ? PracticeMode.parse(args[3]) : d.mode(),
-                  args.length > 4 ? Integer.parseInt(args[4]) : d.bestOf()));
-        }
-        case "rematch" -> {
-          checkPerm(sender, "practice.rematch");
-          Player p = player(sender);
-          Selection previous = lastSelections.get(p.getUniqueId());
-          if (previous == null)
-            throw new IllegalArgumentException(messages.get("combat.rematch-none"));
-          start(p, previous);
-        }
-        case "pause" -> {
-          checkPerm(sender, "practice.pause");
-          if (ownSession(sender).endingRound)
-            throw new IllegalArgumentException(messages.get("combat.wait-for-round-result"));
-          ownSession(sender).setPaused(true);
-        }
-        case "resume" -> {
-          checkPerm(sender, "practice.pause");
-          ownSession(sender).setPaused(false);
-        }
-        case "hud" -> {
-          checkPerm(sender, "practice.hud");
-          ownSession(sender).toggleHud();
-        }
-        case "damage" -> {
-          checkPerm(sender, "practice.damage");
-          PracticeSession active = ownSession(sender);
-          active.damageDiagnostics.toggle(active.owner);
-        }
-        case "stats" -> {
-          checkPerm(sender, "practice.stats");
-          Player p = player(sender);
-          for (PracticeMode mode : PracticeMode.values())
-            sender.sendMessage(Messages.color(progress.summary(p.getUniqueId(), mode)));
-          if (session != null && session.owner.equals(p))
-            messages.send(
-                sender,
-                "commands.stats-current",
-                "%summary%",
-                session.total.summary(session.totalFightTicks));
-        }
-        case "kits" -> {
-          checkPerm(sender, "practice.kits.list");
-          kits.values()
-              .forEach(
-                  k ->
-                      messages.send(
-                          sender, "commands.kit-entry", "%kit%", k.name(), "%summary%", k.summary()));
-        }
-        case "difficulties" -> {
-          checkPerm(sender, "practice.difficulties.list");
-          difficulties
-              .values()
-              .forEach(
-                  d ->
-                      messages.send(
-                          sender,
-                          "commands.difficulty-entry",
-                          "%difficulty%",
-                          d.prettyDisplayName(),
-                          "%decision%",
-                          String.valueOf(d.decisionTicks()),
-                          "%perception%",
-                          String.valueOf(d.perceptionTicks()),
-                          "%aim%",
-                          String.valueOf(d.aimError())));
-        }
-        case "kit" -> {
-          if (args.length > 1 && args[1].equalsIgnoreCase("info")) {
-            checkPerm(sender, "practice.kits.list");
-            if (args.length < 3) throw new IllegalArgumentException(messages.get("commands.kit-info-usage"));
-            Kit kit = kits.get(args[2].toLowerCase(Locale.ROOT));
-            if (kit == null) throw new IllegalArgumentException(messages.get("kit.unknown-kit"));
-            messages.send(sender, "commands.kit-entry", "%kit%", kit.name(), "%summary%", kit.summary());
-          } else kitEditor.command(player(sender), args);
-        }
-        case "stop" -> {
-          PracticeSession target = session;
-          if (args.length > 1) {
-            checkPerm(sender, "practice.stop.other");
-            Player other = Bukkit.getPlayerExact(args[1]);
-            target = other == null ? null : sessions.get(other.getUniqueId());
-          } else {
-            checkPerm(sender, "practice.stop");
-          }
-          if (target == null)
-            throw new IllegalArgumentException(messages.get(args.length > 1 ? "session.no-active-match-other" : "session.no-active-match"));
-          stop(target, messages.get("session.match-stopped"));
-          if (args.length > 1 && sender != target.owner) {
-            messages.send(sender, "session.match-stopped-player", "%player%", target.owner.getName());
-          }
-        }
-        case "status" -> {
-          checkPerm(sender, "practice.status");
-          messages.send(
-              sender,
-              "commands.status-sessions",
-              "%sessions%",
-              String.valueOf(sessions.size()),
-              "%arenas%",
-              String.valueOf(arenaNames()));
-          messages.send(
-              sender,
-              "commands.status-kits",
-              "%kits%",
-              String.valueOf(kits.keySet()),
-              "%default_kit%",
-              String.valueOf(getConfig().getString("session.default-kit")),
-              "%default_difficulty%",
-              String.valueOf(getConfig().getString("session.default-difficulty")));
-          if (session == null) {
-            messages.send(sender, "commands.status-no-match");
-          } else {
-            messages.send(
-                sender,
-                "commands.status-match",
-                "%player%",
-                session.owner.getName(),
-                "%round%",
-                String.valueOf(session.match.round()),
-                "%wins%",
-                String.valueOf(session.match.playerWins()),
-                "%losses%",
-                String.valueOf(session.match.botWins()));
-          }
-          try {
-            Arena a = arena();
-            messages.send(sender, "arena.ready", "%radius%", String.valueOf((int) a.radius()));
-          } catch (IllegalArgumentException e) {
-            sender.sendMessage(Messages.color(e.getMessage()));
-          }
-        }
-        case "reload" -> {
-          checkPerm(sender, "practice.reload");
-          if (!sessions.isEmpty())
-            throw new IllegalArgumentException(messages.get("general.reload-busy-warning"));
-          reloadConfig();
-          loadSettings();
-          messages.reload();
-          dev.insanmiy.practiceplugin.papi.PapiHook.shutdown();
-          dev.insanmiy.practiceplugin.papi.PapiHook.init(this);
-          messages.send(sender, "general.plugin-reloaded");
-        }
-        case "arena" -> {
-          checkPerm(sender, "practice.arena");
-          if (args.length < 2)
-            throw new IllegalArgumentException(messages.get("commands.arena-usage"));
-          String arenaSub = args[1].toLowerCase(Locale.ROOT);
-          switch (arenaSub) {
-            case "list" -> {
-              messages.send(sender, "arena.header");
-              Map<String, Arena> occupied = occupiedArenas();
-              for (String name : arenaNames()) {
-                String status;
-                try {
-                  Arena a = arena(name);
-                  status = switch (ArenaPool.status(name, a, occupied)) {
-                    case OCCUPIED -> messages.get("arena.status-in-use");
-                    case OVERLAPPING -> messages.get("arena.status-overlapping");
-                    case AVAILABLE -> messages.get("arena.status-ready", "%radius%", String.valueOf((int) a.radius()));
-                  };
-                } catch (IllegalArgumentException e) {
-                  status = messages.get("arena.status-incomplete", "%error%", e.getMessage());
-                }
-                messages.send(sender, "arena.entry", "%arena%", name, "%status%", status);
-              }
-            }
-            case "delete" -> {
-              if (args.length < 3) throw new IllegalArgumentException(messages.get("commands.arena-delete-usage"));
-              String toDelete = validArenaName(args[2]);
-              if (sessions.values().stream().anyMatch(s -> s.arenaName.equals(toDelete)))
-                throw new IllegalArgumentException(messages.get("arena.cannot-delete-occupied"));
-              if (toDelete.equals("default")) {
-                getConfig().set("arena.player", null);
-                getConfig().set("arena.bot", null);
-              } else {
-                getConfig().set("arenas." + toDelete, null);
-              }
-              saveConfig();
-              messages.send(sender, "arena.deleted", "%arena%", toDelete);
-            }
-            case "tp" -> {
-              if (!(sender instanceof Player p)) throw new IllegalArgumentException(messages.get("general.players-only"));
-              String target = args.length > 2 ? validArenaName(args[2]) : "default";
-              Arena a = arena(target);
-              p.teleport(a.playerSpawn());
-              messages.send(sender, "arena.teleported", "%arena%", target);
-            }
-            case "setradius" -> {
-              if (args.length < 3)
-                throw new IllegalArgumentException(messages.get("commands.arena-setradius-usage"));
-              double r;
-              try {
-                r = Double.parseDouble(args[2]);
-              } catch (NumberFormatException e) {
-                throw new IllegalArgumentException(messages.get("general.number-format-error", "%error%", e.getMessage()));
-              }
-              if (!Double.isFinite(r) || r < 1)
-                throw new IllegalArgumentException(messages.get("arena.radius-invalid"));
-              double maxR = getConfig().getDouble("arena.max-radius", 0.0);
-              if (maxR <= 0.0) {
-                maxR = 500.0;
-              }
-              if (r > maxR) {
-                throw new IllegalArgumentException(
-                    messages.get("arena.radius-exceeds-max", "%radius%", String.valueOf(r), "%max%", String.valueOf(maxR)));
-              }
-              String targetArena = args.length > 3 ? validArenaName(args[3]) : "default";
-              getConfig().set(arenaPath(targetArena) + ".radius", r);
-              saveConfig();
-              messages.send(sender, "arena.saved-radius", "%radius%", String.valueOf(r), "%arena%", targetArena);
-            }
-            case "info" -> {
-              String arenaName = args.length > 2 ? validArenaName(args[2]) : "default";
-              Arena a = arena(arenaName);
-              Location pSp = a.playerSpawn();
-              Location bSp = a.botSpawn();
-              String pStr = String.format("%.1f, %.1f, %.1f", pSp.getX(), pSp.getY(), pSp.getZ());
-              String bStr = String.format("%.1f, %.1f, %.1f", bSp.getX(), bSp.getY(), bSp.getZ());
-              messages.send(sender, "arena.info", "%player%", pStr, "%bot%", bStr, "%radius%", String.valueOf(a.radius()));
-            }
-            case "setplayer", "setbot" -> {
-              String arenaName = args.length > 2 ? validArenaName(args[2]) : "default";
-              if (sessions.values().stream().anyMatch(active -> active.arenaName.equals(arenaName)))
-                throw new IllegalArgumentException(messages.get("arena.occupied"));
-              if (!(sender instanceof Player p)) throw new IllegalArgumentException(messages.get("general.players-only"));
-              String point = arenaSub.equals("setplayer") ? "Player" : "Bot";
-              if (!Arena.safe(p.getLocation()))
-                throw new IllegalArgumentException(messages.get("arena.unsafe-spawn"));
-              getConfig().set(arenaPath(arenaName) + "." + (point.toLowerCase(Locale.ROOT)), p.getLocation());
-              saveConfig();
-              messages.send(sender, "arena.saved-spawn", "%point%", point, "%arena%", arenaName);
-            }
-            default -> throw new IllegalArgumentException(messages.get("commands.arena-usage"));
-          }
-        }
-        default -> messages.send(sender, "commands.usage");
-      }
-    } catch (NumberFormatException e) {
-      messages.send(sender, "general.number-format-error", "%error%", e.getMessage());
-    } catch (IllegalArgumentException e) {
-      sender.sendMessage(Messages.color(e.getMessage().contains("\u00A7") || e.getMessage().contains("&") ? e.getMessage() : "&c" + e.getMessage()));
-    } catch (Exception | LinkageError e) {
-      getLogger().log(java.util.logging.Level.SEVERE, "Practice Command Failed", e);
-      messages.send(sender, "general.internal-error");
-    }
-    return true;
-  }
 
-  private void checkPerm(CommandSender sender, String perm) {
-    if (!sender.hasPermission(perm)
-        && !sender.hasPermission("practice.admin")
-        && !sender.hasPermission("practice.*")) {
-      throw new IllegalArgumentException(messages.get("general.no-permission", "%permission%", perm));
-    }
-  }
+  SessionRegistry<PracticeSession> sessions() { return sessions; }
+  SettingsMenu settingsMenu() { return settingsMenu; }
+  PracticeMenu menu() { return menu; }
+  KitEditor kitEditor() { return kitEditor; }
+  TemporaryBlocks blocks() { return blocks; }
+  PracticeClouds clouds() { return clouds; }
+  Set<Projectile> projectiles() { return projectiles; }
+  Map<UUID, Selection> lastSelections() { return lastSelections; }
+  SnapshotWriter saves() { return saves; }
 
-  private static boolean hasPerm(CommandSender sender, String perm) {
-    return sender.hasPermission(perm)
-        || sender.hasPermission("practice.admin")
-        || sender.hasPermission("practice.*");
-  }
-
-  private void admin(CommandSender sender) {
-    if (!sender.hasPermission("practice.admin") && !sender.hasPermission("practice.*"))
-      throw new IllegalArgumentException(messages.get("general.no-permission", "%permission%", "practice.admin"));
-  }
-
-  @Override
-  public List<String> onTabComplete(
-      @NotNull CommandSender s,
-      @NotNull Command c,
-      @NotNull String label,
-      @NotNull String[] a) {
-    a[0] = a[0].toLowerCase(Locale.ROOT);
-    Collection<String> choices =
-        switch (a.length) {
-          case 1 -> {
-            List<String> subs = new ArrayList<>();
-            if (hasPerm(s, "practice.menu")) subs.add("menu");
-            if (hasPerm(s, "practice.settings")) subs.add("settings");
-            if (hasPerm(s, "practice.settings")) subs.add("preset");
-            if (hasPerm(s, "practice.start")) subs.add("start");
-            if (hasPerm(s, "practice.stop")) subs.add("stop");
-            if (hasPerm(s, "practice.pause")) {
-              subs.add("pause");
-              subs.add("resume");
-            }
-            if (hasPerm(s, "practice.rematch")) subs.add("rematch");
-            if (hasPerm(s, "practice.hud")) subs.add("hud");
-            if (hasPerm(s, "practice.damage")) subs.add("damage");
-            if (hasPerm(s, "practice.stats")) subs.add("stats");
-            if (hasPerm(s, "practice.kits.list")) subs.add("kits");
-            if (hasPerm(s, "practice.difficulties.list")) subs.add("difficulties");
-            if (hasPerm(s, "practice.kits")
-                || hasPerm(s, "practice.kits.*")
-                || hasPerm(s, "practice.kits.editor")
-                || hasPerm(s, "practice.kits.create")
-                || hasPerm(s, "practice.kits.delete")
-                || hasPerm(s, "practice.kits.import")
-                || hasPerm(s, "practice.kits.list")) subs.add("kit");
-            if (hasPerm(s, "practice.status")) subs.add("status");
-            if (hasPerm(s, "practice.arena")) subs.add("arena");
-            if (hasPerm(s, "practice.reload")) subs.add("reload");
-            yield subs;
-          }
-          case 2 ->
-              switch (a[0]) {
-                case "preset" -> hasPerm(s, "practice.settings")
-                    ? List.of("save", "load", "delete", "list") : List.of();
-                case "start" -> kits.keySet();
-                case "kit" -> {
-                  List<String> kitSubs = new ArrayList<>();
-                  if (hasPerm(s, "practice.kits.list")) kitSubs.add("info");
-                  if (hasPerm(s, "practice.kits.editor")) kitSubs.addAll(List.of("editor", "edit"));
-                  if (hasPerm(s, "practice.kits.create")) kitSubs.addAll(List.of("create", "copy", "save", "rename"));
-                  if (hasPerm(s, "practice.kits.import")) kitSubs.add("import");
-                  if (hasPerm(s, "practice.kits.delete")) kitSubs.add("delete");
-                  yield kitSubs;
-                }
-                case "arena" ->
-                    hasPerm(s, "practice.arena")
-                        ? List.of("list", "setplayer", "setbot", "setradius", "info", "delete", "tp")
-                        : List.of();
-                case "stop" ->
-                    hasPerm(s, "practice.stop.other")
-                        ? Bukkit.getOnlinePlayers().stream().map(Player::getName).toList()
-                        : List.of();
-                default -> List.of();
-              };
-          case 3 ->
-              a[0].equals("preset") && s instanceof Player player && hasPerm(s, "practice.settings")
-                  && Set.of("save", "load", "delete").contains(a[1].toLowerCase(Locale.ROOT))
-                  ? settings.presets(player.getUniqueId())
-                  : a[0].equals("arena")
-                  ? (a[1].equalsIgnoreCase("setradius")
-                      ? List.of("16", "24", "32", "64", "128", "256")
-                      : a[1].equalsIgnoreCase("list") ? List.of() : arenaNames())
-                  : a[0].equals("start")
-                      ? difficulties.keySet()
-                      : a[0].equals("kit")
-                              && Set.of("info", "edit", "copy", "rename", "delete").contains(a[1])
-                          ? kits.keySet()
-                          : List.of();
-          case 4 ->
-              a[0].equals("arena") && a[1].equalsIgnoreCase("setradius")
-                  ? arenaNames()
-                  : a[0].equals("start")
-                      ? Arrays.stream(PracticeMode.values()).map(PracticeMode::id).toList()
-                      : a[0].equals("kit") && a[1].equals("create") ? kits.keySet() : List.of();
-          case 5 -> a[0].equals("start") ? List.of("1", "3", "5", "7", "9", "11") : List.of();
-          default -> List.of();
-        };
-    return choices.stream()
-        .filter(v -> v.startsWith(a[a.length - 1].toLowerCase(Locale.ROOT)))
-        .toList();
-  }
-
-  @EventHandler
-  public void join(PlayerJoinEvent e) {
-    if (isBot(e.getPlayer())) {
-      e.joinMessage(null);
-      return;
-    }
-    if (recovery != null && sessionFor(e.getPlayer()) == null)
-      getServer()
-          .getScheduler()
-          .runTask(
-              this,
-              () -> {
-                if (sessionFor(e.getPlayer()) == null) recovery.restore(e.getPlayer());
-              });
-  }
-
-  @EventHandler
-  public void quit(PlayerQuitEvent e) {
-    PracticeSession session = sessionFor(e.getPlayer());
-    if (isBot(e.getPlayer())) {
-      e.quitMessage(null);
-      return;
-    }
-    UUID uid = e.getPlayer().getUniqueId();
-    lastSelections.remove(uid);
-    if (menu != null) menu.cleanup(uid);
-    if (participant(e.getPlayer())) stop(session, messages != null ? messages.get("session.player-disconnected") : "Player Disconnected.");
-  }
-
-  @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
-  public void healingPressure(EntityDamageByEntityEvent event) {
-    if (!(event.getEntity() instanceof Player p)) return;
-    PracticeSession session = sessionFor(p);
-    if (session == null || !session.fighting()) return;
-    BotPlatform b = session.findBot(p);
-    if (b != null) b.onIncomingDamage(event.getFinalDamage());
-  }
-
-  @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
-  public void resurrect(EntityResurrectEvent e) {
-    if (!(e.getEntity() instanceof Player p)) return;
-    PracticeSession session = sessionFor(p);
-    if (session == null || !session.fighting()) return;
-    BotPlatform b = session.findBot(p);
-    if (b != null) b.onTotemPopped();
-  }
-
-  @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
-  public void damage(EntityDamageEvent e) {
-    Entity source = e instanceof EntityDamageByEntityEvent by ? by.getDamager() : null;
-    if (source instanceof Projectile projectile
-        && projectile.getShooter() instanceof Entity shooter) source = shooter;
-    PracticeSession victimSession = sessionFor(e.getEntity());
-    PracticeSession attackSession = sessionFor(source);
-    if (e instanceof EntityDamageByEntityEvent && attackSession != victimSession) {
-      e.setCancelled(true);
-      return;
-    }
-    if (victimSession == null) return;
-    if (source instanceof Player attacker && e.getEntity() instanceof Player target) {
-      if (victimSession.isBotPlayer(attacker) && victimSession.isBotPlayer(target)) {
-        e.setCancelled(true);
-        return;
-      }
-    }
-    if (!victimSession.fighting() || victimSession.endingRound) {
-      e.setCancelled(true);
-      return;
-    }
-    if (!(e.getEntity() instanceof Player damaged)) return;
-    double amount = Math.clamp(e.getFinalDamage(), 0.0, damaged.getHealth());
-    if (e.getFinalDamage() >= damaged.getHealth()) victimSession.finishingBlow = e;
-    if (damaged.equals(victimSession.owner)) {
-      victimSession.round.hurt(amount);
-      victimSession.total.hurt(amount);
-    } else {
-      victimSession.round.hit(amount, victimSession.tick);
-      victimSession.total.hit(amount, victimSession.tick);
-      if (amount > 0 && source != null && source.equals(victimSession.owner)) {
-        BotPlatform b = victimSession.findBot(damaged);
-        if (b != null) b.onOpponentHit();
-        else if (victimSession.bot != null) victimSession.bot.onOpponentHit();
-      }
-    }
-
-  }
-
-  @EventHandler(priority = EventPriority.MONITOR)
-  public void reportDamage(EntityDamageByEntityEvent e) {
-    PracticeSession session = sessionFor(e.getEntity());
-    if (session != null
-        && e.getDamager() instanceof Player attacker
-        && session.participant(attacker)
-        && e.getEntity() instanceof Player target
-        && participant(target)) session.damageDiagnostics.report(e, session);
-  }
-
-  @EventHandler(priority = EventPriority.HIGHEST)
-  public void regain(EntityRegainHealthEvent e) {
-    PracticeSession session = sessionFor(e.getEntity());
-    if (e.getEntity() instanceof Player p
-        && participant(p)
-        && (!session.fighting()
-            || !session.kit.regeneration()
-                && e.getRegainReason() == EntityRegainHealthEvent.RegainReason.SATIATED))
-      e.setCancelled(true);
-  }
-
-  @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
-  public void swing(PlayerAnimationEvent e) {
-    PracticeSession session = sessionFor(e.getPlayer());
-    if (session != null
-        && session.fighting()
-        && e.getPlayer().equals(session.owner)
-        && e.getAnimationType() == PlayerAnimationType.ARM_SWING) {
-      session.round.swing();
-      session.total.swing();
-    }
-  }
-
-  @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
-  public void consume(PlayerItemConsumeEvent e) {
-    PracticeSession session = sessionFor(e.getPlayer());
-    if (session != null
-        && session.fighting()
-        && e.getPlayer().equals(session.owner)
-        && e.getItem().getType() == Material.GOLDEN_APPLE) {
-      session.round.apple();
-      session.total.apple();
-    }
-  }
-
-  @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
-  public void move(PlayerMoveEvent e) {
-    PracticeSession session = sessionFor(e.getPlayer());
-    if (session != null
-        && !session.fighting()
-        && !session.internalTeleport
-        && !(e instanceof PlayerTeleportEvent)) {
-      if (e.getFrom().getX() != e.getTo().getX() || e.getFrom().getY() != e.getTo().getY() || e.getFrom().getZ() != e.getTo().getZ()) {
-        Location to = e.getFrom().clone();
-        to.setYaw(e.getTo().getYaw());
-        to.setPitch(e.getTo().getPitch());
-        e.setTo(to);
-      }
-    }
-  }
-
-  @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
-  public void teleport(PlayerTeleportEvent e) {
-    PracticeSession session = sessionFor(e.getPlayer());
-    if (participant(e.getPlayer()) && !session.internalTeleport && !session.closing) {
-      if (isBot(e.getPlayer())) {
-        BotPlatform b = session.findBot(e.getPlayer());
-        if (b != null && b.isTeleporting()) return;
-      }
-      if (e.getCause() == PlayerTeleportEvent.TeleportCause.ENDER_PEARL
-          || e.getCause() == PlayerTeleportEvent.TeleportCause.CHORUS_FRUIT) {
-        if (session.fighting() && e.getPlayer().equals(session.owner)) {
-          for (BotPlatform b : session.aliveBots()) {
-            if (b != null) b.onOpponentPearled(session.owner);
-          }
-        }
-        return;
-      }
-      getServer()
-          .getScheduler()
-          .runTask(
-              this,
-              () -> {
-                if (sessions.get(session.owner.getUniqueId()) == session
-                    && e.getPlayer().equals(session.owner))
-                  session.followTeleport(session.owner.getLocation());
-              });
-    }
-  }
-
-  @EventHandler(priority = EventPriority.HIGHEST)
-  public void respawn(PlayerRespawnEvent e) {
-    PracticeSession session = sessionFor(e.getPlayer());
-    if (session != null) {
-      e.setRespawnLocation(session.arena.playerSpawn());
-    } else {
-      getServer()
-          .getScheduler()
-          .runTask(
-              this,
-              () -> {
-                if (sessionFor(e.getPlayer()) == null && recovery.pending(e.getPlayer()))
-                  recovery.restore(e.getPlayer());
-              });
-    }
-  }
-
-  @EventHandler
-  public void gameMode(PlayerGameModeChangeEvent e) {
-    PracticeSession session = sessionFor(e.getPlayer());
-    if (session != null && !isBot(e.getPlayer())
-        && !session.internalGameMode && !session.closing) e.setCancelled(true);
-  }
-
-  @EventHandler
-  public void drop(PlayerDropItemEvent e) {
-    if (participant(e.getPlayer())) e.setCancelled(true);
-  }
-
-  @EventHandler
-  public void pickup(EntityPickupItemEvent e) {
-    if (e.getEntity() instanceof Player p && participant(p)) e.setCancelled(true);
-  }
-
-  private boolean practiceProjectile(Projectile p) {
-    return p.getPersistentDataContainer().has(gearKey);
-  }
-
-  @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
-  public void launch(ProjectileLaunchEvent e) {
-    if (!(e.getEntity().getShooter() instanceof Player shooter) || !participant(shooter)) return;
-    PracticeSession session = sessionFor(shooter);
-    session.projectiles.removeIf(p -> !p.isValid());
-    if (!session.fighting() || session.projectiles.size() >= 128) {
-      e.setCancelled(true);
-      return;
-    }
-    e.getEntity()
-        .getPersistentDataContainer()
-        .set(gearKey, org.bukkit.persistence.PersistentDataType.BYTE, (byte) 1);
-    e.getEntity().setPersistent(false);
-    if (e.getEntity() instanceof AbstractArrow arrow)
-      arrow.setPickupStatus(AbstractArrow.PickupStatus.DISALLOWED);
-    projectiles.add(e.getEntity());
-    session.projectiles.add(e.getEntity());
-    session.round.utility();
-    session.total.utility();
-  }
-
-  @SuppressWarnings("UnstableApiUsage")
-  @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
-  public void projectileHit(ProjectileHitEvent e) {
-    if (!practiceProjectile(e.getEntity())) return;
-    PracticeSession session = sessionFor(e.getEntity());
-
-    if (session != null
-        && session.fighting()
-        && sessionFor(e.getHitEntity()) == session
-        && (e.getEntity() instanceof EnderPearl && e.getHitEntity() instanceof WindCharge
-            || e.getEntity() instanceof WindCharge && e.getHitEntity() instanceof EnderPearl)) {
-      e.setCancelled(true);
-      return;
-    }
-    if (session == null
-        || !session.fighting()
-        || e.getEntity() instanceof AbstractArrow && e.getHitBlock() != null
-        || e.getHitEntity() instanceof Player p && !session.participant(p)) {
-      e.setCancelled(true);
-      e.getEntity().remove();
-    }
-  }
-
-  @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
-  public void combustion(EntityCombustByEntityEvent e) {
-    Entity source = e.getCombuster();
-    if (source instanceof Projectile projectile
-        && projectile.getShooter() instanceof Entity shooter) source = shooter;
-    PracticeSession attacker = sessionFor(source), victim = sessionFor(e.getEntity());
-    if ((attacker != null || victim != null) && (attacker != victim || !attacker.fighting()))
-      e.setCancelled(true);
-  }
-
-  @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
-  public void splash(PotionSplashEvent e) {
-    PracticeSession session = sessionFor(e.getEntity());
-    boolean ours = practiceProjectile(e.getEntity());
-    if (ours && (session == null || !session.fighting())) {
-      e.setCancelled(true);
-      return;
-    }
-    for (LivingEntity entity : e.getAffectedEntities()) {
-      boolean fighter = entity instanceof Player p && participant(p);
-      if (ours ? sessionFor(entity) != session : fighter) e.setIntensity(entity, 0);
-    }
-  }
-
-  @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
-  public void lingering(LingeringPotionSplashEvent event) {
-    if (!practiceProjectile(event.getEntity())) return;
-    PracticeSession session = sessionFor(event.getEntity());
-    if (session == null || !session.fighting()) {
-      event.setCancelled(true);
-      return;
-    }
-    clouds.register(session.owner.getUniqueId(), event.getAreaEffectCloud());
-  }
-
-  @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
-  public void cloudApply(AreaEffectCloudApplyEvent event) {
-    PracticeSession session = sessionFor(event.getEntity());
-    clouds.filterTargets(event, session != null && session.fighting(), entity -> {
-      PracticeSession target = sessionFor(entity);
-      return target == null ? null : target.owner.getUniqueId();
-    });
-  }
-
-  @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
-  public void experienceBottle(ExpBottleEvent e) {
-    PracticeSession session = sessionFor(e.getEntity());
-    if (!practiceProjectile(e.getEntity())) return;
-    int xp = e.getExperience();
-    e.setExperience(0);
-    if (session != null
-        && session.fighting()
-        && e.getEntity().getShooter() instanceof Player p
-        && participant(p)) {
-      long before = MendingExperience.equippedDamage(p);
-      MendingExperience.award(p, xp);
-      BotPlatform b = session.findBot(p);
-      if (b != null)
-        b.onRepairImpact(MendingExperience.equippedDamage(p) < before);
-    }
-  }
-
-  private static final Set<Material> DRINKABLES =
-      Set.of(
-          Material.POTION,
-          Material.HONEY_BOTTLE,
-          Material.MUSHROOM_STEW,
-          Material.RABBIT_STEW,
-          Material.BEETROOT_SOUP,
-          Material.SUSPICIOUS_STEW);
-
-  @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
-  public void potionBottle(PlayerItemConsumeEvent e) {
-    PracticeSession session = sessionFor(e.getPlayer());
-    if (session != null && DRINKABLES.contains(e.getItem().getType())) {
-      getServer()
-          .getScheduler()
-          .runTask(
-              this,
-              () -> {
-                if (sessions.get(session.owner.getUniqueId()) != session
-                    || !participant(e.getPlayer())) return;
-                var inventory = e.getPlayer().getInventory();
-                for (int slot = 0; slot < 36; slot++) {
-                  var remainder = inventory.getItem(slot);
-                  if (remainder != null
-                      && !remainder.hasItemMeta()
-                      && (remainder.getType() == Material.BOWL
-                          || remainder.getType() == Material.GLASS_BOTTLE))
-                    inventory.setItem(slot, null);
-                }
-              });
-    }
-  }
-
-  @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
-  public void pourWater(PlayerBucketEmptyEvent e) {
-    PracticeSession session = sessionFor(e.getPlayer());
-    if (protectedFrom(session, e.getBlock().getLocation())) {
-      e.setCancelled(true);
-      return;
-    }
-    if (!participant(e.getPlayer())) return;
-    if (!session.fighting()
-        || (e.getBucket() != Material.WATER_BUCKET && e.getBucket() != Material.LAVA_BUCKET)) {
-      e.setCancelled(true);
-      return;
-    }
-    tagBucketResult(e);
-    try {
-      Material fluid = e.getBucket() == Material.LAVA_BUCKET ? Material.LAVA : Material.WATER;
-      if (!blocks.recordFluid(e.getBlock(), null, session.owner.getUniqueId(), fluid)){
-        e.setCancelled(true);
-        messages.send(e.getPlayer(), "session.water-journal-failed");
-      }
-    } catch (java.io.IOException failure) {
-      e.setCancelled(true);
-      getLogger().severe("Water Journal Failed: " + failure.getMessage());
-    }
-  }
-
-  @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
-  public void fillWater(PlayerBucketFillEvent e) {
-    PracticeSession session = sessionFor(e.getPlayer());
-    if (protectedFrom(session, e.getBlock().getLocation())
-        || blocks.owns(e.getBlock())
-            && (session == null
-                || !session.owner.getUniqueId().equals(blocks.owner(e.getBlock())))){
-      e.setCancelled(true);
-      return;
-    }
-    if (!participant(e.getPlayer())){
-      return;
-    }
-    if (!session.fighting()
-        || e.getItemStack() == null
-        || (e.getItemStack().getType() != Material.WATER_BUCKET
-            && e.getItemStack().getType() != Material.LAVA_BUCKET)){
-      e.setCancelled(true);
-    }
-    else {
-      tagBucketResult(e);
-    }
-  }
-
-  private void tagBucketResult(PlayerBucketEvent e) {
-    if (e.getItemStack() == null) return;
-    var item = e.getItemStack().clone();
-    dev.insanmiy.practiceplugin.ItemMetadata.edit(item,
-        meta ->
-            meta.getPersistentDataContainer()
-                .set(gearKey, org.bukkit.persistence.PersistentDataType.BYTE, (byte) 1));
-    e.setItemStack(item);
-  }
-
-  @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
-  public void waterFlow(BlockFromToEvent e) {
-    if (!blocks.owns(e.getBlock())){
-      return;
-    }
-    PracticeSession source = sessions.get(blocks.owner(e.getBlock()));
-    if (protectedFrom(source, e.getToBlock().getLocation())){
-      e.setCancelled(true);
-      return;
-    }
-    try {
-      if (!blocks.recordFluid(e.getToBlock(), e.getBlock(), blocks.owner(e.getBlock()))){
-        e.setCancelled(true);
-      }
-    } catch (java.io.IOException failure) {
-      e.setCancelled(true);
-      getLogger().severe("Water Flow Journal Failed: " + failure.getMessage());
-    }
-  }
-
-  @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
-  public void waterFreeze(BlockFormEvent e) {
-    if (blocks.owns(e.getBlock())){
-      e.setCancelled(true);
-    }
-  }
-
-  @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
-  public void practiceIgnition(BlockIgniteEvent e) {
-    var source = e.getIgnitingBlock();
-
-    if (source != null && (blocks.owns(source) || blocks.fire(source))){
-      e.setCancelled(true);
-      return;
-    }
-    PracticeSession session = e.getPlayer() == null ? null : sessionFor(e.getPlayer());
-    if (protectedFrom(session, e.getBlock().getLocation())){
-      e.setCancelled(true);
-      return;
-    }
-    if (session == null){
-      return;
-    }
-    if (!session.fighting()){
-      e.setCancelled(true);
-      return;
-    }
-    try {
-      if (!blocks.recordFire(e.getBlock(), session.owner.getUniqueId())){
-        e.setCancelled(true);
-      }
-    } catch (java.io.IOException failure) {
-      e.setCancelled(true);
-      getLogger().severe("Fire Journal Failed: " + failure.getMessage());
-    }
-  }
-
-  @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
-  public void practiceFireSpread(BlockSpreadEvent e) {
-    if (blocks.fire(e.getSource())){
-      e.setCancelled(true);
-    }
-  }
-
-  @EventHandler
-  public void loadedEntities(org.bukkit.event.world.EntitiesLoadEvent e) {
-    for (Entity entity : e.getEntities())
-      if (entity instanceof Projectile p && practiceProjectile(p) && !projectiles.contains(p))
-        p.remove();
-      else if (entity instanceof AreaEffectCloud cloud && clouds.marked(cloud) && clouds.owner(cloud) == null)
-        cloud.remove();
-  }
-
-  @EventHandler
-  public void extendPiston(BlockPistonExtendEvent e) {
-    if (e.getBlocks().stream().anyMatch(blocks::owns)){
-      e.setCancelled(true);
-    }
-  }
-
-  @EventHandler
-  public void retractPiston(BlockPistonRetractEvent e) {
-    if (e.getBlocks().stream().anyMatch(blocks::owns)){
-      e.setCancelled(true);
-    }
-  }
-
-  @EventHandler
-  public void burnWeb(BlockBurnEvent e) {
-    if (blocks.owns(e.getBlock())
-        || (e.getIgnitingBlock() != null && blocks.fire(e.getIgnitingBlock()))
-        || protectedFrom(null, e.getBlock().getLocation())){
-      e.setCancelled(true);
-    }
-  }
-
-  @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
-  public void breakBlock(BlockBreakEvent e) {
-    PracticeSession session = sessionFor(e.getPlayer());
-    if (protectedFrom(session, e.getBlock().getLocation())
-        || blocks.owns(e.getBlock())
-            && (session == null || !session.owner.getUniqueId().equals(blocks.owner(e.getBlock())))){
-      e.setCancelled(true);
-      return;
-    }
-    if (dev.insanmiy.practiceplugin.model.BlockAccess.shouldCancel(
-        participant(e.getPlayer()), session != null && session.fighting())){
-      e.setCancelled(true);
-      return;
-    }
-    if (participant(e.getPlayer())) {
-
-      e.setDropItems(false);
-      e.setExpToDrop(0);
-    }
-  }
-
-  @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
-  public void placeBlock(BlockPlaceEvent e) {
-    PracticeSession session = sessionFor(e.getPlayer());
-    if (protectedFrom(session, e.getBlock().getLocation())){
-      e.setCancelled(true);
-      return;
-    }
-    if (dev.insanmiy.practiceplugin.model.BlockAccess.shouldCancel(
-        participant(e.getPlayer()), session != null && session.fighting())){
-      e.setCancelled(true);
-      return;
-    }
-    if (participant(e.getPlayer()) && session.fighting()){
-      try {
-        if (blocks.record(e.getBlock(), e.getBlockReplacedState(), session.owner.getUniqueId())){
-          return;
-        }
-      } catch (java.io.IOException failure) {
-        getLogger().severe("Block Placement Cancelled: Journal Could Not Be Saved.");
-      }
-      e.setCancelled(true);
-      messages.send(e.getPlayer(), "session.block-journal-failed");
-    }
-  }
-
-  private boolean inArena(Location l) {
-    return sessions.values().stream().anyMatch(session -> session.arena.contains(l));
-  }
-
-  private boolean protectedFrom(PracticeSession actor, Location location) {
-    return sessions.values().stream().anyMatch(s -> s != actor && s.arena.contains(location));
-  }
-
-  @EventHandler
-  public void explode(EntityExplodeEvent e) {
-    e.blockList().removeIf(b -> inArena(b.getLocation()) || blocks.owns(b));
-  }
-
-  @EventHandler
-  public void explodeBlock(BlockExplodeEvent e) {
-    e.blockList().removeIf(b -> inArena(b.getLocation()) || blocks.owns(b));
-  }
-
-  @SuppressWarnings("UnstableApiUsage")
-  @EventHandler(priority = EventPriority.HIGH)
-  public void interact(PlayerInteractEvent e) {
-    Player player = e.getPlayer();
-    PracticeSession session = sessionFor(player);
-    if (session == null || !participant(player)) return;
-
-    if (Kit.isVersionAtLeast1_21()
-        && (e.getAction() == Action.RIGHT_CLICK_AIR || e.getAction() == Action.RIGHT_CLICK_BLOCK)
-        && e.getItem() != null
-        && e.getItem().getType() == Material.WIND_CHARGE) {
-      if (session.fighting()) {
-        if (!player.hasCooldown(Material.WIND_CHARGE)) {
-          try {
-            WindCharge charge = BotAdapters.getAdapter().launchWindCharge(player);
-            if (charge != null) {
-              player.setCooldown(Material.WIND_CHARGE, 10);
-              try {
-                player.getWorld().playSound(player.getLocation(), Sound.ENTITY_WIND_CHARGE_THROW, 0.5f, 1.0f);
-              } catch (Exception | LinkageError ignored) {}
-              if (e.getHand() == org.bukkit.inventory.EquipmentSlot.OFF_HAND) player.swingOffHand(); else player.swingMainHand();
-              charge
-                  .getPersistentDataContainer()
-                  .set(gearKey, org.bukkit.persistence.PersistentDataType.BYTE, (byte) 1);
-              charge.setPersistent(false);
-              projectiles.add(charge);
-              session.projectiles.add(charge);
-              session.round.utility();
-              session.total.utility();
-              if (player.getGameMode() != GameMode.CREATIVE) { e.getItem().subtract(1); player.updateInventory(); }
-            }
-          } catch (Exception ex) {
-            getLogger().fine("Wind charge launch error: " + ex.getMessage());
-          }
-        }
-      }
-      e.setUseItemInHand(Event.Result.DENY);
-      e.setUseInteractedBlock(Event.Result.DENY);
-      e.setCancelled(true);
-      return;
-    }
-
-    if (e.getClickedBlock() != null && protectedFrom(session, e.getClickedBlock().getLocation())) {
-      e.setUseInteractedBlock(Event.Result.DENY);
-      e.setUseItemInHand(Event.Result.DENY);
-      return;
-    }
-    if (!session.fighting()) {
-      e.setUseInteractedBlock(Event.Result.DENY);
-      e.setUseItemInHand(Event.Result.DENY);
-    }
-  }
-
-  @EventHandler
-  public void interactEntity(PlayerInteractEntityEvent e) {
-    if (participant(e.getPlayer())) e.setCancelled(true);
-  }
-
-  @EventHandler
-  public void inventory(InventoryClickEvent e) {
-    PracticeSession session = sessionFor(e.getWhoClicked());
-    if (e.getWhoClicked() instanceof Player p
-        && participant(p)
-        && (session != null && session.closing
-            || e.getView().getTopInventory().getType() != InventoryType.CRAFTING
-            || e.getRawSlot() < 5
-            || e.getAction() == InventoryAction.DROP_ALL_SLOT
-            || e.getAction() == InventoryAction.DROP_ONE_SLOT
-            || e.getAction() == InventoryAction.DROP_ALL_CURSOR
-            || e.getAction() == InventoryAction.DROP_ONE_CURSOR)) e.setCancelled(true);
-  }
-
-  @EventHandler
-  public void drag(InventoryDragEvent e) {
-    if (e.getWhoClicked() instanceof Player p && participant(p)) {
-      PracticeSession session = sessionFor(p);
-      if (session != null
-          && (session.closing
-              || e.getView().getTopInventory().getType() != InventoryType.CRAFTING
-              || e.getRawSlots().stream().anyMatch(slot -> slot < 5))) {
-        e.setCancelled(true);
-      }
-    }
-  }
-
-  @EventHandler
-  public void open(InventoryOpenEvent e) {
-    if (e.getPlayer() instanceof Player p && participant(p)) e.setCancelled(true);
-  }
-
-  @EventHandler
-  public void target(EntityTargetLivingEntityEvent e) {
-    if (e.getTarget() instanceof Player p && participant(p)) e.setCancelled(true);
-  }
-
-  @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
-  public void death(PlayerDeathEvent e) {
-    PracticeSession session = sessionFor(e.getEntity());
-    if (participant(e.getEntity())) {
-      e.getDrops().clear();
-      e.setDroppedExp(0);
-      e.deathMessage(null);
-      if (session != null && session.fighting() && !session.endingRound) {
-        session.captureLayout();
-        boolean isOwner = e.getEntity().equals(session.owner);
-
-        boolean revived = ServerFeatures.revive(e);
-        e.setKeepInventory(true);
-        e.setKeepLevel(true);
-
-        if (isOwner) {
-          session.endingRound = true;
-          messages.send(session.owner, "combat.lethal-hit", "%target%", "You");
-          getServer()
-              .getScheduler()
-              .runTask(
-                  this,
-                  () -> {
-                    if (sessions.get(session.owner.getUniqueId()) != session) return;
-                    if (!revived) {
-                      session.owner.spigot().respawn();
-                    }
-                    session.endingRound = false;
-                    session.win(false);
-                  });
-        } else {
-          BotPlatform deadBot = session.findBot((Player) e.getEntity());
-          session.eliminateBot(deadBot);
-          boolean allDead = session.aliveBotCount() <= 0;
-          if (allDead) {
-            session.endingRound = true;
-            messages.send(session.owner, "combat.lethal-hit", "%target%", "Bot");
-            getServer()
-                .getScheduler()
-                .runTask(
-                    this,
-                    () -> {
-                      if (sessions.get(session.owner.getUniqueId()) != session) return;
-                      session.endingRound = false;
-                      session.win(true);
-                    });
-          } else {
-            messages.send(session.owner, "combat.bot-eliminated",
-                "%remaining%", String.valueOf(session.aliveBotCount()));
-            getServer()
-                .getScheduler()
-                .runTask(
-                    this,
-                    () -> {
-                      if (sessions.get(session.owner.getUniqueId()) != session) return;
-                      session.removeEliminatedBot(deadBot);
-                    });
-          }
-        }
-        return;
-      }
-      getServer()
-          .getScheduler()
-          .runTask(this, () -> stop(session, "Unexpected Player Death; Practice Aborted."));
-    }
+  CleanupSteps cleanup() {
+    return new CleanupSteps((description, failure) -> getLogger().log(
+        java.util.logging.Level.SEVERE, description + "; Recovery Records Retained Where Needed", failure));
   }
 }

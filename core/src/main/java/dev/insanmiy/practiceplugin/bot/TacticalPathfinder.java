@@ -118,7 +118,9 @@ public final class TacticalPathfinder {
         continue;
       }
 
-      if (current.hScore < bestNode.hScore) {
+      if (Math.abs(current.y - dy) < Math.abs(bestNode.y - dy)
+          || (Math.abs(current.y - dy) == Math.abs(bestNode.y - dy)
+              && current.hScore < bestNode.hScore)) {
         bestNode = current;
       }
 
@@ -146,7 +148,7 @@ public final class TacticalPathfinder {
     }
 
     // If goal not strictly reached, return best partial path if it made progress towards the target
-    if (bestNode != startNode && (bestNode.hScore < initialH - 0.75 || bestNode.y != startNode.y)) {
+    if (bestNode != startNode && (bestNode.hScore < initialH - 0.75 || Math.abs(bestNode.y - dy) < Math.abs(startNode.y - dy))) {
       return buildPath(world, bestNode, false);
     }
 
@@ -202,10 +204,10 @@ public final class TacticalPathfinder {
       tryAddNode(current, nx, cy + 1, nz, ActionType.JUMP_UP, cost, targetX, targetY, targetZ, openSet, gScores);
     }
 
-    // Safe Drops Stay Within Three Blocks On Dry Ground
+    // Search For A Landing Within Twelve Blocks
     if (isPassable(TacticalMovement.getBlock(world, nx, cy, nz))
         && isPassable(TacticalMovement.getBlock(world, nx, cy + 1, nz))) {
-      for (int drop = 1; drop <= 3; drop++) {
+      for (int drop = 1; drop <= 12; drop++) {
         int dropY = cy - drop;
         Block dropBlock = TacticalMovement.getBlock(world, nx, dropY, nz);
         if (!isPassable(dropBlock)) break;

@@ -114,6 +114,8 @@ class PlayerSettingsTest {
     assertThrows(IOException.class, () -> settings.savePreset(owner, "defaults"));
     assertThrows(IOException.class, () -> settings.deletePreset(owner, "defaults"));
     assertEquals(List.of("defaults"), settings.presets(owner));
+    assertThrows(IOException.class, () -> settings.resetBotSettings(owner));
+    assertEquals(3, settings.botSetting(owner, "bot-aim"));
 
     Files.delete(file.resolve("block-replacement"));
     Files.delete(file);
@@ -123,5 +125,25 @@ class PlayerSettingsTest {
 
   private PlayerSettings settings() {
     return new PlayerSettings(folder.resolve("settings.yml").toFile(), new YamlConfiguration());
+  }
+
+  @Test
+  void backgroundSnapshotsKeepTheLatestSettingsAndPresets() throws IOException {
+    Path file = folder.resolve("background.yml");
+    UUID owner = UUID.randomUUID();
+    try (SnapshotWriter writer = new SnapshotWriter((path, failure) -> {})) {
+      PlayerSettings settings = new PlayerSettings(file.toFile(), new YamlConfiguration(), writer);
+      settings.set(owner, "bot-aim", 2);
+      settings.savePreset(owner, "sword");
+      settings.set(owner, "bot-aim", 5);
+      settings.resetBotSettings(owner);
+      assertEquals(-1, settings.botSetting(owner, "bot-aim"));
+      settings.loadPreset(owner, "sword");
+      settings.set(owner, "countdown", 9);
+    }
+    PlayerSettings reloaded = new PlayerSettings(file.toFile(), new YamlConfiguration());
+    assertEquals(2, reloaded.botSetting(owner, "bot-aim"));
+    assertEquals(9, reloaded.number(owner, "countdown"));
+    assertEquals(List.of("sword"), reloaded.presets(owner));
   }
 }

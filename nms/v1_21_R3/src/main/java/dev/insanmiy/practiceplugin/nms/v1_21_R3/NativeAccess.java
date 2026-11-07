@@ -58,7 +58,20 @@ final class NativeAccess {
     try {
       java.lang.reflect.Method m = player.getClass().getMethod("setClientLoaded", boolean.class);
       m.invoke(player, true);
-    } catch (Throwable ignored) {
+      return;
+    } catch (NoSuchMethodException ignored) {
+      // Newer Versions Acknowledge Loading Through The Packet Listener.
+    } catch (ReflectiveOperationException failure) {
+      throw new IllegalStateException("Could Not Mark Bot Client Loaded", failure);
+    }
+    try {
+      Class<?> packet = Class.forName("net.minecraft.network.protocol.game.ServerboundPlayerLoadedPacket");
+      player.connection.getClass().getMethod("handleAcceptPlayerLoad", packet)
+          .invoke(player.connection, packet.getConstructor().newInstance());
+    } catch (ClassNotFoundException ignored) {
+      // Older Versions Do Not Have A Client Loaded Packet.
+    } catch (ReflectiveOperationException failure) {
+      throw new IllegalStateException("Could Not Acknowledge Bot Client Loading", failure);
     }
   }
 

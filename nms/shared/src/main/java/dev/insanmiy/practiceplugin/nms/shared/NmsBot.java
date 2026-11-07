@@ -12,6 +12,7 @@ import dev.insanmiy.practiceplugin.model.CriticalWindow;
 import dev.insanmiy.practiceplugin.model.MovementRecovery;
 import dev.insanmiy.practiceplugin.model.SwingClock;
 import io.netty.channel.embedded.EmbeddedChannel;
+import io.netty.channel.ChannelFutureListener;
 import java.net.InetSocketAddress;
 import java.util.*;
 import java.util.function.Consumer;
@@ -85,7 +86,7 @@ public final class NmsBot implements BotPlatform {
     register.accept(botId);
     handle.getBukkitEntity().setPersistent(false);
     NativeAccess.moveToLocation(handle, spawn);
-    connection = new DummyConnection();
+    connection = new DummyConnection(this::capturePacket);
     CommonListenerCookie cookie = CommonListenerCookie.createInitial(profile, false);
     try {
       server.getPlayerList().placeNewPlayer(connection, handle, cookie);
@@ -94,16 +95,16 @@ public final class NmsBot implements BotPlatform {
           new ServerGamePacketListenerImpl(server, connection, handle, cookie) {
             @Override
             public void send(@NotNull Packet<?> packet) {
-
-              if (packet instanceof ClientboundSetEntityMotionPacket motion
-                  && motion.getId() == handle.getId())
-                pendingVelocity = NativeAccess.extractMotion(motion);
-              if (packet instanceof ClientboundPlayerPositionPacket teleport)
-                pendingTeleport = NativeAccess.teleportId(teleport);
+              capturePacket(packet);
             }
 
             @Override
             public void send(@NotNull Packet<?> packet, PacketSendListener listener) {
+              send(packet);
+            }
+
+            // Newer Servers Use Netty Listeners Instead Of PacketSendListener.
+            public void send(@NotNull Packet<?> packet, ChannelFutureListener listener) {
               send(packet);
             }
           };
@@ -120,6 +121,13 @@ public final class NmsBot implements BotPlatform {
   @Override
   public Player player() {
     return handle.getBukkitEntity();
+  }
+
+  private void capturePacket(Packet<?> packet) {
+    if (packet instanceof ClientboundSetEntityMotionPacket motion && motion.getId() == handle.getId())
+      pendingVelocity = NativeAccess.extractMotion(motion);
+    if (packet instanceof ClientboundPlayerPositionPacket teleport)
+      pendingTeleport = NativeAccess.teleportId(teleport);
   }
 
   public static void stopUsing(Player player) {
@@ -819,9 +827,11 @@ public final class NmsBot implements BotPlatform {
   // Fake connection for the bot entity
   private static final class DummyConnection extends Connection {
     boolean active = true;
+    private final Consumer<Packet<?>> receiver;
 
-    DummyConnection() {
+    DummyConnection(Consumer<Packet<?>> receiver) {
       super(PacketFlow.SERVERBOUND);
+      this.receiver = receiver;
       channel = new EmbeddedChannel();
       address = new InetSocketAddress("127.0.0.1", 0);
       Connection.configureSerialization(channel.pipeline(), PacketFlow.SERVERBOUND, false, null);
@@ -833,12 +843,19 @@ public final class NmsBot implements BotPlatform {
     }
 
     @Override
-    public void send(@NotNull Packet<?> packet) {}
+    public void send(@NotNull Packet<?> packet) { receiver.accept(packet); }
 
     @Override
-    public void send(@NotNull Packet<?> packet, PacketSendListener listener) {}
+    public void send(@NotNull Packet<?> packet, PacketSendListener listener) { send(packet); }
 
     @Override
-    public void send(@NotNull Packet<?> packet, PacketSendListener listener, boolean flush) {}
+    public void send(@NotNull Packet<?> packet, PacketSendListener listener, boolean flush) { send(packet); }
+
+    public void send(@NotNull Packet<?> packet, ChannelFutureListener listener) { send(packet); }
+
+    public void send(@NotNull Packet<?> packet, ChannelFutureListener listener, boolean flush) { send(packet); }
+
+    @Override
+    public void flushChannel() {}
   }
 }

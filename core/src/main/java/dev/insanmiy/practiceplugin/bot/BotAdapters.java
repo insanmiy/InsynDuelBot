@@ -31,30 +31,20 @@ public final class BotAdapters {
 
     throw new UnsupportedOperationException(
         "Unsupported Minecraft Version: " + version + " (" + bukkitVersion + "). "
-            + "Supported Versions: 1.20.6 To 1.21.11");
+            + "Supported Paper Releases: 1.20.5, 1.20.6, 1.21, 1.21.1, And 1.21.3 Through 1.21.11");
   }
 
-  private static String getAdapterClassName(String version) {
-    if ("1.20.5".equals(version) || "1.20.6".equals(version)) {
-      return "dev.insanmiy.practiceplugin.nms.v1_20_R4.Adapter_1_20_R4";
-    }
-
-    if ("1.21".equals(version) || "1.21.0".equals(version) || "1.21.1".equals(version)) {
-      return "dev.insanmiy.practiceplugin.nms.v1_21_R1.Adapter_1_21_R1";
-    }
-
-    if (version.startsWith("1.21.")) {
-      try {
-        int patch = Integer.parseInt(version.substring("1.21.".length()));
-        if (patch >= 2 && patch <= 11) {
-          return "dev.insanmiy.practiceplugin.nms.v1_21_R3.Adapter_1_21_R3";
-        }
-      } catch (NumberFormatException ignored) {
-        // Ignore non numeric suffixes
-      }
-    }
-
-    return null;
+  static String getAdapterClassName(String version) {
+    return switch (version) {
+      case "1.20.5", "1.20.6" ->
+          "dev.insanmiy.practiceplugin.nms.v1_20_R4.Adapter_1_20_R4";
+      case "1.21", "1.21.0", "1.21.1" ->
+          "dev.insanmiy.practiceplugin.nms.v1_21_R1.Adapter_1_21_R1";
+      case "1.21.3", "1.21.4", "1.21.5", "1.21.6", "1.21.7", "1.21.8",
+          "1.21.9", "1.21.10", "1.21.11" ->
+          "dev.insanmiy.practiceplugin.nms.v1_21_R3.Adapter_1_21_R3";
+      default -> null;
+    };
   }
 
   private BotAdapters() {}

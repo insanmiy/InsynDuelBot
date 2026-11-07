@@ -5,6 +5,8 @@ The Pages In `wiki/` Are The Source For The Published [InsynDuelBot GitHub Wiki]
 
 ## Read Locally
 
+For Build, Test, And Live Server Verification Instructions, See [Development Checks](Development-Checks.md).
+
 * [Home](wiki/Home.md)
 * [Getting Started](wiki/Getting-Started.md)
 * [Arenas](wiki/Arenas.md)

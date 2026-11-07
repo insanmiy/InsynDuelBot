@@ -8,7 +8,9 @@ Practice Minecraft PvP Against A Custom Bot On Your Paper Server. Choose A Kit, 
 
 ## Documentation
 
-See The [GitHub Wiki](https://github.com/insanmiy/InsynDuelBot/wiki) For Setup, Commands, Bot Settings, Presets, And Troubleshooting. Documentation Sources Are In [docs/](docs/README.md).
+See The [GitHub Wiki](https://github.com/insanmiy/InsynDuelBot/wiki) For Setup, Commands, Bot Settings, Presets, And Troubleshooting. Documentation Sources Are In [docs](docs/README.md).
+
+Quick Links: [Getting Started](docs/wiki/Getting-Started.md), [Arenas](docs/wiki/Arenas.md), [Bot Settings](docs/wiki/Bot-Settings.md), [Kits](docs/wiki/Kits.md), And [Troubleshooting](docs/wiki/Troubleshooting.md).
 
 ## Features
 
@@ -30,7 +32,7 @@ See The [GitHub Wiki](https://github.com/insanmiy/InsynDuelBot/wiki) For Setup, 
 | Java | Java 21 |
 | Optional Plugin | PlaceholderAPI |
 
-The Plugin Includes Multiple NMS Adapters For This Minecraft Version Range. Compatibility Across Every Listed Version Has Not Been Fully Verified Through Live Gameplay.
+The Plugin Includes Multiple NMS Adapters For This Minecraft Version Range. CI Runs Live Server Checks For Bot Combat, Healing, And Session Recovery Across The Listed Versions. See [Development Checks](docs/Development-Checks.md) For The Test Command And Coverage. Client Rendering And Every Utility Item Still Require Manual Gameplay Testing.
 
 ## Installation And First Match
 
@@ -112,6 +114,7 @@ In The Presets Menu, Left Click To Load, Shift Left Click To Replace A Preset Wi
 | `customkits.yml` | Saved Custom Kits |
 | `messages.yml` | Messages, Formatting, And Custom Placeholders |
 | `player-settings.yml` | Individual Player Settings And Bot Presets |
+| `stats.yml` | Player Results And Combat Totals By Practice Mode |
 
 The Base Permission Is `practice.use`. Bot Settings And Presets Use `practice.settings`. Administrative Permissions Include `practice.arena`, `practice.reload`, And `practice.stop.other`.
 

@@ -20,25 +20,36 @@ final class TemporaryBlocks {
       Material expected) {}
 
   private final File file;
+  private final java.util.function.Function<UUID, World> worlds;
   private final Map<String, Entry> entries = new LinkedHashMap<>();
   private final Map<UUID, Integer> ownerCounts = new HashMap<>();
   private boolean dirty;
 
   TemporaryBlocks(PracticePlugin plugin) {
-    file = new File(plugin.getDataFolder(), "temporary-blocks.yml");
-    var data = YamlFiles.load(file);
+    this(new File(plugin.getDataFolder(), "temporary-blocks.yml"), Bukkit::getWorld);
+  }
+
+  TemporaryBlocks(File file, java.util.function.Function<UUID, World> worlds) {
+    this.file = Objects.requireNonNull(file);
+    this.worlds = Objects.requireNonNull(worlds);
+    YamlConfiguration data;
+    try {
+      data = YamlFiles.readOrEmpty(file.toPath());
+    } catch (IOException failure) {
+      throw new IllegalStateException("Block Journal Is Unreadable; Repair It Before Starting Practice", failure);
+    }
     for (String key : data.getKeys(false)) {
       try {
         read(key, data.getConfigurationSection(key));
       } catch (RuntimeException e) {
-        plugin.getLogger().warning("Skipping Bad Journal Entry " + key + ": " + e);
+        throw new IllegalStateException("Invalid Block Journal Entry: " + key + "; Repair It Before Starting Practice", e);
       }
     }
   }
 
   private void read(String key, org.bukkit.configuration.ConfigurationSection c) {
       if (c == null){
-        return;
+        throw new IllegalArgumentException("Block Journal Entry Must Be A Section");
       }
       int x = c.getInt("x"), y = c.getInt("y"), z = c.getInt("z");
       UUID owner = c.getString("owner") == null ? null : UUID.fromString(c.getString("owner"));
@@ -226,7 +237,7 @@ final class TemporaryBlocks {
       if (owner != null && !owner.equals(e.owner())){
         continue;
       }
-      World world = Bukkit.getWorld(e.world());
+      World world = worlds.apply(e.world());
       if (world == null){
         continue;
       }
@@ -258,13 +269,13 @@ final class TemporaryBlocks {
       iterator.remove();
       changed = true;
     }
-    if (changed || dirty){
+    dirty |= changed;
+    if (dirty){
       save();
     }
   }
 
   private void save() throws IOException {
-    dirty = false;
     var data = new YamlConfiguration();
     entries.forEach(
         (key, e) -> {
@@ -280,5 +291,6 @@ final class TemporaryBlocks {
           data.set(key + ".expected", e.expected().name());
         });
     YamlFiles.write(file.toPath(), data);
+    dirty = false;
   }
 }

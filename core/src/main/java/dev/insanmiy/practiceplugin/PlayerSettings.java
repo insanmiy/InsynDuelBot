@@ -18,21 +18,28 @@ final class PlayerSettings {
       List.of("healing", "utilities", "criticals", "shields", "strafing", "counters");
   private final java.util.function.Supplier<org.bukkit.configuration.ConfigurationSection> defaults;
   private final File file;
+  private final SnapshotWriter writer;
   private YamlConfiguration data;
 
   PlayerSettings(PracticePlugin plugin) {
-    this(new File(plugin.getDataFolder(), "player-settings.yml"), plugin::getConfig);
+    this(new File(plugin.getDataFolder(), "player-settings.yml"), plugin::getConfig, plugin.saves());
   }
 
   PlayerSettings(File file, org.bukkit.configuration.ConfigurationSection defaults) {
-    this(file, () -> defaults);
+    this(file, () -> defaults, null);
+  }
+
+  PlayerSettings(File file, org.bukkit.configuration.ConfigurationSection defaults, SnapshotWriter writer) {
+    this(file, () -> defaults, writer);
   }
 
   private PlayerSettings(
       File file,
-      java.util.function.Supplier<org.bukkit.configuration.ConfigurationSection> defaults) {
+      java.util.function.Supplier<org.bukkit.configuration.ConfigurationSection> defaults,
+      SnapshotWriter writer) {
     this.defaults = defaults;
     this.file = file;
+    this.writer = writer;
     data = YamlFiles.load(file);
   }
 
@@ -96,8 +103,9 @@ final class PlayerSettings {
       "bot-strafe-speed",
       "bot-heal-threshold"
     };
-    for (String k : botKeys) data.set(id + "." + k, null);
-    YamlFiles.write(file.toPath(), data);
+    YamlConfiguration candidate = copySettings();
+    for (String k : botKeys) candidate.set(id + "." + k, null);
+    writeSettings(candidate);
   }
 
   BotOptions options(UUID id) {
@@ -258,19 +266,14 @@ final class PlayerSettings {
   }
 
   private void writeSettings(YamlConfiguration candidate) throws IOException {
-    YamlFiles.write(file.toPath(), candidate);
+    if (writer == null) YamlFiles.write(file.toPath(), candidate);
+    else writer.submit(file.toPath(), candidate.saveToString());
     data = candidate;
   }
 
   void set(UUID id, String key, Object value) throws IOException {
-    String path = id + "." + key;
-    Object previous = data.get(path);
-    data.set(path, value);
-    try {
-      YamlFiles.write(file.toPath(), data);
-    } catch (IOException e) {
-      data.set(path, previous);
-      throw e;
-    }
+    YamlConfiguration candidate = copySettings();
+    candidate.set(id + "." + key, value);
+    writeSettings(candidate);
   }
 }

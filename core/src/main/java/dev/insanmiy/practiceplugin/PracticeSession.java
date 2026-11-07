@@ -134,10 +134,10 @@ public final class PracticeSession {
               plugin.botName(),
               id -> {
                 botIds.add(id);
-                plugin.registerBot(id);
+                plugin.registerBot(id, this);
               });
-      created.configure(options, kit.regeneration());
       bots.add(created);
+      created.configure(options, kit.regeneration());
       aliveBots.add(created);
     }
     updatePrimaryBot();
@@ -146,9 +146,7 @@ public final class PracticeSession {
   void clearBots() {
     for (BotPlatform b : bots) {
       if (b != null) {
-        try {
-          b.close();
-        } catch (Exception ignored) {}
+        plugin.cleanup().run("Could Not Remove Practice Bot", b::close);
       }
     }
     for (UUID id : botIds) {
@@ -189,10 +187,10 @@ public final class PracticeSession {
               plugin.botName(),
               id -> {
                 botIds.add(id);
-                plugin.registerBot(id);
+                plugin.registerBot(id, this);
               });
-      created.configure(options, kit.regeneration());
       bots.add(created);
+      created.configure(options, kit.regeneration());
     }
     updatePrimaryBot();
   }
@@ -658,33 +656,28 @@ public final class PracticeSession {
   void close() {
     if (closing) return;
     closing = true;
-    captureLayout();
-    bar.removePlayer(owner);
-    TextUI.actionBar(owner, Component.empty());
+    CleanupSteps cleanup = plugin.cleanup();
+    cleanup.run("Could Not Capture Kit Layout", this::captureLayout);
+    cleanup.run("Could Not Remove Practice HUD", () -> bar.removePlayer(owner));
+    cleanup.run("Could Not Clear Practice Action Bar", () -> TextUI.actionBar(owner, Component.empty()));
     if (totalFightTicks > 0 || roundsWon + roundsLost > 0) {
-      plugin.messages().send(
+      cleanup.run("Could Not Send Practice Summary", () -> plugin.messages().send(
           owner,
           "combat.session-summary",
           "%wins%", String.valueOf(roundsWon),
           "%losses%", String.valueOf(roundsLost),
-          "%summary%", total.summary(totalFightTicks));
+          "%summary%", total.summary(totalFightTicks)));
     }
+    cleanup.run("Could Not Clear Session Utilities", () -> plugin.clearUtilities(this));
+    cleanup.run("Could Not Remove Session Bots", this::clearBots);
+    cleanup.run("Could Not Restore Player Modifiers", this::restoreModifiers);
+    internalTeleport = true;
     try {
-      try {
-        plugin.clearUtilities(this);
-      } finally {
-        clearBots();
-      }
+      cleanup.run("Could Not Restore Player Inventory", () -> plugin.recovery().restore(owner));
     } finally {
-      restoreModifiers();
-      internalTeleport = true;
-      try {
-        plugin.recovery().restore(owner);
-      } finally {
-        internalTeleport = false;
-        plugin.progress().record(this);
-      }
+      internalTeleport = false;
     }
+    cleanup.run("Could Not Record Practice Stats", () -> plugin.progress().record(this));
 
     Component actions = Component.text("  ")
         .append(Component.text("[Rematch]", NamedTextColor.GREEN, TextDecoration.BOLD)
@@ -701,7 +694,7 @@ public final class PracticeSession {
             .clickEvent(net.kyori.adventure.text.event.ClickEvent.runCommand("/practice settings"))
             .hoverEvent(net.kyori.adventure.text.event.HoverEvent.showText(
                 Component.text("Click to customize bot settings", NamedTextColor.GRAY))));
-    owner.sendMessage(actions);
+    cleanup.run("Could Not Send Practice Actions", () -> owner.sendMessage(actions));
   }
 
   private void stripModifiers(Player player, boolean save) {

@@ -371,7 +371,8 @@ final class UtilityBrain {
       repair.stop(tick);
       return true;
     }
-    if (tick >= nextPearl
+    if (target.isOnGround()
+        && tick >= nextPearl
         && !self.hasCooldown(Material.ENDER_PEARL)
         && distance > 10
         && distance <= 48
@@ -392,7 +393,8 @@ final class UtilityBrain {
               nextPearl = tick + 100;
             },
             () ->
-                player().hasLineOfSight(target)
+                target.isOnGround()
+                    && player().hasLineOfSight(target)
                     && player().getLocation().distanceSquared(target.getLocation()) > 64);
         return true;
       }
@@ -477,7 +479,8 @@ final class UtilityBrain {
             tick,
             this::nativeUse,
             () ->
-                player().hasLineOfSight(target)
+                target.isOnGround()
+                    && player().hasLineOfSight(target)
                     && player().getLocation().distanceSquared(target.getLocation()) >= 16);
         return true;
       }
@@ -1452,14 +1455,16 @@ final class UtilityBrain {
     }
 
     // 2. Ender Pearl: High-arc lob out of the pit to high ground (only if distant or target is far above or in pit)
-    if (!self.hasCooldown(Material.ENDER_PEARL)
+    if (target.isOnGround()
+        && !self.hasCooldown(Material.ENDER_PEARL)
         && tick >= nextPearl
         && (horizontalDist >= 6.0 || yDiff >= 4.0 || pitEnclosed || (botInWater && pitStuckTicks >= 35))) {
       int pearlSlot = find(i -> i.getType() == Material.ENDER_PEARL);
-      if (pearlSlot >= 0 && targetLoc.getY() > target.getWorld().getMinHeight() + 2) {
+      if (pearlSlot >= 0 && self.hasLineOfSight(target)
+          && targetLoc.getY() > target.getWorld().getMinHeight() + 2) {
         Vector toTarget = targetLoc.toVector().subtract(here.toVector());
         float yaw = (float) Math.toDegrees(Math.atan2(-toTarget.getX(), toTarget.getZ()));
-        float pitch = -52.0f;
+        float pitch = self.getEyeLocation().setDirection(targetLoc.clone().add(0, 1, 0).toVector().subtract(self.getEyeLocation().toVector())).getPitch();
         handle.setYRot(yaw);
         handle.setXRot(pitch);
         BotLook.publish(handle);
@@ -1471,9 +1476,9 @@ final class UtilityBrain {
               handle.setXRot(pitch);
               BotLook.publish(handle);
               nativeUse();
-              nextPearl = tick + 60;
+              nextPearl = tick + 160;
             },
-            () -> true);
+            () -> target.isOnGround() && player().hasLineOfSight(target));
         return true;
       }
     }

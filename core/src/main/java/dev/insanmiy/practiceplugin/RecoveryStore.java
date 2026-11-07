@@ -11,24 +11,35 @@ import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.potion.PotionEffect;
 
 public final class RecoveryStore {
-  private final PracticePlugin plugin;
+  private final File folder;
+  private final NamespacedKey gearKey;
+  private final java.util.logging.Logger logger;
   private final File file;
 
   public RecoveryStore(PracticePlugin plugin) {
-    this.plugin = plugin;
-    file = new File(plugin.getDataFolder(), "recovery.yml");
+    this(plugin.getDataFolder(), plugin.gearKey(), plugin.getLogger());
+  }
+
+  RecoveryStore(File folder, NamespacedKey gearKey, java.util.logging.Logger logger) {
+    this.folder = folder;
+    this.gearKey = gearKey;
+    this.logger = logger;
+    file = new File(folder, "recovery.yml");
   }
 
   private File playerFile(Player p) {
-    return new File(plugin.getDataFolder(), "recovery/" + p.getUniqueId() + ".yml");
+    return new File(folder, "recovery/" + p.getUniqueId() + ".yml");
   }
 
   public boolean pending(Player p) {
-    return playerFile(p).exists()
-        || file.exists()
-            && p.getUniqueId()
-                .toString()
-                .equals(YamlFiles.load(file).getString("uuid"));
+    if (playerFile(p).exists()) return true;
+    if (!file.exists()) return false;
+    try {
+      return p.getUniqueId().toString().equals(YamlFiles.read(file.toPath()).getString("uuid"));
+    } catch (IOException failure) {
+      logger.warning("Legacy Recovery Is Unreadable; Repair recovery.yml Before Starting Practice");
+      return true;
+    }
   }
 
   public void capture(Player p) throws IOException {
@@ -83,16 +94,28 @@ public final class RecoveryStore {
   }
 
   public boolean restore(Player p) {
-    clearGear(p);
-    if (!pending(p)) return true;
-    File file = playerFile(p).exists() ? playerFile(p) : this.file;
-    YamlConfiguration c = YamlFiles.load(file);
-    if (!p.getUniqueId().toString().equals(c.getString("uuid"))) return false;
+    if (!pending(p)) {
+      if (!p.isDead()) clearGear(p);
+      return true;
+    }
     if (p.isDead()) return false;
+    File file = playerFile(p).exists() ? playerFile(p) : this.file;
     try {
+      YamlConfiguration c = YamlFiles.read(file.toPath());
+      if (!p.getUniqueId().toString().equals(c.getString("uuid")))
+        throw new IOException("Recovery Owner Does Not Match The Player");
       Location location = c.getLocation("location");
       if (location == null || location.getWorld() == null)
         throw new IOException("Recovery World Unavailable");
+      ItemStack[] inventory = readInventory(c, p.getInventory().getSize());
+      ItemStack cursor = c.contains("cursor") ? readItem(c.getString("cursor")) : null;
+      GameMode gameMode = c.contains("gamemode") ? GameMode.valueOf(c.getString("gamemode")) : null;
+      List<PotionEffect> effects = new ArrayList<>();
+      for (Map<?, ?> effect : c.getMapList("potion-effects")) {
+        Map<String, Object> values = new HashMap<>();
+        for (var entry : effect.entrySet()) values.put(String.valueOf(entry.getKey()), entry.getValue());
+        effects.add(new PotionEffect(values));
+      }
       p.getActivePotionEffects().forEach(e -> p.removePotionEffect(e.getType()));
       p.setAbsorptionAmount(0);
       var maxHealthInstance = Attributes.get(p, Attributes.MAX_HEALTH);
@@ -116,43 +139,11 @@ public final class RecoveryStore {
       p.setCooldown(Material.SHIELD, 0);
       p.setCooldown(Material.ENDER_PEARL, c.getInt("pearl-cooldown", 0));
 
-      if (c.contains("gamemode")) {
-        try {
-          p.setGameMode(GameMode.valueOf(c.getString("gamemode")));
-        } catch (Exception ignored) {}
-      }
-      if (c.contains("absorption")) {
-        p.setAbsorptionAmount(c.getDouble("absorption", 0.0));
-      }
-      if (c.contains("potion-effects")) {
-        for (Map<?, ?> map : c.getMapList("potion-effects")) {
-          try {
-            @SuppressWarnings("unchecked")
-            Map<String, Object> cast = (Map<String, Object>) map;
-            p.addPotionEffect(new PotionEffect(cast));
-          } catch (Exception ignored) {}
-        }
-      }
-
-      if (c.contains("inventory")) {
-        p.getInventory().clear();
-        var invSec = c.getConfigurationSection("inventory");
-        if (invSec != null) {
-          for (String key : invSec.getKeys(false)) {
-            try {
-              int slot = Integer.parseInt(key);
-              byte[] bytes = Base64.getDecoder().decode(invSec.getString(key));
-              p.getInventory().setItem(slot, ItemStack.deserializeBytes(bytes));
-            } catch (Exception ignored) {}
-          }
-        }
-      }
-      if (c.contains("cursor")) {
-        try {
-          byte[] bytes = Base64.getDecoder().decode(c.getString("cursor"));
-          p.setItemOnCursor(ItemStack.deserializeBytes(bytes));
-        } catch (Exception ignored) {}
-      }
+      if (gameMode != null) p.setGameMode(gameMode);
+      p.setAbsorptionAmount(c.getDouble("absorption", 0.0));
+      for (PotionEffect effect : effects) p.addPotionEffect(effect);
+      p.getInventory().setContents(inventory);
+      p.setItemOnCursor(cursor);
 
       if (!p.teleport(location)) throw new IOException("Return Teleport Was Cancelled");
       p.setInvulnerable(c.getBoolean("invulnerable", false));
@@ -169,9 +160,40 @@ public final class RecoveryStore {
       p.saveData();
       Files.delete(file.toPath());
       return true;
-    } catch (Exception e) {
-      plugin.getLogger().severe("Recovery Retained For " + p.getName() + ": " + e.getMessage());
+    } catch (IOException | RuntimeException e) {
+      logger.severe("Recovery Retained For " + p.getName() + ": " + e.getMessage());
       return false;
+    }
+  }
+
+  static ItemStack[] readInventory(YamlConfiguration data, int size) throws IOException {
+    ItemStack[] inventory = new ItemStack[size];
+    var section = data.getConfigurationSection("inventory");
+    if (section == null) {
+      if (data.contains("inventory")) throw new IOException("Recovery Inventory Must Be A Section");
+      return inventory;
+    }
+    Set<Integer> occupied = new HashSet<>();
+    for (String key : section.getKeys(false)) {
+      int slot;
+      try {
+        slot = Integer.parseInt(key);
+      } catch (NumberFormatException failure) {
+        throw new IOException("Invalid Recovery Inventory Slot: " + key, failure);
+      }
+      if (slot < 0 || slot >= size || !occupied.add(slot))
+        throw new IOException("Invalid Or Duplicate Recovery Inventory Slot: " + key);
+      inventory[slot] = readItem(section.getString(key));
+    }
+    return inventory;
+  }
+
+  private static ItemStack readItem(String encoded) throws IOException {
+    if (encoded == null) throw new IOException("Recovery Item Data Is Missing");
+    try {
+      return ItemStack.deserializeBytes(Base64.getDecoder().decode(encoded));
+    } catch (RuntimeException failure) {
+      throw new IOException("Recovery Item Is Unreadable; Repair The Journal Before Retrying", failure);
     }
   }
 
@@ -186,6 +208,6 @@ public final class RecoveryStore {
         && item.hasItemMeta()
         && item.getItemMeta()
             .getPersistentDataContainer()
-            .has(plugin.gearKey(), PersistentDataType.BYTE);
+            .has(gearKey, PersistentDataType.BYTE);
   }
 }

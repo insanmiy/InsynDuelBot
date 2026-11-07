@@ -104,11 +104,28 @@ class TacticalPathfinderTest {
   }
 
   @Test
-  void refusesDryDropsOverThreeBlocks() {
+  void findsDropFromRaisedPlatform() {
     Grid grid = new Grid();
     grid.set(0, 4, 0, Material.STONE);
     TacticalPathfinder.Path path = grid.path(0, 5, 0, 1, 1, 0);
-    assertNull(path);
+    assertNotNull(path);
+    assertTrue(path.reachesGoal());
+    assertTrue(path.waypoints().stream().anyMatch(point -> point.action() == TacticalPathfinder.ActionType.DROP));
+  }
+
+  @Test
+  void partialRoutePreservesVerticalProgressAwayFromTargetColumn() {
+    Grid grid = new Grid();
+    for (int x = -20; x <= 20; x++) {
+      for (int z = -20; z <= 20; z++) {
+        grid.set(x, 3, z, Material.STONE);
+      }
+    }
+    grid.set(1, 3, 0, Material.AIR);
+    TacticalPathfinder.Path path = TacticalPathfinder.findPath(
+        grid.world, grid.at(0, 4, 0), grid.at(0, 1, 0), 20);
+    assertNotNull(path);
+    assertTrue(path.waypoints().stream().anyMatch(point -> point.y() == 1));
   }
 
   @Test

@@ -87,7 +87,7 @@ public final class ProgressStore {
 
   void save() {
     try {
-      YamlFiles.write(file.toPath(), data);
+      plugin.saves().submit(file.toPath(), data.saveToString());
     } catch (IOException e) {
       plugin.getLogger().log(java.util.logging.Level.SEVERE, "Could Not Save Practice Stats", e);
     }
