@@ -15,10 +15,9 @@ jobs:
           distribution: temurin
           java-version: 21
       - uses: gradle/actions/setup-gradle@v4
-      - run: chmod +x ./gradlew
-      - run: ./gradlew build
+      - run: .\gradlew.bat build
       - name: Test Minecraft ${{ matrix.version }}
-        run: ./gradlew runServer -PminecraftVersion="${{ matrix.version }}" -PcompatibilityTest=true
+        run: .\gradlew.bat runServer -PminecraftVersion="${{ matrix.version }}" -PcompatibilityTest=true
       - uses: actions/upload-artifact@v4
         if: always()
         with:
