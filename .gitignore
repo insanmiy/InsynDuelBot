@@ -18,5 +18,5 @@ test.bat
 out/
 bin/
 *.md
+!README.md
 !docs/**/*.md
-!UPDATING-THE-WIKI.md
