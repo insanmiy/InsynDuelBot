@@ -17,7 +17,7 @@ final class CustomKitStore {
   static String name(String name) {
     String result = name.toLowerCase(Locale.ROOT);
     if (!result.matches("[a-z0-9_-]{1,32}"))
-      throw new IllegalArgumentException("Kit Name: 1 To 32 Letters, Numbers, _ Or -.");
+      throw new IllegalArgumentException(Messages.text("text.custom-kit-store.kit-name-1-to-32-letters"));
     return result;
   }
 
@@ -63,22 +63,22 @@ final class CustomKitStore {
     var yaml = read();
     var old = yaml.getConfigurationSection(name);
     if (old != null && expected == null)
-      throw new IllegalArgumentException("Name Already Used. Choose A New Name.");
+      throw new IllegalArgumentException(Messages.text("text.custom-kit-store.name-already-used-choose-a-new"));
     if (!Objects.equals(expected, revision(old)))
-      throw new IllegalArgumentException("This Kit Changed. Reopen The Editor Before Saving It.");
+      throw new IllegalArgumentException(Messages.text("text.custom-kit-store.this-kit-changed-reopen-the-editor"));
     if (old != null) {
       if (!editable(old, player, admin))
-        throw new IllegalArgumentException("You Can Only Edit Your Own Custom Kits.");
+        throw new IllegalArgumentException(Messages.text("text.custom-kit-store.you-can-only-edit-your-own"));
     }
 	else {
       if (reserved.contains(name) || yaml.contains(name))
-        throw new IllegalArgumentException("Name Already Used. Choose A New Name.");
+        throw new IllegalArgumentException(Messages.text("text.custom-kit-store.name-already-used-choose-a-new"));
       if (!admin
           && yaml.getKeys(false).stream()
                   .filter(k -> player.toString().equals(yaml.getString(k + ".owner")))
                   .count()
               >= MAX_PER_PLAYER)
-        throw new IllegalArgumentException("Custom Kit Limit Reached (" + MAX_PER_PLAYER + ").");
+        throw new IllegalArgumentException(Messages.text("text.custom-kit-store.custom-kit-limit-reached") + MAX_PER_PLAYER + ").");
     }
     String owner = old == null ? player.toString() : old.getString("owner", player.toString());
     yaml.set(name, null);
@@ -92,11 +92,11 @@ final class CustomKitStore {
     name = name(name);
     var yaml = read();
     var old = yaml.getConfigurationSection(name);
-    if (old == null) throw new IllegalArgumentException("Custom Kit No Longer Exists.");
+    if (old == null) throw new IllegalArgumentException(Messages.text("text.custom-kit-store.custom-kit-no-longer-exists"));
     if (expected != null && !Objects.equals(expected, revision(old)))
-      throw new IllegalArgumentException("This Kit Changed. Reopen The Editor Before Deleting It.");
+      throw new IllegalArgumentException(Messages.text("text.custom-kit-store.this-kit-changed-reopen-the-editor-2"));
     if (!editable(old, player, admin))
-      throw new IllegalArgumentException("You Can Only Edit Your Own Custom Kits.");
+      throw new IllegalArgumentException(Messages.text("text.custom-kit-store.you-can-only-edit-your-own"));
     yaml.set(name, null);
     write(yaml);
   }
@@ -108,9 +108,9 @@ final class CustomKitStore {
     var yaml = read();
     var old = yaml.getConfigurationSection(from);
     if (!editable(old, player, admin))
-      throw new IllegalArgumentException("You Can Only Rename Your Own Custom Kits.");
+      throw new IllegalArgumentException(Messages.text("text.custom-kit-store.you-can-only-rename-your-own"));
     if (yaml.contains(to) || reserved.contains(to))
-      throw new IllegalArgumentException("Name Already Used.");
+      throw new IllegalArgumentException(Messages.text("text.custom-kit-store.name-already-used"));
     copy(old, yaml.createSection(to));
     yaml.set(from, null);
     write(yaml);

@@ -13,7 +13,7 @@
 #                          or for potions: {type: SPLASH_POTION, potion: <POTION_TYPE>}
 kits:
   diamond-smp:
-    description: "Official Diamond SMP Kit"
+    description: "Official diamond SMP kit"
     health: 20
     natural-regeneration: true
     armor:
@@ -62,7 +62,7 @@ kits:
       35: {type: SPLASH_POTION, potion: STRONG_STRENGTH}
 
   netherite-smp:
-    description: "Official Netherite SMP Kit"
+    description: "Official netherite SMP kit"
     health: 20
     natural-regeneration: true
     armor:
@@ -110,7 +110,7 @@ kits:
       35: {type: SPLASH_POTION, potion: LONG_FIRE_RESISTANCE}
 
   sword:
-    description: "Official Sword PvP Kit"
+    description: "Official sword PvP kit"
     health: 20
     natural-regeneration: true
     armor: [DIAMOND_BOOTS, DIAMOND_LEGGINGS, DIAMOND_CHESTPLATE, DIAMOND_HELMET]
@@ -119,7 +119,7 @@ kits:
       0: DIAMOND_SWORD
 
   axe:
-    description: "Official Axe PvP Kit"
+    description: "Official axe PvP kit"
     health: 20
     natural-regeneration: true
     armor: [DIAMOND_BOOTS, DIAMOND_LEGGINGS, DIAMOND_CHESTPLATE, DIAMOND_HELMET]
@@ -132,7 +132,7 @@ kits:
       4: 'ARROW:6'
 
   pot:
-    description: "Official Pot PvP Kit"
+    description: "Official pot PvP kit"
     health: 20
     natural-regeneration: true
     armor:
@@ -180,7 +180,7 @@ kits:
       35: {type: SPLASH_POTION, potion: STRONG_HEALING}
 
   uhc:
-    description: "UHC Kit"
+    description: "UHC kit"
     health: 20
     natural-regeneration: false
     armor:

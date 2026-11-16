@@ -1,41 +1,43 @@
-# Bot Settings
+# Bot settings
 
-Run `/practice settings` Outside An Active Session. Settings Are Saved For Your Future Sessions.
+When chasing on a clear route, the bot sprint jumps with no Speed effect or Speed I. With Speed II or higher, it sprints without chase jumps. Obstacle jumps and critical hit jumps keep their separate rules.
 
-## Match Settings
+Run `/practice settings` outside an active session. Settings are saved for your future sessions.
 
-Adjust The Starting Countdown, Break Between Rounds, Starting Saturation, Health Display, And Menu Animations. Choose Your Match Mode And Round Count In The Practice Setup Menu.
+## Match settings
 
-## Bot Abilities
+Adjust the starting countdown, break between rounds, starting saturation, health display, and menu animations. Choose your match mode and round count in the practice setup menu.
 
-Toggle Healing, Utilities, Critical Hits, Shields, Strafing, And Shield Counters.
+## Bot abilities
 
-Utilities Include Actions Such As Using Webs, Pearls, And Bows. The Selected Kit Must Contain The Required Items.
+Toggle healing, utilities, critical hits, shields, strafing, and shield counters.
 
-## Advanced Tuning
+Utilities include actions such as using webs, pearls, and bows. The selected kit must contain the required items.
 
-| Setting | What It Changes |
+## Advanced tuning
+
+| Setting | What it changes |
 | --- | --- |
-| Attack Timing | How Much Attack Charge The Bot Waits For |
-| Aim Accuracy | How Precisely The Bot Aims |
-| Reaction Speed | Decision Frequency And Perception Delay |
-| Sprint Reset | How Often The Bot Restarts Its Sprint After Hits |
-| Shield Defense | How Often The Bot Tries To Block |
-| Strafe Movement | Sideways Movement Strength |
-| Healing Threshold | When The Bot Starts Seeking Healing |
+| Attack timing | How much attack charge the bot waits for |
+| Aim accuracy | How precisely the bot aims |
+| Reaction speed | Decision frequency and perception delay |
+| Sprint reset | How often the bot restarts its sprint after hits |
+| Shield defense | How often the bot tries to block |
+| Strafe movement | Sideways movement strength |
+| Healing threshold | When the bot starts seeking healing |
 
-Left Click To Advance A Setting, Right Click To Go Back, Or Shift Click To Use The Selected Difficulty's Default.
+Left click to advance a setting, right click to go back, or shift click to use the selected difficulty's default.
 
-Reset Advanced Tuning Restores These Seven Settings To Difficulty Defaults. Ability Toggles Stay As You Set Them. Custom Overrides Can Make A Difficulty Behave Differently From Its Shipped Values.
+Reset advanced tuning restores these seven settings to difficulty defaults. Ability toggles stay as you set them. Custom overrides can make a difficulty behave differently from its shipped values.
 
 ## Difficulties
 
-The Default Configuration Includes `dummy` And Tiers From `lt5` Through `ht1`. Use `/practice difficulties` To List The Actual Choices On Your Server.
+The default configuration includes `dummy` and tiers from `lt5` through `ht1`. Use `/practice difficulties` to list the actual choices on your server.
 
-The `dummy` Difficulty Does Not Attack. Administrators Can Edit Difficulty Definitions In `config.yml`.
+The `dummy` difficulty does not attack. Administrators can edit difficulty definitions in `config.yml`.
 
 ## Recovery
 
-When Navigation Stalls, The Bot Can Try A Safe Sideways Or Backward Detour Before Calculating A Fresh Route. It Also Rechecks Blocked Walking Routes. Recovery Does Not Guarantee That Every Terrain Layout Is Reachable.
+When navigation stalls, the bot can try a safe sideways or backward detour before calculating a fresh route. It also rechecks blocked walking routes. Recovery does not guarantee that every terrain layout is reachable.
 
-Save Useful Setups As [Bot Presets](Bot-Presets).
+Save useful setups as [bot presets](Bot-Presets).

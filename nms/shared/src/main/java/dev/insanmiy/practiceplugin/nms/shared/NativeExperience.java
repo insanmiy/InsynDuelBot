@@ -1,5 +1,7 @@
 package dev.insanmiy.practiceplugin.nms.shared;
 
+import dev.insanmiy.practiceplugin.Messages;
+
 import dev.insanmiy.practiceplugin.bot.*;
 
 import java.lang.reflect.Method;
@@ -21,11 +23,11 @@ public final class NativeExperience {
           && params.length == 2
           && (params[0] == ServerPlayer.class || params[0] == net.minecraft.world.entity.player.Player.class)
           && params[1] == int.class) {
-        if (match != null) throw new IllegalStateException("Ambiguous Native Mending Method");
+        if (match != null) throw new IllegalStateException(Messages.text("text.native-experience.ambiguous-native-mending-method"));
         match = method;
       }
     }
-    if (match == null) throw new IllegalStateException("Native Mending Method Unavailable");
+    if (match == null) throw new IllegalStateException(Messages.text("text.native-experience.native-mending-method-unavailable"));
     match.setAccessible(true);
     return match;
   }
@@ -34,6 +36,6 @@ public final class NativeExperience {
     var handle = ((CraftPlayer) player).getHandle();
     var orb = new ExperienceOrb(EntityType.EXPERIENCE_ORB, handle.level());
     try { return (int) MEND.invoke(orb, handle, amount); }
-    catch (ReflectiveOperationException e) { throw new IllegalStateException("Native Mending Failed", e); }
+    catch (ReflectiveOperationException e) { throw new IllegalStateException(Messages.text("text.native-experience.native-mending-failed"), e); }
   }
 }

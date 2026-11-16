@@ -19,11 +19,11 @@ final class DamageDiagnostics {
     enabled = !enabled;
     swings.clear();
     owner.sendMessage(TextUI.legacy(
-        Component.text(
-            "Damage Readout "
-                + (enabled ? "On" : "Off")
-                + ". Raw = Hit Before Defenses; Final = HP Damage After Armor/Shield/Absorption. 2"
-                + " HP = 1 Heart.")));
+        Messages.component(
+            Messages.text("text.damage-diagnostics.damage-readout")
+                + (enabled ? Messages.text("text.damage-diagnostics.on") : Messages.text("text.damage-diagnostics.off"))
+                + Messages.text("text.damage-diagnostics.raw-hit-before-defenses-final-hp")
+                + Messages.text("text.damage-diagnostics.hp-1-heart"))));
   }
 
   void capture(Player attacker, Player target) {
@@ -57,23 +57,23 @@ final class DamageDiagnostics {
         known
             ? String.format(
                 Locale.ROOT,
-                "%s | Attribute %.2f | Charge %.0f%%",
+                Messages.text("text.damage-diagnostics.s-attribute-2f-charge-0f"),
                 swing.weapon(),
                 swing.base(),
                 swing.charge() * 100)
-            : "Secondary Hit";
+            : Messages.text("text.damage-diagnostics.secondary-hit");
 
     String result;
     if (event == session.finishingBlow) {
-      result = "Round Ending Hit";
+      result = Messages.text("text.damage-diagnostics.round-ending-hit");
     } else if (event.isCancelled()) {
-      result = "Cancelled: No HP Damage";
+      result = Messages.text("text.damage-diagnostics.cancelled-no-hp-damage");
     } else {
-      result = "Applied";
+      result = Messages.text("text.damage-diagnostics.applied");
     }
 
-    String attackerName = attacker.equals(session.owner) ? "You" : "Bot";
-    String targetName = target.equals(session.owner) ? "You" : "Bot";
+    String attackerName = attacker.equals(session.owner) ? Messages.text("text.damage-diagnostics.you") : Messages.text("text.damage-diagnostics.bot");
+    String targetName = target.equals(session.owner) ? Messages.text("text.damage-diagnostics.you") : Messages.text("text.damage-diagnostics.bot");
     double armor = Attributes.getValue(target, Attributes.ARMOR, 0.0);
     double toughness = Attributes.getValue(target, Attributes.ARMOR_TOUGHNESS, 0.0);
     String isCritical = ServerFeatures.critical(event);
@@ -81,7 +81,7 @@ final class DamageDiagnostics {
     String message =
         String.format(
             Locale.ROOT,
-            "%s -> %s | %s | Raw %.2f -> Final %.2f HP | Armor %.1f / Toughness %.1f | Critical %s | %s",
+            Messages.text("text.damage-diagnostics.s-s-s-raw-2f-final"),
             attackerName,
             targetName,
             input,
@@ -92,6 +92,6 @@ final class DamageDiagnostics {
             isCritical,
             result);
 
-    session.owner.sendMessage(TextUI.legacy(Component.text(message)));
+    session.owner.sendMessage(TextUI.legacy(Messages.component(message)));
   }
 }

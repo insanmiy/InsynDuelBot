@@ -1,39 +1,39 @@
-# Wiki Documentation
+# Wiki documentation
 
-The Pages In `wiki/` Are The Source For The Published [InsynDuelBot GitHub Wiki](https://github.com/insanmiy/InsynDuelBot/wiki). GitHub Stores Wiki Pages In A Separate Git Repository.
+The pages in `wiki/` are the source for the published [InsynDuelBot GitHub wiki](https://github.com/insanmiy/InsynDuelBot/wiki). GitHub stores wiki pages in a separate Git repository.
 
 
-## Read Locally
+## Read locally
 
-For Build, Test, And Live Server Verification Instructions, See [Development Checks](Development-Checks.md).
+For build, test, and live server verification instructions, see [development checks](Development-Checks.md).
 
 * [Home](wiki/Home.md)
-* [Getting Started](wiki/Getting-Started.md)
+* [Getting started](wiki/Getting-Started.md)
 * [Arenas](wiki/Arenas.md)
-* [Practice Modes](wiki/Practice-Modes.md)
+* [Practice modes](wiki/Practice-Modes.md)
 * [Commands](wiki/Commands.md)
-* [Bot Settings](wiki/Bot-Settings.md)
-* [Bot Presets](wiki/Bot-Presets.md)
+* [Bot settings](wiki/Bot-Settings.md)
+* [Bot presets](wiki/Bot-Presets.md)
 * [Kits](wiki/Kits.md)
 * [Configuration](wiki/Configuration.md)
 * [Permissions](wiki/Permissions.md)
 * [Troubleshooting](wiki/Troubleshooting.md)
 
-Links Between Wiki Pages Use GitHub Wiki Page Names, Without `.md`. Use This Index When Browsing The Source Files Locally.
+Links between wiki pages use GitHub wiki page names, without `.md`. Use this index when browsing the source files locally.
 
 ## Publish
 
-For Browser Edits, Pulling Updates, And Publishing Individual Pages, Follow [Updating The Wiki](../UPDATING-THE-WIKI.md).
+For browser edits, pulling updates, and publishing individual pages, follow [updating the wiki](../UPDATING-THE-WIKI.md).
 
-First, Open The Repository's Wiki On GitHub And Save An Initial Home Page. The Wiki Repository Cannot Be Cloned Until That First Page Exists.
+First, open the repository's wiki on GitHub and save an initial home page. The wiki repository cannot be cloned until that first page exists.
 
-From The Project Root, Clone The Wiki Into A Separate Folder:
+From the project root, clone the wiki into a separate folder:
 
 ```powershell
 git clone https://github.com/insanmiy/InsynDuelBot.wiki.git ..\InsynDuelBot-wiki
 ```
 
-Copy These Prepared Pages Into The Clone, Commit Them, And Push:
+Copy these prepared pages into the clone, commit them, and push:
 
 ```powershell
 Copy-Item -Path .\docs\wiki\*.md -Destination ..\InsynDuelBot-wiki\
@@ -42,6 +42,6 @@ git -C ..\InsynDuelBot-wiki commit -m "Add Plugin Documentation"
 git -C ..\InsynDuelBot-wiki push
 ```
 
-For Later Updates, Pull The Wiki Repository Before Copying Changes. Review Existing Wiki Edits Before Replacing Pages. Push To Its Default Branch To Publish.
+For later updates, pull the wiki repository before copying changes. Review existing wiki edits before replacing pages. Push to its default branch to publish.
 
-`_Sidebar.md` And `_Footer.md` Provide The Wiki Navigation. Keep Their Links Updated When Adding Or Renaming Pages.
+`_Sidebar.md` and `_Footer.md` provide the wiki navigation. Keep their links updated when adding or renaming pages.

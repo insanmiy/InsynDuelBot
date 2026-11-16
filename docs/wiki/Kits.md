@@ -1,38 +1,38 @@
 # Kits
 
-Kits Define The Equipment And Items Used In A Match. Run `/practice kits` To See What Is Available On Your Server.
+Kits define the equipment and items used in a match. Run `/practice kits` to see what is available on your server.
 
-The Shipped Catalog Includes `diamond-smp`, `netherite-smp`, `sword`, `axe`, `pot`, And `uhc`.
+The shipped catalog includes `diamond-smp`, `netherite-smp`, `sword`, `axe`, `pot`, and `uhc`.
 
-## Use The Editor
+## Use the editor
 
-Stop Your Session And Open `/practice kit editor`. Create Or Edit A Custom Kit, Then Click Save To Keep Your Changes. Closing A Draft Discards Changes That Have Not Been Saved.
+Stop your session and open `/practice kit editor`. Create or edit a custom kit, then click save to keep your changes. Closing a draft discards changes that have not been saved.
 
-## Kit Commands
+## Kit commands
 
 | Command | Action |
 | --- | --- |
-| `/practice kit info <name>` | Show A Kit Summary |
-| `/practice kit create <name> [template]` | Open A New Draft, Optionally Based On Another Kit |
-| `/practice kit edit <name>` | Edit A Saved Custom Kit |
-| `/practice kit import <name>` | Save Your Inventory As A Custom Kit And Open Its Editor |
-| `/practice kit save <name>` | Save Your Current Inventory Directly As A Custom Kit |
-| `/practice kit copy <source> <new-name>` | Open A New Draft Based On Another Kit |
-| `/practice kit rename <old-name> <new-name>` | Rename A Custom Kit |
-| `/practice kit delete <name>` | Open The Deletion Confirmation |
+| `/practice kit info <name>` | Show a kit summary |
+| `/practice kit create <name> [template]` | Open a new draft, optionally based on another kit |
+| `/practice kit edit <name>` | Edit a saved custom kit |
+| `/practice kit import <name>` | Save your inventory as a custom kit and open its editor |
+| `/practice kit save <name>` | Save your current inventory directly as a custom kit |
+| `/practice kit copy <source> <new-name>` | Open a new draft based on another kit |
+| `/practice kit rename <old-name> <new-name>` | Rename a custom kit |
+| `/practice kit delete <name>` | Open the deletion confirmation |
 
-Names Use 1 To 32 Letters, Numbers, Underscores, Or Hyphens. Use A New Name When Copying A Built In Kit.
+Names use 1 to 32 letters, numbers, underscores, or hyphens. Use a new name when copying a built in kit.
 
 ```text
 /practice kit create my_sword sword
 ```
 
-Edit The Draft And Click Save. It Then Becomes Available In Practice Setup.
+Edit the draft and click save. It then becomes available in practice setup.
 
-## Ownership And Storage
+## Ownership and storage
 
-Players Normally Edit Their Own Custom Kits. Administrators With `practice.kits.bypass` Can Modify Kits Owned By Other Players.
+Players normally edit their own custom kits. Administrators with `practice.kits.bypass` can modify kits owned by other players.
 
-Built In Kit Definitions Are In `kits.yml`. Custom Kits Are Stored In `customkits.yml`. Items Must Be Allowed By The Plugin And Supported By Your Server Version.
+Built in kit definitions are in `kits.yml`. Custom kits are stored in `customkits.yml`. Items must be allowed by the plugin and supported by your server version.
 
-See [Permissions](Permissions) For Individual Kit Permissions.
+See [permissions](Permissions) for individual kit permissions.

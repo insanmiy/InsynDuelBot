@@ -37,13 +37,13 @@ public final class RecoveryStore {
     try {
       return p.getUniqueId().toString().equals(YamlFiles.read(file.toPath()).getString("uuid"));
     } catch (IOException failure) {
-      logger.warning("Legacy Recovery Is Unreadable; Repair recovery.yml Before Starting Practice");
+      logger.warning(Messages.text("text.recovery-store.legacy-recovery-is-unreadable-repair-recovery"));
       return true;
     }
   }
 
   public void capture(Player p) throws IOException {
-    if (pending(p)) throw new IOException("An Earlier Recovery For This Player Is Pending.");
+    if (pending(p)) throw new IOException(Messages.text("text.recovery-store.an-earlier-recovery-for-this-player"));
     File file = playerFile(p);
     Files.createDirectories(file.toPath().getParent());
     YamlConfiguration c = new YamlConfiguration();
@@ -103,10 +103,10 @@ public final class RecoveryStore {
     try {
       YamlConfiguration c = YamlFiles.read(file.toPath());
       if (!p.getUniqueId().toString().equals(c.getString("uuid")))
-        throw new IOException("Recovery Owner Does Not Match The Player");
+        throw new IOException(Messages.text("text.recovery-store.recovery-owner-does-not-match-the"));
       Location location = c.getLocation("location");
       if (location == null || location.getWorld() == null)
-        throw new IOException("Recovery World Unavailable");
+        throw new IOException(Messages.text("text.recovery-store.recovery-world-unavailable"));
       ItemStack[] inventory = readInventory(c, p.getInventory().getSize());
       ItemStack cursor = c.contains("cursor") ? readItem(c.getString("cursor")) : null;
       GameMode gameMode = c.contains("gamemode") ? GameMode.valueOf(c.getString("gamemode")) : null;
@@ -145,7 +145,7 @@ public final class RecoveryStore {
       p.getInventory().setContents(inventory);
       p.setItemOnCursor(cursor);
 
-      if (!p.teleport(location)) throw new IOException("Return Teleport Was Cancelled");
+      if (!p.teleport(location)) throw new IOException(Messages.text("text.recovery-store.return-teleport-was-cancelled"));
       p.setInvulnerable(c.getBoolean("invulnerable", false));
       String vehicleId = c.getString("vehicle");
       if (vehicleId != null) {
@@ -161,7 +161,7 @@ public final class RecoveryStore {
       Files.delete(file.toPath());
       return true;
     } catch (IOException | RuntimeException e) {
-      logger.severe("Recovery Retained For " + p.getName() + ": " + e.getMessage());
+      logger.severe(Messages.text("text.recovery-store.recovery-retained-for") + p.getName() + ": " + e.getMessage());
       return false;
     }
   }
@@ -170,7 +170,7 @@ public final class RecoveryStore {
     ItemStack[] inventory = new ItemStack[size];
     var section = data.getConfigurationSection("inventory");
     if (section == null) {
-      if (data.contains("inventory")) throw new IOException("Recovery Inventory Must Be A Section");
+      if (data.contains("inventory")) throw new IOException(Messages.text("text.recovery-store.recovery-inventory-must-be-a-section"));
       return inventory;
     }
     Set<Integer> occupied = new HashSet<>();
@@ -179,21 +179,21 @@ public final class RecoveryStore {
       try {
         slot = Integer.parseInt(key);
       } catch (NumberFormatException failure) {
-        throw new IOException("Invalid Recovery Inventory Slot: " + key, failure);
+        throw new IOException(Messages.text("text.recovery-store.invalid-recovery-inventory-slot") + key, failure);
       }
       if (slot < 0 || slot >= size || !occupied.add(slot))
-        throw new IOException("Invalid Or Duplicate Recovery Inventory Slot: " + key);
+        throw new IOException(Messages.text("text.recovery-store.invalid-or-duplicate-recovery-inventory-slot") + key);
       inventory[slot] = readItem(section.getString(key));
     }
     return inventory;
   }
 
   private static ItemStack readItem(String encoded) throws IOException {
-    if (encoded == null) throw new IOException("Recovery Item Data Is Missing");
+    if (encoded == null) throw new IOException(Messages.text("text.recovery-store.recovery-item-data-is-missing"));
     try {
       return ItemStack.deserializeBytes(Base64.getDecoder().decode(encoded));
     } catch (RuntimeException failure) {
-      throw new IOException("Recovery Item Is Unreadable; Repair The Journal Before Retrying", failure);
+      throw new IOException(Messages.text("text.recovery-store.recovery-item-is-unreadable-repair-the"), failure);
     }
   }
 

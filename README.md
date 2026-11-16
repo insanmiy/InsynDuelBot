@@ -1,6 +1,6 @@
 # InsynDuelBot
 
-Practice Minecraft PvP Against A Custom Bot On Your Paper Server. Choose A Kit, Adjust The Bot's Difficulty, And Fight A Single Duel, A Series, Or An Outnumbered Match.
+Practice Minecraft PvP against a custom bot on your Paper server. Choose a kit, adjust the bot's difficulty, and fight a single duel, a series, or an outnumbered match.
 
 ![License](https://img.shields.io/github/license/insanmiy/InsynDuelBot)
 ![Java](https://img.shields.io/badge/Java-21-orange)
@@ -8,45 +8,48 @@ Practice Minecraft PvP Against A Custom Bot On Your Paper Server. Choose A Kit, 
 
 ## Documentation
 
-See The [GitHub Wiki](https://github.com/insanmiy/InsynDuelBot/wiki) For Setup, Commands, Bot Settings, Presets, And Troubleshooting. Documentation Sources Are In [docs](docs/README.md).
+See the [GitHub wiki](https://github.com/insanmiy/InsynDuelBot/wiki) for setup, commands, bot settings, presets, and troubleshooting. Documentation sources are in [docs](docs/README.md).
 
-Quick Links: [Getting Started](docs/wiki/Getting-Started.md), [Arenas](docs/wiki/Arenas.md), [Bot Settings](docs/wiki/Bot-Settings.md), [Kits](docs/wiki/Kits.md), And [Troubleshooting](docs/wiki/Troubleshooting.md).
+Quick links: [getting started](docs/wiki/Getting-Started.md), [arenas](docs/wiki/Arenas.md), [bot settings](docs/wiki/Bot-Settings.md), [kits](docs/wiki/Kits.md), and [troubleshooting](docs/wiki/Troubleshooting.md).
 
 ## Features
 
-* Combat Movement With Strafing, Sprint Resetting, Shield Use, And Critical Hits.
-* Healing And Utility Item Use, Controlled Through Bot Settings.
-* Navigation With Safe Recovery Detours When The Bot Gets Stuck.
-* Built In Kits And A Custom Kit Editor.
-* Adjustable Aim, Reaction Speed, Attack Timing, And Other Combat Settings.
-* Personal Bot Presets Saved Across Server Restarts.
-* Match Health Display, Win And Loss Statistics, And Combat Damage Diagnostics.
-* Configurable Messages With Legacy Colors, Hex Colors, And MiniMessage Support.
-* Optional PlaceholderAPI Integration.
+* Combat movement with strafing, sprint resetting, shield use, and critical hits.
+* Healing and utility item use, controlled through bot settings.
+* Navigation with safe recovery detours when the bot gets stuck.
+* Direct sprint jumping on clear routes with no Speed effect or Speed I; Speed II and higher use sprinting without chase jumps.
+* Water can wash away blocks and waterlog supported blocks, with original block data kept for cleanup.
+* Built in kits and a custom kit editor.
+* Adjustable aim, reaction speed, attack timing, and other combat settings.
+* Personal bot presets saved across server restarts.
+* Match health display, win and loss statistics, and combat damage diagnostics.
+* Editable chat, menus, HUD, titles, tooltips, errors, and plugin logs.
+* Legacy colors, hex colors, and MiniMessage support for chat, menus, and HUD text.
+* Optional PlaceholderAPI integration.
 
 ## Requirements
 
 | Requirement | Details |
 | --- | --- |
-| Server | Paper 1.20.5 Through 1.21.11 |
+| Server | Paper 1.20.5 through 1.21.11 |
 | Java | Java 21 |
-| Optional Plugin | PlaceholderAPI |
+| Optional plugin | PlaceholderAPI |
 
-The Plugin Includes Multiple NMS Adapters For This Minecraft Version Range. CI Runs Live Server Checks For Bot Combat, Healing, And Session Recovery Across The Listed Versions. See [Development Checks](docs/Development-Checks.md) For The Test Command And Coverage. Client Rendering And Every Utility Item Still Require Manual Gameplay Testing.
+The plugin includes multiple NMS adapters for this Minecraft version range. CI runs live server checks for bot combat, healing, and session recovery across the listed versions. See [development checks](docs/Development-Checks.md) for the test command and coverage. Client rendering and every utility item still require manual gameplay testing.
 
-## Installation And First Match
+## Installation and first match
 
-1. Build The Plugin Using The Instructions Below.
-2. Copy The JAR From `build/libs/` Into Your Paper Server's `plugins/` Folder.
-3. Start The Server To Generate The Configuration Files.
-4. As An Operator Or A Player With `practice.arena`, Stand At Your Desired Player Spawn And Run `/practice arena setplayer`.
-5. Move To The Bot Spawn And Run `/practice arena setbot`. Both Spawns Must Be In The Same World, At Least Four Blocks Apart, With Solid Floors And Two Clear Blocks Of Headroom.
-6. Run `/practice arena list` To Check That The Arena Is Ready.
-7. Open `/practice`, Choose Your Kit, Difficulty, And Mode, Then Start Practicing.
+1. Build the plugin using the instructions below.
+2. Copy the JAR from `build/libs/` into your Paper server's `plugins/` folder.
+3. Start the server to generate the configuration files.
+4. As an operator or a player with `practice.arena`, stand at your desired player spawn and run `/practice arena setplayer`.
+5. Move to the bot spawn and run `/practice arena setbot`. Both spawns must be in the same world, at least four blocks apart, with solid floors and two clear blocks of headroom.
+6. Run `/practice arena list` to check that the arena is ready.
+7. Open `/practice`, choose your kit, difficulty, and mode, then start practicing.
 
-Use `/practice stop` To End Your Session.
+Use `/practice stop` to end your session.
 
-For Additional Arenas, Add A Name To Both Spawn Commands:
+For additional arenas, add a name to both spawn commands:
 
 ```text
 /practice arena setplayer courtyard
@@ -54,43 +57,43 @@ For Additional Arenas, Add A Name To Both Spawn Commands:
 /practice arena setradius 32 courtyard
 ```
 
-## Practice Modes
+## Practice modes
 
 | Mode | Description |
 | --- | --- |
-| `duel` | One Round Against One Bot |
-| `match` | A Best Of Series Against One Bot |
-| `endless` | Continuous Sparring With Repeated Rounds |
-| `2v1` | A Best Of Series Against Two Bots |
-| `3v1` | A Best Of Series Against Three Bots |
+| `duel` | One round against one bot |
+| `match` | A best of series against one bot |
+| `endless` | Continuous sparring with repeated rounds |
+| `2v1` | A best of series against two bots |
+| `3v1` | A best of series against three bots |
 
 ## Commands
 
-Aliases: `/p` And `/prac`.
+Aliases: `/p` and `/prac`.
 
 | Command | Action |
 | --- | --- |
-| `/practice` | Open Practice Setup |
-| `/practice start [kit] [difficulty] [mode] [bestOf]` | Start With Your Selected Or Supplied Settings |
-| `/practice stop` | End Your Current Session |
-| `/practice pause` | Pause The Current Session |
-| `/practice resume` | Resume A Paused Session |
-| `/practice rematch` | Start Again With Your Previous Match Selection |
-| `/practice settings` | Configure Match Settings, Bot Abilities, And Advanced Tuning |
-| `/practice preset` | Open Your Saved Bot Presets |
-| `/practice hud` | Toggle The Health Display During A Session |
-| `/practice stats` | View Your Practice Results |
-| `/practice damage` | Toggle Damage Diagnostics During A Session |
-| `/practice kits` | List Available Kits |
-| `/practice difficulties` | List Available Difficulties |
-| `/practice kit editor` | Open The Custom Kit Editor |
-| `/practice arena list` | Check Arena Setup And Availability |
-| `/practice status` | View Sessions And Configuration Status |
-| `/practice reload` | Reload Configuration And Messages After Stopping All Sessions |
+| `/practice` | Open practice setup |
+| `/practice start [kit] [difficulty] [mode] [bestOf]` | Start with your selected or supplied settings |
+| `/practice stop` | End your current session |
+| `/practice pause` | Pause the current session |
+| `/practice resume` | Resume a paused session |
+| `/practice rematch` | Start again with your previous match selection |
+| `/practice settings` | Configure match settings, bot abilities, and advanced tuning |
+| `/practice preset` | Open your saved bot presets |
+| `/practice hud` | Toggle the health display during a session |
+| `/practice stats` | View your practice results |
+| `/practice damage` | Toggle damage diagnostics during a session |
+| `/practice kits` | List available kits |
+| `/practice difficulties` | List available difficulties |
+| `/practice kit editor` | Open the custom kit editor |
+| `/practice arena list` | Check arena setup and availability |
+| `/practice status` | View sessions and configuration status |
+| `/practice reload` | Reload configuration and messages after stopping all sessions |
 
-## Bot Presets
+## Bot presets
 
-Configure The Bot Through `/practice settings`, Then Save A Named Preset:
+Configure the bot through `/practice settings`, then save a named preset:
 
 ```text
 /practice preset save sword_practice
@@ -99,30 +102,30 @@ Configure The Bot Through `/practice settings`, Then Save A Named Preset:
 /practice preset delete sword_practice
 ```
 
-Each Player Can Save Up To 21 Personal Presets. Presets Include Bot Abilities And Advanced Combat Tuning. Match Timing, Starting Saturation, HUD, And Menu Animations Stay Separate.
+Each player can save up to 21 personal presets. Presets include bot abilities and advanced combat tuning. Match timing, starting saturation, HUD, and menu animations stay separate.
 
-Saving An Existing Name Replaces That Preset. Loading A Preset Applies Its Settings To Your Next Session. Presets Can Be Managed When You Are Outside An Active Match.
+Saving an existing name replaces that preset. Loading a preset applies its settings to your next session. Presets can be managed when you are outside an active match.
 
-In The Presets Menu, Left Click To Load, Shift Left Click To Replace A Preset With Your Current Bot Settings, Or Shift Right Click To Delete It.
+In the presets menu, left click to load, shift left click to replace a preset with your current bot settings, or shift right click to delete it.
 
-## Configuration And Permissions
+## Configuration and permissions
 
 | File | Purpose |
 | --- | --- |
-| `config.yml` | Arena Settings, Session Defaults, And Bot Difficulties |
-| `kits.yml` | Built In Kit Definitions |
-| `customkits.yml` | Saved Custom Kits |
-| `messages.yml` | Messages, Formatting, And Custom Placeholders |
-| `player-settings.yml` | Individual Player Settings And Bot Presets |
-| `stats.yml` | Player Results And Combat Totals By Practice Mode |
+| `config.yml` | Arena settings, session defaults, and bot difficulties |
+| `kits.yml` | Built in kit definitions |
+| `customkits.yml` | Saved custom kits |
+| `messages.yml` | Messages, formatting, and custom placeholders |
+| `player-settings.yml` | Individual player settings and bot presets |
+| `stats.yml` | Player results and combat totals by practice mode |
 
-The Base Permission Is `practice.use`. Bot Settings And Presets Use `practice.settings`. Administrative Permissions Include `practice.arena`, `practice.reload`, And `practice.stop.other`.
+The base permission is `practice.use`. Bot settings and presets use `practice.settings`. Administrative permissions include `practice.arena`, `practice.reload`, and `practice.stop.other`.
 
-Operators Receive `practice.admin` By Default. See [plugin.yml](core/src/main/resources/plugin.yml) For The Full Permission List And Defaults.
+Operators receive `practice.admin` by default. See [plugin.yml](core/src/main/resources/plugin.yml) for the full permission list and defaults.
 
-## Building From Source
+## Building from source
 
-Install JDK 21 And Set `JAVA_HOME` To Its Installation Folder. Run The Included Gradle Wrapper From The Repository Root. A Separate Gradle Installation Is Not Required.
+Install JDK 21 and set `JAVA_HOME` to its installation folder. Run the included Gradle wrapper from the repository root. A separate Gradle installation is not required.
 
 Windows PowerShell:
 
@@ -130,20 +133,20 @@ Windows PowerShell:
 .\gradlew.bat build
 ```
 
-Linux Or macOS:
+Linux or macOS:
 
 ```sh
 ./gradlew build
 ```
 
-The Plugin JAR Is Written To `build/libs/`. The Build Also Runs The Automated Tests.
+The plugin JAR is written to `build/libs/`. The build also runs the automated tests.
 
-## Support And Contributing
+## Support and contributing
 
-Found A Bug Or Have An Idea? [Open An Issue](../../issues). For Bug Reports, Include Your Paper Version, Plugin Version, Relevant Server Log Output, And The Steps Needed To Reproduce The Problem.
+Found a bug or have an idea? [Open an issue](../../issues). For bug reports, include your Paper version, plugin version, relevant server log output, and the steps needed to reproduce the problem.
 
-Pull Requests Are Welcome.
+Pull requests are welcome.
 
 ## License
 
-Licensed Under The [MIT License](LICENSE).
+Licensed under the [MIT license](LICENSE).

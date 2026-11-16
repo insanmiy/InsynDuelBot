@@ -44,7 +44,7 @@ final class PracticeProtection implements Listener {
     UUID uid = e.getPlayer().getUniqueId();
     plugin.lastSelections().remove(uid);
     if (plugin.menu() != null) plugin.menu().cleanup(uid);
-    if (plugin.participant(e.getPlayer())) plugin.stop(session, plugin.messages() != null ? plugin.messages().get("session.player-disconnected") : "Player Disconnected.");
+    if (plugin.participant(e.getPlayer())) plugin.stop(session, plugin.messages() != null ? plugin.messages().get("session.player-disconnected") : Messages.text("text.practice-protection.player-disconnected"));
   }
 
   @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
@@ -386,7 +386,7 @@ final class PracticeProtection implements Listener {
       }
     } catch (java.io.IOException failure) {
       e.setCancelled(true);
-      plugin.getLogger().severe("Water Journal Failed: " + failure.getMessage());
+      plugin.getLogger().severe(Messages.text("text.practice-protection.water-journal-failed") + failure.getMessage());
     }
   }
 
@@ -440,7 +440,7 @@ final class PracticeProtection implements Listener {
       }
     } catch (java.io.IOException failure) {
       e.setCancelled(true);
-      plugin.getLogger().severe("Water Flow Journal Failed: " + failure.getMessage());
+      plugin.getLogger().severe(Messages.text("text.practice-protection.water-flow-journal-failed") + failure.getMessage());
     }
   }
 
@@ -477,7 +477,7 @@ final class PracticeProtection implements Listener {
       }
     } catch (java.io.IOException failure) {
       e.setCancelled(true);
-      plugin.getLogger().severe("Fire Journal Failed: " + failure.getMessage());
+      plugin.getLogger().severe(Messages.text("text.practice-protection.fire-journal-failed") + failure.getMessage());
     }
   }
 
@@ -559,7 +559,7 @@ final class PracticeProtection implements Listener {
           return;
         }
       } catch (java.io.IOException failure) {
-        plugin.getLogger().severe("Block Placement Cancelled: Journal Could Not Be Saved.");
+        plugin.getLogger().severe(Messages.text("text.practice-protection.block-placement-cancelled-journal-could-not"));
       }
       e.setCancelled(true);
       plugin.messages().send(e.getPlayer(), "session.block-journal-failed");
@@ -616,7 +616,7 @@ final class PracticeProtection implements Listener {
               if (player.getGameMode() != GameMode.CREATIVE) { e.getItem().subtract(1); player.updateInventory(); }
             }
           } catch (Exception ex) {
-            plugin.getLogger().fine("Wind charge launch error: " + ex.getMessage());
+            plugin.getLogger().fine(Messages.text("text.practice-protection.wind-charge-launch-error") + ex.getMessage());
           }
         }
       }
@@ -696,7 +696,7 @@ final class PracticeProtection implements Listener {
 
         if (isOwner) {
           session.endingRound = true;
-          plugin.messages().send(session.owner, "combat.lethal-hit", "%target%", "You");
+          plugin.messages().send(session.owner, "combat.lethal-hit", "%target%", Messages.text("text.practice-protection.you"));
           plugin.getServer()
               .getScheduler()
               .runTask(
@@ -715,7 +715,7 @@ final class PracticeProtection implements Listener {
           boolean allDead = session.aliveBotCount() <= 0;
           if (allDead) {
             session.endingRound = true;
-            plugin.messages().send(session.owner, "combat.lethal-hit", "%target%", "Bot");
+            plugin.messages().send(session.owner, "combat.lethal-hit", "%target%", Messages.text("text.practice-protection.bot"));
             plugin.getServer()
                 .getScheduler()
                 .runTask(
@@ -742,6 +742,6 @@ final class PracticeProtection implements Listener {
       }
       plugin.getServer()
           .getScheduler()
-          .runTask(plugin, () -> plugin.stop(session, "Unexpected Player Death; Practice Aborted."));
+          .runTask(plugin, () -> plugin.stop(session, Messages.text("text.practice-protection.unexpected-player-death-practice-aborted")));
     }
   }}

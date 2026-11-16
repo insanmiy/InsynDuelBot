@@ -220,9 +220,9 @@ final class PlayerSettings {
   }
 
   static String presetName(String name) {
-    String normalized = Objects.requireNonNull(name, "Preset Name Is Required").toLowerCase(Locale.ROOT);
+    String normalized = Objects.requireNonNull(name, Messages.text("text.player-settings.preset-name-is-required")).toLowerCase(Locale.ROOT);
     if (!normalized.matches("[a-z0-9_-]{1,32}"))
-      throw new IllegalArgumentException("Preset Names Must Be 1 To 32 Letters, Numbers, Underscores, Or Hyphens.");
+      throw new IllegalArgumentException(Messages.text("text.player-settings.preset-names-must-be-1-to"));
     return normalized;
   }
 
@@ -230,7 +230,7 @@ final class PlayerSettings {
     String normalized = presetName(name);
     List<String> saved = presets(id);
     if (!saved.contains(normalized) && saved.size() >= MAX_PRESETS)
-      throw new IllegalArgumentException("You Can Save Up To " + MAX_PRESETS + " Bot Presets. Delete One First.");
+      throw new IllegalArgumentException(Messages.text("text.player-settings.you-can-save-up-to") + MAX_PRESETS + Messages.text("text.player-settings.bot-presets-delete-one-first"));
     YamlConfiguration candidate = copySettings();
     ConfigurationSection preset = candidate.createSection(id + ".presets." + normalized);
     for (String key : BOT_SETTINGS) preset.set(key, botSetting(id, key));
@@ -255,7 +255,7 @@ final class PlayerSettings {
 
   private ConfigurationSection requirePreset(UUID id, String name) {
     ConfigurationSection preset = data.getConfigurationSection(id + ".presets." + presetName(name));
-    if (preset == null) throw new IllegalArgumentException("Unknown Bot Preset. Use /practice Preset List.");
+    if (preset == null) throw new IllegalArgumentException(Messages.text("text.player-settings.unknown-bot-preset-use-practice-preset"));
     return preset;
   }
 

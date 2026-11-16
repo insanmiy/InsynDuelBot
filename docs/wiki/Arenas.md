@@ -1,10 +1,12 @@
 # Arenas
 
-Arenas Define Where Players And Bots Spawn. Arena Commands Require `practice.arena`, Which Operators Receive Through `practice.admin`.
+Water placed during practice can wash away blocks and waterlog supported blocks. The block journal records original block data for cleanup. Ownership checks, flow distance limits, and the per-player block limit still apply. Lava placement keeps its existing restrictions.
 
-## Create An Arena
+Arenas define where players and bots spawn. Arena commands require `practice.arena`, which operators receive through `practice.admin`.
 
-Stand At Each Spawn Before Running Its Command:
+## Create an arena
+
+Stand at each spawn before running its command:
 
 ```text
 /practice arena setplayer courtyard
@@ -13,22 +15,22 @@ Stand At Each Spawn Before Running Its Command:
 /practice arena list
 ```
 
-Leaving Out The Name Uses The `default` Arena.
+Leaving out the name uses the `default` arena.
 
-Choose Solid Ground With Two Clear Blocks Of Headroom. Spawns Must Be In The Same World, At Least Four Blocks Apart, And Close Enough For The Arena Radius.
+Choose solid ground with two clear blocks of headroom. Spawns must be in the same world, at least four blocks apart, and close enough for the arena radius.
 
-## Manage Arenas
+## Manage arenas
 
 | Command | Action |
 | --- | --- |
-| `/practice arena list` | Show Readiness And Availability |
-| `/practice arena info [name]` | Show Spawns And Radius |
-| `/practice arena tp [name]` | Teleport To The Player Spawn |
-| `/practice arena setradius <radius> [name]` | Change The Arena Radius |
-| `/practice arena delete <name>` | Remove An Arena's Setup |
+| `/practice arena list` | Show readiness and availability |
+| `/practice arena info [name]` | Show spawns and radius |
+| `/practice arena tp [name]` | Teleport to the player spawn |
+| `/practice arena setradius <radius> [name]` | Change the arena radius |
+| `/practice arena delete <name>` | Remove an arena's setup |
 
-Matches Are Assigned An Available Arena Automatically. Occupied Arenas And Arenas That Overlap An Active Match Cannot Be Assigned To Another Match. Leave Space Between Arenas.
+Matches are assigned an available arena automatically. Occupied arenas and arenas that overlap an active match cannot be assigned to another match. Leave space between arenas.
 
-Stop Matches Before Changing Their Arena Setup. Occupied Arenas Cannot Be Deleted.
+Stop matches before changing their arena setup. Occupied arenas cannot be deleted.
 
-If No Arena Is Available, Run `/practice arena list` And Follow The Reported Setup Error. See [Troubleshooting](Troubleshooting).
+If no arena is available, run `/practice arena list` and follow the reported setup error. See [troubleshooting](Troubleshooting).

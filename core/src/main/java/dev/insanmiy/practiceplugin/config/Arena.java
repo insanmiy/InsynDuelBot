@@ -1,5 +1,7 @@
 package dev.insanmiy.practiceplugin.config;
 
+import dev.insanmiy.practiceplugin.Messages;
+
 import org.bukkit.*;
 
 public record Arena(Location playerSpawn, Location botSpawn, double radius) {
@@ -10,15 +12,15 @@ public record Arena(Location playerSpawn, Location botSpawn, double radius) {
 
   public String error() {
     if (playerSpawn.getWorld() == null || !playerSpawn.getWorld().equals(botSpawn.getWorld()))
-      return "Spawns Must Be In The Same Loaded World.";
+      return Messages.text("text.arena.spawns-must-be-in-the-same");
     double distance = playerSpawn.distance(botSpawn);
-    if (distance < 4 || distance > Math.max(12.0, radius * 2.0 - 4.0)) return "Spawns Must Be At Least 4 Blocks Apart And Inside The Arena.";
+    if (distance < 4 || distance > Math.max(12.0, radius * 2.0 - 4.0)) return Messages.text("text.arena.spawns-must-be-at-least-4");
     if (!Double.isFinite(radius) || radius < 1)
-      return "Arena Radius Must Be At Least 1 Block.";
+      return Messages.text("text.arena.arena-radius-must-be-at-least");
     if (radius > 1000.0)
-      return "Arena Radius Cannot Exceed 1000 Blocks.";
+      return Messages.text("text.arena.arena-radius-cannot-exceed-1000-blocks");
     if (!safe(playerSpawn) || !safe(botSpawn))
-      return "Spawns Need Solid Floors And Two Clear Blocks Of Headroom.";
+      return Messages.text("text.arena.spawns-need-solid-floors-and-two");
     return null;
   }
 

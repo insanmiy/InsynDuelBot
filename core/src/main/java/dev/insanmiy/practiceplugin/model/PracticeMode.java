@@ -1,13 +1,15 @@
 package dev.insanmiy.practiceplugin.model;
 
+import dev.insanmiy.practiceplugin.Messages;
+
 import java.util.Locale;
 
 public enum PracticeMode {
-  MATCH("match", "Best Of Series", 1),
-  DUEL("duel", "Single 1v1 Duel", 1),
-  ENDLESS("endless", "Endless Sparring", 1),
-  V2_1("2v1", "2v1 Outnumbered Series", 2),
-  V3_1("3v1", "3v1 Outnumbered Series", 3);
+  MATCH("match", "text.practice-mode.best-of-series", 1),
+  DUEL("duel", "text.practice-mode.single-1v1-duel", 1),
+  ENDLESS("endless", "text.practice-mode.endless-sparring", 1),
+  V2_1("2v1", "text.practice-mode.2v1-outnumbered-series", 2),
+  V3_1("3v1", "text.practice-mode.3v1-outnumbered-series", 3);
 
   private final String id;
   private final String description;
@@ -24,7 +26,7 @@ public enum PracticeMode {
   }
 
   public String description() {
-    return description;
+    return Messages.text(description);
   }
 
   public int botCount() {
@@ -37,7 +39,7 @@ public enum PracticeMode {
 
   public static PracticeMode parse(String name) {
     if (name == null || name.isBlank()) {
-      throw new IllegalArgumentException("Mode Must Be Match, Duel, Endless, 2v1, Or 3v1.");
+      throw new IllegalArgumentException(Messages.text("text.practice-mode.mode-must-be-match-duel-endless"));
     }
     String normalized = name.trim().toLowerCase(Locale.ROOT);
     for (PracticeMode mode : values()) {
@@ -51,6 +53,6 @@ public enum PracticeMode {
     if (normalized.equals("3-1") || normalized.equals("3_1") || normalized.equals("3vs1")) {
       return V3_1;
     }
-    throw new IllegalArgumentException("Mode Must Be Match, Duel, Endless, 2v1, Or 3v1.");
+    throw new IllegalArgumentException(Messages.text("text.practice-mode.mode-must-be-match-duel-endless"));
   }
 }

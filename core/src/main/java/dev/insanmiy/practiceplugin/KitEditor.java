@@ -50,7 +50,7 @@ final class KitEditor implements Listener {
 
     Draft(String name) {
       this.name = name;
-      this.description = "Custom Kit: " + name;
+      this.description = Messages.text("text.kit-editor.custom-kit") + name;
     }
   }
 
@@ -73,11 +73,11 @@ final class KitEditor implements Listener {
           TextUI.inventory(
               this,
               54,
-              Component.text(
+              Messages.component(
                   screen == Screen.LIBRARY || screen == Screen.TEMPLATES
-                      ? (screen == Screen.LIBRARY ? "Custom Kits / " : "Copy A Template / ")
+                      ? (screen == Screen.LIBRARY ? Messages.text("text.kit-editor.custom-kits") : Messages.text("text.kit-editor.copy-a-template"))
                           + (page + 1)
-                      : screen
+                      : Messages.text("text.kit-editor.screen-" + screen.name().toLowerCase(Locale.ROOT))
                           + " / "
                           + draft.name
                           + (screen == Screen.PALETTE ? " / " + (page + 1) : "")));
@@ -118,9 +118,9 @@ final class KitEditor implements Listener {
         && !canCreate(player)
         && !canDelete(player)
         && !canImport(player))
-      throw new IllegalArgumentException("Missing Permission: practice.kits");
+      throw new IllegalArgumentException(Messages.text("text.kit-editor.missing-permission-practice-kits"));
     if (plugin.sessionFor(player) != null)
-      throw new IllegalArgumentException("Stop Practice Before Editing Kits.");
+      throw new IllegalArgumentException(Messages.text("text.kit-editor.stop-practice-before-editing-kits"));
   }
 
   boolean hasBypass(Player player) {
@@ -157,7 +157,7 @@ final class KitEditor implements Listener {
     allowed(player);
     String action = args.length > 1 ? args[1].toLowerCase(Locale.ROOT) : "editor";
     if (action.equals("editor")) {
-      if (!canEditor(player)) throw new IllegalArgumentException("Missing Permission: practice.kits.editor");
+      if (!canEditor(player)) throw new IllegalArgumentException(Messages.text("text.kit-editor.missing-permission-practice-kits-editor"));
       library(player, 0);
       return;
     }
@@ -167,29 +167,29 @@ final class KitEditor implements Listener {
     String name = CustomKitStore.name(args[2]);
     switch (action) {
       case "create" -> {
-        if (!canCreate(player)) throw new IllegalArgumentException("Missing Permission: practice.kits.create");
+        if (!canCreate(player)) throw new IllegalArgumentException(Messages.text("text.kit-editor.missing-permission-practice-kits-create"));
         create(player, name, args.length > 3 ? args[3] : null);
       }
       case "import" -> {
-        if (!canImport(player)) throw new IllegalArgumentException("Missing Permission: practice.kits.import");
+        if (!canImport(player)) throw new IllegalArgumentException(Messages.text("text.kit-editor.missing-permission-practice-kits-import"));
         importKit(player, name);
       }
       case "edit" -> {
-        if (!canEditor(player)) throw new IllegalArgumentException("Missing Permission: practice.kits.editor");
+        if (!canEditor(player)) throw new IllegalArgumentException(Messages.text("text.kit-editor.missing-permission-practice-kits-editor"));
         edit(player, name);
       }
       case "save" -> {
         var saved = store.read();
         var existingSection = saved.getConfigurationSection(name);
         if (existingSection == null && !canCreate(player))
-          throw new IllegalArgumentException("Missing Permission: practice.kits.create");
+          throw new IllegalArgumentException(Messages.text("text.kit-editor.missing-permission-practice-kits-create"));
         if (existingSection != null && !canEditor(player))
-          throw new IllegalArgumentException("Missing Permission: practice.kits.editor");
+          throw new IllegalArgumentException(Messages.text("text.kit-editor.missing-permission-practice-kits-editor"));
         if (existingSection != null && !CustomKitStore.editable(existingSection, player.getUniqueId(), hasBypass(player))) {
-          throw new IllegalArgumentException("You Can Only Overwrite Your Own Custom Kits.");
+          throw new IllegalArgumentException(Messages.text("text.kit-editor.you-can-only-overwrite-your-own"));
         }
         if (existingSection == null && (plugin.kits().containsKey(name) || saved.contains(name))) {
-          throw new IllegalArgumentException("Name Already Used By A Built-In Kit.");
+          throw new IllegalArgumentException(Messages.text("text.kit-editor.name-already-used-by-a-built"));
         }
         String revision = existingSection != null ? CustomKitStore.revision(existingSection) : null;
         var candidate = new YamlConfiguration();
@@ -198,15 +198,15 @@ final class KitEditor implements Listener {
         plugin.messages().send(player, "kit.saved", "%name%", name);
       }
       case "copy" -> {
-        if (!canCreate(player)) throw new IllegalArgumentException("Missing Permission: practice.kits.create");
+        if (!canCreate(player)) throw new IllegalArgumentException(Messages.text("text.kit-editor.missing-permission-practice-kits-create"));
         if (args.length != 4)
-          throw new IllegalArgumentException("/practice Kit Copy <Source> <New Name>");
+          throw new IllegalArgumentException(Messages.text("text.kit-editor.practice-kit-copy-source-new-name"));
         create(player, CustomKitStore.name(args[3]), name);
       }
       case "rename" -> {
-        if (!canCreate(player) && !canEditor(player)) throw new IllegalArgumentException("Missing Permission: practice.kits");
+        if (!canCreate(player) && !canEditor(player)) throw new IllegalArgumentException(Messages.text("text.kit-editor.missing-permission-practice-kits"));
         if (args.length != 4)
-          throw new IllegalArgumentException("/practice Kit Rename <Old Name> <New Name>");
+          throw new IllegalArgumentException(Messages.text("text.kit-editor.practice-kit-rename-old-name-new"));
         store.rename(
             name,
             args[3],
@@ -218,7 +218,7 @@ final class KitEditor implements Listener {
         library(player, 0);
       }
       case "delete" -> {
-        if (!canDelete(player)) throw new IllegalArgumentException("Missing Permission: practice.kits.delete");
+        if (!canDelete(player)) throw new IllegalArgumentException(Messages.text("text.kit-editor.missing-permission-practice-kits-delete"));
         if (args.length >= 4 && args[3].equalsIgnoreCase("confirm")) {
           store.delete(
               name,
@@ -234,7 +234,7 @@ final class KitEditor implements Listener {
       }
       default ->
           throw new IllegalArgumentException(
-              "Use Editor, Create, Import, Edit, Save, Copy, Rename Or Delete.");
+              Messages.text("text.kit-editor.use-editor-create-import-edit-save"));
     }
   }
 
@@ -262,14 +262,14 @@ final class KitEditor implements Listener {
 
   void create(Player player, String name, String template) throws IOException {
     allowed(player);
-    if (!canCreate(player)) throw new IllegalArgumentException("Missing Permission: practice.kits.create");
+    if (!canCreate(player)) throw new IllegalArgumentException(Messages.text("text.kit-editor.missing-permission-practice-kits-create"));
     name = CustomKitStore.name(name);
     if (plugin.kits().containsKey(name) || store.read().contains(name))
-      throw new IllegalArgumentException("Name Already Used. Choose A New Name.");
+      throw new IllegalArgumentException(Messages.text("text.kit-editor.name-already-used-choose-a-new"));
     Draft draft = new Draft(name);
     if (template != null) {
       Kit kit = plugin.kits().get(template.toLowerCase(Locale.ROOT));
-      if (kit == null) throw new IllegalArgumentException("Unknown Template Kit.");
+      if (kit == null) throw new IllegalArgumentException(Messages.text("text.kit-editor.unknown-template-kit"));
       kit.previewItems().forEach((slot, item) -> draft.items[slot] = item);
       draft.health = kit.health();
       draft.regeneration = kit.regeneration();
@@ -283,11 +283,11 @@ final class KitEditor implements Listener {
     name = CustomKitStore.name(name);
     var section = store.read().getConfigurationSection(name);
     if (section == null)
-      throw new IllegalArgumentException("Custom Kit '" + name + "' Does Not Exist.");
+      throw new IllegalArgumentException(Messages.text("text.kit-editor.custom-kit-2") + name + Messages.text("text.kit-editor.does-not-exist"));
     if (!CustomKitStore.editable(
         section, player.getUniqueId(), hasBypass(player)))
       throw new IllegalArgumentException(
-          "You Can Only Edit Your Own Custom Kits. Copy A Preset To Customize It.");
+          Messages.text("text.kit-editor.you-can-only-edit-your-own"));
     Draft draft = new Draft(name);
     draft.revision = CustomKitStore.revision(section);
     try {
@@ -297,8 +297,8 @@ final class KitEditor implements Listener {
       draft.health = kit.health();
       draft.regeneration = kit.regeneration();
     } catch (Exception e) {
-      plugin.getLogger().warning("Could not fully parse kit " + name + ": " + e.getMessage());
-      draft.description = section.getString("description", "Custom Kit: " + name);
+      plugin.getLogger().warning(Messages.text("text.kit-editor.could-not-fully-parse-kit") + name + ": " + e.getMessage());
+      draft.description = section.getString("description", Messages.text("text.kit-editor.custom-kit") + name);
       draft.health = section.getDouble("health", 20.0);
       draft.regeneration = section.getBoolean("natural-regeneration", true);
     }
@@ -334,21 +334,21 @@ final class KitEditor implements Listener {
 
   private void importKit(Player player, String name) throws IOException {
     allowed(player);
-    if (!canImport(player)) throw new IllegalArgumentException("Missing Permission: practice.kits.import");
+    if (!canImport(player)) throw new IllegalArgumentException(Messages.text("text.kit-editor.missing-permission-practice-kits-import"));
     name = CustomKitStore.name(name);
     var saved = store.read();
     var existingSection = saved.getConfigurationSection(name);
     if (existingSection != null && !CustomKitStore.editable(existingSection, player.getUniqueId(), hasBypass(player))) {
-      throw new IllegalArgumentException("You Can Only Overwrite Your Own Custom Kits.");
+      throw new IllegalArgumentException(Messages.text("text.kit-editor.you-can-only-overwrite-your-own"));
     }
     if (existingSection == null && (plugin.kits().containsKey(name) || saved.contains(name))) {
-      throw new IllegalArgumentException("Name Already Used By A Built-In Kit.");
+      throw new IllegalArgumentException(Messages.text("text.kit-editor.name-already-used-by-a-built"));
     }
     Draft draft = new Draft(name);
     if (existingSection != null) {
       draft.revision = CustomKitStore.revision(existingSection);
     }
-    draft.description = "Saved By " + player.getName();
+    draft.description = Messages.text("text.kit-editor.saved-by") + player.getName();
     importInventory(player, draft);
     save(player, draft.name, serialize(draft), draft.revision);
     draft.revision = CustomKitStore.revision(store.read().getConfigurationSection(draft.name));
@@ -362,7 +362,7 @@ final class KitEditor implements Listener {
 
   void library(Player player, int requested) throws IOException {
     allowed(player);
-    if (!canEditor(player)) throw new IllegalArgumentException("Missing Permission: practice.kits.editor");
+    if (!canEditor(player)) throw new IllegalArgumentException(Messages.text("text.kit-editor.missing-permission-practice-kits-editor"));
     var saved = store.read();
     List<String> names =
         saved.getKeys(false).stream()
@@ -384,35 +384,35 @@ final class KitEditor implements Listener {
           button(
               Material.WRITABLE_BOOK,
               name,
-              "Left: Edit | Right: Duplicate | Shift-Right: Delete",
-              "/practice kit rename " + name + " <new-name>"));
+              Messages.text("text.kit-editor.left-edit-right-duplicate-shift-right"),
+              Messages.text("text.kit-editor.practice-kit-rename") + name + Messages.text("text.kit-editor.new-name")));
     }
     view.inventory.setItem(
         45,
         page == 0
-            ? button(Material.ARROW, "Back To Main Menu", "Return To Kit Selection")
-            : button(Material.ARROW, "Previous Page"));
+            ? button(Material.ARROW, Messages.text("text.kit-editor.back-to-main-menu"), Messages.text("text.kit-editor.return-to-kit-selection"))
+            : button(Material.ARROW, Messages.text("text.kit-editor.previous-page")));
     view.inventory.setItem(
-        46, button(Material.EMERALD, "Create Blank Kit", "No Fixed Kit-Count Limit"));
+        46, button(Material.EMERALD, Messages.text("text.kit-editor.create-blank-kit"), Messages.text("text.kit-editor.no-fixed-kit-count-limit")));
     view.inventory.setItem(
         47,
         button(
-            Material.CHEST, "Browse Kit Templates", "Choose Any Kit To Copy Into Your Own Draft"));
+            Material.CHEST, Messages.text("text.kit-editor.browse-kit-templates"), Messages.text("text.kit-editor.choose-any-kit-to-copy-into")));
     view.inventory.setItem(
         49,
         button(
             Material.BOOK,
-            names.size() + " Custom Kits",
-            "/practice kit create <name> [template]"));
-    view.inventory.setItem(52, button(Material.ARROW, "Next Page"));
+            names.size() + Messages.text("text.kit-editor.custom-kits-2"),
+            Messages.text("text.kit-editor.practice-kit-create-name-template")));
+    view.inventory.setItem(52, button(Material.ARROW, Messages.text("text.kit-editor.next-page")));
     view.inventory.setItem(
         50,
         button(
             Material.HOPPER,
-            "Create From Your Inventory",
-            "Copies Hotbar, Inventory, Armor And Offhand Into A New Draft",
-            "Your Real Items Stay Untouched; Click Save When Ready",
-            "/practice kit import <name>"));
+            Messages.text("text.kit-editor.create-from-your-inventory"),
+            Messages.text("text.kit-editor.copies-hotbar-inventory-armor-and-offhand"),
+            Messages.text("text.kit-editor.your-real-items-stay-untouched-click"),
+            Messages.text("text.kit-editor.practice-kit-import-name")));
     player.openInventory(view.inventory);
   }
 
@@ -439,13 +439,13 @@ final class KitEditor implements Listener {
               kit.icon(),
               kit.name(),
               kit.description(),
-              kit.health() + " HP | Click To Create An Independent Copy"));
+              kit.health() + Messages.text("text.kit-editor.hp-click-to-create-an-independent")));
     }
-    view.inventory.setItem(45, button(Material.ARROW, "Previous Page"));
+    view.inventory.setItem(45, button(Material.ARROW, Messages.text("text.kit-editor.previous-page")));
     view.inventory.setItem(
-        49, button(Material.BOOK, "Choose A Starting Loadout", "Original Kits Are Never Modified"));
-    view.inventory.setItem(52, button(Material.ARROW, "Next Page"));
-    view.inventory.setItem(53, button(Material.BARRIER, "Back To Your Kits"));
+        49, button(Material.BOOK, Messages.text("text.kit-editor.choose-a-starting-loadout"), Messages.text("text.kit-editor.original-kits-are-never-modified")));
+    view.inventory.setItem(52, button(Material.ARROW, Messages.text("text.kit-editor.next-page")));
+    view.inventory.setItem(53, button(Material.BARRIER, Messages.text("text.kit-editor.back-to-your-kits")));
     player.openInventory(view.inventory);
   }
 
@@ -454,9 +454,7 @@ final class KitEditor implements Listener {
   }
 
   private static String pretty(String value) {
-    return Arrays.stream(value.toLowerCase(Locale.ROOT).split("_"))
-        .map(s -> s.isEmpty() ? s : Character.toUpperCase(s.charAt(0)) + s.substring(1))
-        .collect(java.util.stream.Collectors.joining(" "));
+    return Messages.displayName(value);
   }
 
   private static ItemStack displayItem(ItemStack item, String... hints) {
@@ -466,7 +464,7 @@ final class KitEditor implements Listener {
           List<Component> lore =
               TextUI.lore(meta) == null ? new ArrayList<>() : new ArrayList<>(TextUI.lore(meta));
           lore.add(Component.empty());
-          for (String hint : hints) lore.add(Component.text(hint, NamedTextColor.AQUA));
+          for (String hint : hints) lore.add(Messages.component(hint, NamedTextColor.AQUA));
           TextUI.lore(meta, lore);
         });
     return display;
@@ -474,10 +472,10 @@ final class KitEditor implements Listener {
 
   private static String slotName(int slot) {
     return slot < 9
-        ? "Hotbar " + (slot + 1)
+        ? Messages.text("text.kit-editor.hotbar") + (slot + 1)
         : slot < 36
-            ? "Inventory " + slot
-            : new String[] {"Boots", "Leggings", "Chestplate", "Helmet", "Offhand"}[slot - 36];
+            ? Messages.text("text.kit-editor.inventory") + slot
+            : new String[] {Messages.text("text.kit-editor.boots"), Messages.text("text.kit-editor.leggings"), Messages.text("text.kit-editor.chestplate"), Messages.text("text.kit-editor.helmet"), Messages.text("text.kit-editor.offhand")}[slot - 36];
   }
 
   private void show(Player player, Screen screen, Draft draft, int requested) {
@@ -490,7 +488,7 @@ final class KitEditor implements Listener {
       return;
     }
     if (screen == Screen.ENCHANT && !canEnchant(draft.items[draft.selected]))
-      throw new IllegalArgumentException("This Item Cannot Be Enchanted.");
+      throw new IllegalArgumentException(Messages.text("text.kit-editor.this-item-cannot-be-enchanted"));
     pendingNames.remove(player.getUniqueId());
 
     int page = Math.max(0, requested);
@@ -503,52 +501,52 @@ final class KitEditor implements Listener {
             empty(draft.items[i])
                 ? button(
                     Material.LIGHT_GRAY_STAINED_GLASS_PANE,
-                    slotName(i) + " / Empty",
-                    "Click To Choose An Item From The GUI",
-                    "Shift-Left: Paste Selected Item | Right: Clear")
+                    slotName(i) + Messages.text("text.kit-editor.empty"),
+                    Messages.text("text.kit-editor.click-to-choose-an-item-from"),
+                    Messages.text("text.kit-editor.shift-left-paste-selected-item-right"))
                 : displayItem(
                     draft.items[i],
                     slotName(i),
-                    "Click: Item Settings And Enchantments",
-                    "Shift-Left: Paste Selected Item | Right: Clear"));
+                    Messages.text("text.kit-editor.click-item-settings-and-enchantments"),
+                    Messages.text("text.kit-editor.shift-left-paste-selected-item-right")));
       inv.setItem(
           41,
           button(
               Material.COMPASS,
-              "Selected: " + slotName(draft.selected),
-              "Slots 0-8 (Top Row) Are The Hotbar",
-              "Click An Item: Settings / Enchants",
-              "Click Empty Slot: Item Picker",
-              "Shift-Left Another Slot: Copy Selected Into It",
-              "Click Your Inventory Below To Copy An Item Here"));
-      inv.setItem(42, button(Material.RED_DYE, "Amount -1", "Shift: -16"));
-      inv.setItem(43, button(Material.LIME_DYE, "Amount +1", "Shift: +16 (Native Stack Limits)"));
+              Messages.text("text.kit-editor.selected") + slotName(draft.selected),
+              Messages.text("text.kit-editor.slots-0-8-top-row-are"),
+              Messages.text("text.kit-editor.click-an-item-settings-enchants"),
+              Messages.text("text.kit-editor.click-empty-slot-item-picker"),
+              Messages.text("text.kit-editor.shift-left-another-slot-copy-selected"),
+              Messages.text("text.kit-editor.click-your-inventory-below-to-copy")));
+      inv.setItem(42, button(Material.RED_DYE, Messages.text("text.kit-editor.amount-1"), Messages.text("text.kit-editor.shift-16")));
+      inv.setItem(43, button(Material.LIME_DYE, Messages.text("text.kit-editor.amount-1-2"), Messages.text("text.kit-editor.shift-16-native-stack-limits")));
       inv.setItem(
           44,
           button(
-              Material.CHEST, "Choose / Replace Selected Item", "Opens Categorized Item Picker"));
-      inv.setItem(45, button(Material.ARROW, "Discard Changes / Back"));
-      inv.setItem(46, button(Material.REDSTONE, "Health -2 / " + (int) draft.health + " HP"));
-      inv.setItem(47, button(Material.GLOWSTONE_DUST, "Health +2 / " + (int) draft.health + " HP"));
-      inv.setItem(48, button(Material.COOKED_BEEF, "Natural Regeneration: " + draft.regeneration));
+              Material.CHEST, Messages.text("text.kit-editor.choose-replace-selected-item"), Messages.text("text.kit-editor.opens-categorized-item-picker")));
+      inv.setItem(45, button(Material.ARROW, Messages.text("text.kit-editor.discard-changes-back")));
+      inv.setItem(46, button(Material.REDSTONE, Messages.text("text.kit-editor.health-2") + (int) draft.health + Messages.text("text.kit-editor.hp")));
+      inv.setItem(47, button(Material.GLOWSTONE_DUST, Messages.text("text.kit-editor.health-2-2") + (int) draft.health + Messages.text("text.kit-editor.hp")));
+      inv.setItem(48, button(Material.COOKED_BEEF, Messages.text("text.kit-editor.natural-regeneration") + draft.regeneration));
       inv.setItem(
           49,
           button(
               Material.EMERALD_BLOCK,
-              "Save " + draft.name,
-              "Validates And Saves To Disk",
-              "Both Fighters Get Independent Copies"));
+              Messages.text("text.kit-editor.save") + draft.name,
+              Messages.text("text.kit-editor.validates-and-saves-to-disk"),
+              Messages.text("text.kit-editor.both-fighters-get-independent-copies")));
       inv.setItem(
           50,
           button(
               Material.HOPPER,
-              "Import Your Inventory",
-              "Replaces Draft Gear; Real Items Untouched"));
-      inv.setItem(51, button(Material.ENCHANTING_TABLE, "Enchant Selected Item"));
+              Messages.text("text.kit-editor.import-your-inventory"),
+              Messages.text("text.kit-editor.replaces-draft-gear-real-items-untouched")));
+      inv.setItem(51, button(Material.ENCHANTING_TABLE, Messages.text("text.kit-editor.enchant-selected-item")));
       inv.setItem(
           52,
-          button(Material.WRITABLE_BOOK, "Name This Kit", "Click, Then Type A Name In Chat"));
-      inv.setItem(53, button(Material.BARRIER, "Delete Saved Kit", "Confirmation Required"));
+          button(Material.WRITABLE_BOOK, Messages.text("text.kit-editor.name-this-kit"), Messages.text("text.kit-editor.click-then-type-a-name-in")));
+      inv.setItem(53, button(Material.BARRIER, Messages.text("text.kit-editor.delete-saved-kit"), Messages.text("text.kit-editor.confirmation-required")));
     } else if (screen == Screen.ITEM) {
       ItemStack item = draft.items[draft.selected];
       inv.setItem(
@@ -556,37 +554,37 @@ final class KitEditor implements Listener {
           button(
               Material.COMPASS,
               slotName(draft.selected),
-              "Editing This Slot Only",
-              "All Changes Stay In The Draft Until Save"));
-      inv.setItem(13, displayItem(item, "Current Item / " + slotName(draft.selected)));
+              Messages.text("text.kit-editor.editing-this-slot-only"),
+              Messages.text("text.kit-editor.all-changes-stay-in-the-draft")));
+      inv.setItem(13, displayItem(item, Messages.text("text.kit-editor.current-item") + slotName(draft.selected)));
       inv.setItem(
           19,
           button(
               Material.CHEST,
-              "Choose A Different Item",
-              "Browse All Items, Equipment, Food, Potions And Blocks"));
+              Messages.text("text.kit-editor.choose-a-different-item"),
+              Messages.text("text.kit-editor.browse-all-items-equipment-food-potions")));
       inv.setItem(
           21,
           button(
               Material.ENCHANTING_TABLE,
-              "Add / Edit Enchantments",
-              "Pick An Enchantment, Then Choose Its Level"));
+              Messages.text("text.kit-editor.add-edit-enchantments"),
+              Messages.text("text.kit-editor.pick-an-enchantment-then-choose-its")));
       inv.setItem(
-          23, button(Material.GRINDSTONE, "Remove All Enchantments", "Only Changes This Item"));
+          23, button(Material.GRINDSTONE, Messages.text("text.kit-editor.remove-all-enchantments"), Messages.text("text.kit-editor.only-changes-this-item")));
       inv.setItem(
           22,
           button(
               Material.NETHER_STAR,
-              "Fast Enchant: Combat / Tool Essentials",
-              "Max Compatible Damage, Protection, Efficiency And Durability",
-              "Skips Conflicting Enchantments"));
+              Messages.text("text.kit-editor.fast-enchant-combat-tool-essentials"),
+              Messages.text("text.kit-editor.max-compatible-damage-protection-efficiency-and"),
+              Messages.text("text.kit-editor.skips-conflicting-enchantments")));
       inv.setItem(
           24,
           button(
               Material.EXPERIENCE_BOTTLE,
-              "Fast Enchant: Mending + Unbreaking",
-              "One Click; Respects Conflicts Such As Infinity"));
-      inv.setItem(25, button(Material.BARRIER, "Clear This Slot"));
+              Messages.text("text.kit-editor.fast-enchant-mending-unbreaking"),
+              Messages.text("text.kit-editor.one-click-respects-conflicts-such-as")));
+      inv.setItem(25, button(Material.BARRIER, Messages.text("text.kit-editor.clear-this-slot")));
       int[] amounts = {1, 8, 16, 32, 64};
       for (int i = 0; i < amounts.length; i++) {
         int count = EditorRules.amount(amounts[i], item.getMaxStackSize());
@@ -594,29 +592,29 @@ final class KitEditor implements Listener {
             28 + i,
             button(
                 Material.PAPER,
-                "Set Amount: " + count,
-                "Native Maximum: " + item.getMaxStackSize()));
+                Messages.text("text.kit-editor.set-amount") + count,
+                Messages.text("text.kit-editor.native-maximum") + item.getMaxStackSize()));
       }
       inv.setItem(
           34,
           button(
               Material.CHEST_MINECART,
-              "Fill Empty Inventory Slots With This Item",
-              "Slots 9-35 Only; Existing Items Are Preserved"));
+              Messages.text("text.kit-editor.fill-empty-inventory-slots-with-this"),
+              Messages.text("text.kit-editor.slots-9-35-only-existing-items")));
       inv.setItem(
           40,
           button(
               Material.ARMOR_STAND,
-              "Copy Enchantments To Matching Armor",
-              "Only Compatible, Non-Conflicting Enchants Are Copied",
-              "Existing Armor Enchantments Are Preserved"));
-      inv.setItem(45, button(Material.ARROW, "Back To Loadout"));
-      inv.setItem(48, button(Material.RED_DYE, "Amount -1", "Shift: -16"));
+              Messages.text("text.kit-editor.copy-enchantments-to-matching-armor"),
+              Messages.text("text.kit-editor.only-compatible-non-conflicting-enchants-are"),
+              Messages.text("text.kit-editor.existing-armor-enchantments-are-preserved")));
+      inv.setItem(45, button(Material.ARROW, Messages.text("text.kit-editor.back-to-loadout")));
+      inv.setItem(48, button(Material.RED_DYE, Messages.text("text.kit-editor.amount-1"), Messages.text("text.kit-editor.shift-16")));
       inv.setItem(
           49,
-          button(Material.BOOK, "Amount: " + item.getAmount() + " / " + item.getMaxStackSize()));
-      inv.setItem(50, button(Material.LIME_DYE, "Amount +1", "Shift: +16"));
-      inv.setItem(53, button(Material.ARROW, "Back To Loadout"));
+          button(Material.BOOK, Messages.text("text.kit-editor.amount") + item.getAmount() + " / " + item.getMaxStackSize()));
+      inv.setItem(50, button(Material.LIME_DYE, Messages.text("text.kit-editor.amount-1-2"), Messages.text("text.kit-editor.shift-16-2")));
+      inv.setItem(53, button(Material.ARROW, Messages.text("text.kit-editor.back-to-loadout")));
     } else if (screen == Screen.PALETTE) {
       if (draft.paletteCategory == 3 && fits(draft.selected, Material.SPLASH_POTION))
         for (Material material :
@@ -648,16 +646,16 @@ final class KitEditor implements Listener {
             i,
             displayItem(
                 view.palette.get(page * 45 + i),
-                "Click To Use In " + slotName(draft.selected),
-                "Then Edit Amount And Enchantments"));
+                Messages.text("text.kit-editor.click-to-use-in") + slotName(draft.selected),
+                Messages.text("text.kit-editor.then-edit-amount-and-enchantments")));
       if (view.palette.isEmpty())
         inv.setItem(
             22,
             button(
                 Material.BARRIER,
-                "No Items For This Slot / Category",
-                "Try The All Items Category"));
-      inv.setItem(45, button(Material.ARROW, "Previous Page"));
+                Messages.text("text.kit-editor.no-items-for-this-slot-category"),
+                Messages.text("text.kit-editor.try-the-all-items-category")));
+      inv.setItem(45, button(Material.ARROW, Messages.text("text.kit-editor.previous-page")));
       Material[] icons = {
         Material.DIAMOND_SWORD,
         Material.COOKED_BEEF,
@@ -667,18 +665,18 @@ final class KitEditor implements Listener {
         Material.DIAMOND_CHESTPLATE
       };
       String[] categories = {
-        "Weapons", "Food", "All Items", "Potions / Tipped Arrows", "Blocks", "Equipment"
+        Messages.text("text.kit-editor.weapons"), Messages.text("text.kit-editor.food"), Messages.text("text.kit-editor.all-items"), Messages.text("text.kit-editor.potions-tipped-arrows"), Messages.text("text.kit-editor.blocks"), Messages.text("text.kit-editor.equipment")
       };
       for (int i = 0; i < categories.length; i++)
         inv.setItem(
             46 + i,
             button(
                 icons[i],
-                (i == draft.paletteCategory ? "Selected: " : "") + categories[i],
-                "Page " + (page + 1) + " / " + (maxPage + 1),
-                "Copies To " + slotName(draft.selected)));
-      inv.setItem(52, button(Material.ARROW, "Next Page"));
-      inv.setItem(53, button(Material.BARRIER, "Back To Editor"));
+                (i == draft.paletteCategory ? Messages.text("text.kit-editor.selected") : "") + categories[i],
+                Messages.text("text.kit-editor.page") + (page + 1) + " / " + (maxPage + 1),
+                Messages.text("text.kit-editor.copies-to") + slotName(draft.selected)));
+      inv.setItem(52, button(Material.ARROW, Messages.text("text.kit-editor.next-page")));
+      inv.setItem(53, button(Material.BARRIER, Messages.text("text.kit-editor.back-to-editor")));
     } else if (screen == Screen.ENCHANT) {
       ItemStack item = draft.items[draft.selected];
       org.bukkit.Registry.ENCHANTMENT
@@ -693,18 +691,18 @@ final class KitEditor implements Listener {
             i,
             button(
                 Material.ENCHANTED_BOOK,
-                pretty(e.getKey().getKey()) + " / Level " + item.getEnchantmentLevel(e),
-                "Click: Exact Level | Shift-Left: Max | Right: Remove",
+                pretty(e.getKey().getKey()) + Messages.text("text.kit-editor.level-2") + item.getEnchantmentLevel(e),
+                Messages.text("text.kit-editor.click-exact-level-shift-left-max"),
                 conflicts(item, e)
-                    ? "Conflict: Remove The Incompatible Enchantment First"
-                    : "Compatible With Selected Item",
-                "Maximum Vanilla Level: " + e.getMaxLevel()));
+                    ? Messages.text("text.kit-editor.conflict-remove-the-incompatible-enchantment-first")
+                    : Messages.text("text.kit-editor.compatible-with-selected-item"),
+                Messages.text("text.kit-editor.maximum-vanilla-level") + e.getMaxLevel()));
       }
       if (view.enchants.isEmpty())
-        inv.setItem(22, button(Material.BARRIER, "This Item Has No Compatible Enchantments"));
-      inv.setItem(48, button(Material.GRINDSTONE, "Remove All Enchantments"));
-      inv.setItem(49, displayItem(item, "Enchanting " + slotName(draft.selected)));
-      inv.setItem(53, button(Material.ARROW, "Back"));
+        inv.setItem(22, button(Material.BARRIER, Messages.text("text.kit-editor.this-item-has-no-compatible-enchantments")));
+      inv.setItem(48, button(Material.GRINDSTONE, Messages.text("text.kit-editor.remove-all-enchantments")));
+      inv.setItem(49, displayItem(item, Messages.text("text.kit-editor.enchanting") + slotName(draft.selected)));
+      inv.setItem(53, button(Material.ARROW, Messages.text("text.kit-editor.back")));
     } else if (screen == Screen.LEVEL) {
       Enchantment enchant = draft.enchantment;
       ItemStack item = draft.items[draft.selected];
@@ -713,20 +711,20 @@ final class KitEditor implements Listener {
           button(
               Material.ENCHANTED_BOOK,
               pretty(enchant.getKey().getKey()),
-              "Current Level: " + item.getEnchantmentLevel(enchant),
-              "Choose A Level Below"));
-      inv.setItem(10, button(Material.GRINDSTONE, "Remove This Enchantment"));
+              Messages.text("text.kit-editor.current-level") + item.getEnchantmentLevel(enchant),
+              Messages.text("text.kit-editor.choose-a-level-below")));
+      inv.setItem(10, button(Material.GRINDSTONE, Messages.text("text.kit-editor.remove-this-enchantment")));
       for (int level = 1; level <= Math.min(30, enchant.getMaxLevel()); level++)
         inv.setItem(
             10 + level,
             button(
                 Material.ENCHANTED_BOOK,
-                "Level " + level,
+                Messages.text("text.kit-editor.level") + level,
                 conflicts(item, enchant)
-                    ? "Conflicts With An Existing Enchantment"
-                    : "Click To Apply"));
-      inv.setItem(49, displayItem(item, "Your Item"));
-      inv.setItem(53, button(Material.ARROW, "Back To Enchantments"));
+                    ? Messages.text("text.kit-editor.conflicts-with-an-existing-enchantment")
+                    : Messages.text("text.kit-editor.click-to-apply")));
+      inv.setItem(49, displayItem(item, Messages.text("text.kit-editor.your-item")));
+      inv.setItem(53, button(Material.ARROW, Messages.text("text.kit-editor.back-to-enchantments")));
     } else if (screen == Screen.NAME) {
       if (draft.nameInput == null) draft.nameInput = draft.name;
       String alphabet = "abcdefghijklmnopqrstuvwxyz0123456789";
@@ -734,31 +732,31 @@ final class KitEditor implements Listener {
         inv.setItem(i, button(Material.PAPER, "" + alphabet.charAt(i)));
       inv.setItem(36, button(Material.PAPER, "_"));
       inv.setItem(37, button(Material.PAPER, "-"));
-      inv.setItem(38, button(Material.ARROW, "Backspace"));
-      inv.setItem(39, button(Material.BARRIER, "Clear Name"));
+      inv.setItem(38, button(Material.ARROW, Messages.text("text.kit-editor.backspace")));
+      inv.setItem(39, button(Material.BARRIER, Messages.text("text.kit-editor.clear-name")));
       inv.setItem(
           40,
           button(
               Material.NAME_TAG,
-              "Name: " + draft.nameInput,
-              draft.nameInput.length() + " / 32 Characters"));
+              Messages.text("text.kit-editor.name") + draft.nameInput,
+              draft.nameInput.length() + Messages.text("text.kit-editor.32-characters")));
       inv.setItem(
           49,
           button(
               Material.EMERALD_BLOCK,
-              "Apply Name",
-              "Existing Saved Kits Are Renamed Immediately",
-              "Other Draft Changes Still Require Save"));
-      inv.setItem(53, button(Material.ARROW, "Cancel Naming"));
+              Messages.text("text.kit-editor.apply-name"),
+              Messages.text("text.kit-editor.existing-saved-kits-are-renamed-immediately"),
+              Messages.text("text.kit-editor.other-draft-changes-still-require-save")));
+      inv.setItem(53, button(Material.ARROW, Messages.text("text.kit-editor.cancel-naming")));
     } else if (screen == Screen.DELETE) {
       inv.setItem(
           22,
           button(
               Material.TNT,
-              "Confirm Deletion: " + draft.name,
-              "Removes The Saved Custom Kit",
-              "Previous File Retained As customkits.yml.bak"));
-      inv.setItem(53, button(Material.ARROW, "Cancel"));
+              Messages.text("text.kit-editor.confirm-deletion") + draft.name,
+              Messages.text("text.kit-editor.removes-the-saved-custom-kit"),
+              Messages.text("text.kit-editor.previous-file-retained-as-customkits-yml")));
+      inv.setItem(53, button(Material.ARROW, Messages.text("text.kit-editor.cancel")));
     }
     player.openInventory(inv);
   }
@@ -774,7 +772,7 @@ final class KitEditor implements Listener {
 
   private static void put(Draft draft, int slot, ItemStack item) {
     if (!empty(item) && !fits(slot, item.getType()))
-      throw new IllegalArgumentException("That Item Does Not Fit " + slotName(slot) + ".");
+      throw new IllegalArgumentException(Messages.text("text.kit-editor.that-item-does-not-fit") + slotName(slot) + ".");
     draft.items[slot] = empty(item) ? null : item.clone();
   }
 
@@ -790,7 +788,7 @@ final class KitEditor implements Listener {
       return;
     }
     if (conflicts(item, enchant))
-      throw new IllegalArgumentException("Remove The Conflicting Enchantment First.");
+      throw new IllegalArgumentException(Messages.text("text.kit-editor.remove-the-conflicting-enchantment-first"));
     item.addUnsafeEnchantment(enchant, level);
   }
 
@@ -818,15 +816,15 @@ final class KitEditor implements Listener {
     ItemStack item = new ItemStack(type);
     dev.insanmiy.practiceplugin.ItemMetadata.edit(item,
         meta -> {
-          TextUI.name(meta, Component.text(title, NamedTextColor.AQUA));
-          TextUI.lore(meta, Arrays.stream(lore).map(s -> Component.text(s, NamedTextColor.GRAY)).toList());
+          TextUI.name(meta, Messages.component(title, NamedTextColor.AQUA));
+          TextUI.lore(meta, Arrays.stream(lore).map(s -> Messages.component(s, NamedTextColor.GRAY)).toList());
         });
     return item;
   }
 
   private static YamlConfiguration serialize(Draft draft) {
     var yaml = new YamlConfiguration();
-    yaml.set("description", draft.description != null ? draft.description : "Custom Kit: " + draft.name);
+    yaml.set("description", draft.description != null ? draft.description : Messages.text("text.kit-editor.custom-kit") + draft.name);
     yaml.set("health", draft.health);
     yaml.set("natural-regeneration", draft.regeneration);
     yaml.createSection("items");
@@ -871,7 +869,7 @@ final class KitEditor implements Listener {
                 plugin.getLogger().warning(e.toString());
               } catch (Throwable t) {
                 plugin.messages().send(player, "general.internal-error");
-                plugin.getLogger().severe("Unexpected error in KitEditor: " + t.getMessage());
+                plugin.getLogger().severe(Messages.text("text.kit-editor.unexpected-error-in-kiteditor") + t.getMessage());
                 t.printStackTrace();
               }
             });
@@ -885,7 +883,7 @@ final class KitEditor implements Listener {
     if (view.screen == Screen.TEMPLATES) {
       int index = view.page * 45 + slot;
       if (slot < 45 && index < view.names.size()) {
-        if (!canCreate(player)) throw new IllegalArgumentException("Missing Permission: practice.kits.create");
+        if (!canCreate(player)) throw new IllegalArgumentException(Messages.text("text.kit-editor.missing-permission-practice-kits-create"));
         create(player, unusedName(), view.names.get(index));
       }
       else if (slot == 45 || slot == 52) templates(player, view.page + (slot == 45 ? -1 : 1));
@@ -897,13 +895,13 @@ final class KitEditor implements Listener {
       if (slot < 45 && index < view.names.size()) {
         String kitName = view.names.get(index);
         if (shift && right) {
-          if (!canDelete(player)) throw new IllegalArgumentException("Missing Permission: practice.kits.delete");
+          if (!canDelete(player)) throw new IllegalArgumentException(Messages.text("text.kit-editor.missing-permission-practice-kits-delete"));
           show(player, Screen.DELETE, existing(player, kitName), 0);
         } else if (right) {
-          if (!canCreate(player)) throw new IllegalArgumentException("Missing Permission: practice.kits.create");
+          if (!canCreate(player)) throw new IllegalArgumentException(Messages.text("text.kit-editor.missing-permission-practice-kits-create"));
           create(player, unusedName(), kitName);
         } else {
-          if (!canEditor(player)) throw new IllegalArgumentException("Missing Permission: practice.kits.editor");
+          if (!canEditor(player)) throw new IllegalArgumentException(Messages.text("text.kit-editor.missing-permission-practice-kits-editor"));
           edit(player, kitName);
         }
         return;
@@ -912,20 +910,20 @@ final class KitEditor implements Listener {
         Bukkit.dispatchCommand(player, "practice menu");
       } else if (slot == 45 || slot == 52) library(player, view.page + (slot == 45 ? -1 : 1));
       else if (slot == 46) {
-        if (!canCreate(player)) throw new IllegalArgumentException("Missing Permission: practice.kits.create");
+        if (!canCreate(player)) throw new IllegalArgumentException(Messages.text("text.kit-editor.missing-permission-practice-kits-create"));
         create(player, unusedName(), null);
       } else if (slot == 47) {
-        if (!canCreate(player)) throw new IllegalArgumentException("Missing Permission: practice.kits.create");
+        if (!canCreate(player)) throw new IllegalArgumentException(Messages.text("text.kit-editor.missing-permission-practice-kits-create"));
         templates(player, 0);
       } else if (slot == 50) {
-        if (!canImport(player)) throw new IllegalArgumentException("Missing Permission: practice.kits.import");
+        if (!canImport(player)) throw new IllegalArgumentException(Messages.text("text.kit-editor.missing-permission-practice-kits-import"));
         importKit(player, unusedName());
       }
       return;
     }
     if (view.screen == Screen.DELETE) {
       if (slot == 22) {
-        if (!canDelete(player)) throw new IllegalArgumentException("Missing Permission: practice.kits.delete");
+        if (!canDelete(player)) throw new IllegalArgumentException(Messages.text("text.kit-editor.missing-permission-practice-kits-delete"));
         store.delete(
             draft.name,
             draft.revision,
@@ -966,12 +964,12 @@ final class KitEditor implements Listener {
         if (!name.equals(draft.name)) {
           var saved = store.read();
           if (saved.contains(name) || plugin.kits().containsKey(name))
-            throw new IllegalArgumentException("Name Already Used.");
+            throw new IllegalArgumentException(Messages.text("text.kit-editor.name-already-used"));
           if (draft.revision != null) {
             if (!Objects.equals(
                 draft.revision, CustomKitStore.revision(saved.getConfigurationSection(draft.name))))
               throw new IllegalArgumentException(
-                  "This Kit Changed. Reopen The Editor Before Renaming It.");
+                  Messages.text("text.kit-editor.this-kit-changed-reopen-the-editor"));
             store.rename(
                 draft.name,
                 name,
@@ -1006,13 +1004,13 @@ final class KitEditor implements Listener {
         return;
       }
       if (slot == 21) {
-        if (!canEnchant(item)) throw new IllegalArgumentException("This Item Cannot Be Enchanted.");
+        if (!canEnchant(item)) throw new IllegalArgumentException(Messages.text("text.kit-editor.this-item-cannot-be-enchanted"));
         show(player, Screen.ENCHANT, draft, 0);
         return;
       }
       if (slot == 23) removeEnchants(item);
       else if (slot == 22 || slot == 24) {
-        if (!canEnchant(item)) throw new IllegalArgumentException("This Item Cannot Be Enchanted.");
+        if (!canEnchant(item)) throw new IllegalArgumentException(Messages.text("text.kit-editor.this-item-cannot-be-enchanted"));
         int applied = QuickEnchant.apply(item, slot == 24);
         player.playSound(player.getLocation(), Sound.BLOCK_ENCHANTMENT_TABLE_USE, .45f, 1.2f);
         plugin.messages().send(player, "kit.quick-enchant-applied", "%count%", String.valueOf(applied));
@@ -1038,7 +1036,7 @@ final class KitEditor implements Listener {
         plugin.messages().send(player, "kit.reserve-filled", "%count%", String.valueOf(filled));
       } else if (slot == 40) {
         if (!armor(item.getType()))
-          throw new IllegalArgumentException("Select An Armor Piece First.");
+          throw new IllegalArgumentException(Messages.text("text.kit-editor.select-an-armor-piece-first"));
         for (int i = 36; i < 40; i++) {
           ItemStack target = draft.items[i];
           if (empty(target)) continue;
@@ -1121,16 +1119,16 @@ final class KitEditor implements Listener {
         case 48 -> draft.regeneration = !draft.regeneration;
         case 49 -> {
           if (draft.revision == null && !canCreate(player))
-            throw new IllegalArgumentException("Missing Permission: practice.kits.create");
+            throw new IllegalArgumentException(Messages.text("text.kit-editor.missing-permission-practice-kits-create"));
           if (draft.revision != null && !canEditor(player))
-            throw new IllegalArgumentException("Missing Permission: practice.kits.editor");
+            throw new IllegalArgumentException(Messages.text("text.kit-editor.missing-permission-practice-kits-editor"));
           save(player, draft.name, serialize(draft), draft.revision);
           draft.revision =
               CustomKitStore.revision(store.read().getConfigurationSection(draft.name));
           plugin.messages().send(player, "kit.saved", "%name%", draft.name);
         }
         case 50 -> {
-          if (!canImport(player)) throw new IllegalArgumentException("Missing Permission: practice.kits.import");
+          if (!canImport(player)) throw new IllegalArgumentException(Messages.text("text.kit-editor.missing-permission-practice-kits-import"));
           importInventory(player, draft);
           int count = 0;
           for (ItemStack it : draft.items) {
@@ -1140,7 +1138,7 @@ final class KitEditor implements Listener {
         }
         case 51 -> {
           if (!canEnchant(draft.items[draft.selected]))
-            throw new IllegalArgumentException("This Item Cannot Be Enchanted.");
+            throw new IllegalArgumentException(Messages.text("text.kit-editor.this-item-cannot-be-enchanted"));
           show(player, Screen.ENCHANT, draft, 0);
           return;
         }
@@ -1156,7 +1154,7 @@ final class KitEditor implements Listener {
             library(player, 0);
             return;
           }
-          if (!canDelete(player)) throw new IllegalArgumentException("Missing Permission: practice.kits.delete");
+          if (!canDelete(player)) throw new IllegalArgumentException(Messages.text("text.kit-editor.missing-permission-practice-kits-delete"));
           show(player, Screen.DELETE, draft, 0);
           return;
         }
@@ -1194,13 +1192,13 @@ final class KitEditor implements Listener {
                 if (!name.equals(draft.name)) {
                   var saved = store.read();
                   if (saved.contains(name) || plugin.kits().containsKey(name))
-                    throw new IllegalArgumentException("Name Already Used.");
+                    throw new IllegalArgumentException(Messages.text("text.kit-editor.name-already-used"));
                   if (draft.revision != null) {
                     if (!Objects.equals(
                         draft.revision,
                         CustomKitStore.revision(saved.getConfigurationSection(draft.name))))
                       throw new IllegalArgumentException(
-                          "This Kit Changed. Reopen The Editor Before Renaming It.");
+                          Messages.text("text.kit-editor.this-kit-changed-reopen-the-editor"));
                     store.rename(
                         draft.name,
                         name,
@@ -1221,7 +1219,7 @@ final class KitEditor implements Listener {
                 plugin.getLogger().warning(e.toString());
               } catch (Throwable t) {
                 plugin.messages().send(player, "kit.naming-error");
-                plugin.getLogger().severe("Unexpected error naming kit in KitEditor: " + t.getMessage());
+                plugin.getLogger().severe(Messages.text("text.kit-editor.unexpected-error-naming-kit-in-kiteditor") + t.getMessage());
                 t.printStackTrace();
               }
               show(player, Screen.EDIT, draft, 0);

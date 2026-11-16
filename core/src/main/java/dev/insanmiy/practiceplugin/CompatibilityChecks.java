@@ -72,6 +72,7 @@ final class CompatibilityChecks extends BukkitRunnable implements Listener {
       originalInventory = owner.getInventory().getContents();
       plugin.settings().set(owner.getUniqueId(), "countdown", 1);
       Bukkit.getPluginManager().registerEvents(this, plugin);
+      verifyMessages(owner);
       startSession();
       runTaskTimer(plugin, 1, 1);
     } catch (Exception | LinkageError failure) {
@@ -110,15 +111,45 @@ final class CompatibilityChecks extends BukkitRunnable implements Listener {
     plugin.refreshKits();
   }
 
+  private void verifyMessages(Player owner) throws IOException {
+    Path file = plugin.getDataFolder().toPath().resolve("messages.yml");
+    byte[] original = Files.readAllBytes(file);
+    String arena = plugin.arenaPath("messagecheck");
+    try {
+      var configured = YamlFiles.read(file);
+      configured.set("text.settings-menu.match-settings", "Custom match settings");
+      configured.set("text.practice-commands.player", "Champion");
+      configured.set("text.practice-commands.bot", "Opponent");
+      YamlFiles.write(file, configured);
+      plugin.messages().reload();
+      Bukkit.dispatchCommand(owner, "practice settings");
+      require(owner.getOpenInventory().getTitle().contains("Custom match settings"), "Configured Menu Title Was Not Applied");
+      require(owner.getOpenInventory().getTopInventory().getItem(2).getItemMeta().displayName()
+          .toString().contains("Custom match settings"), "Configured Menu Label Was Not Applied");
+      owner.closeInventory();
+      Bukkit.dispatchCommand(owner, "practice arena setplayer messagecheck");
+      Bukkit.dispatchCommand(owner, "practice arena setbot messagecheck");
+      require(plugin.getConfig().getLocation(arena + ".player") != null
+          && plugin.getConfig().getLocation(arena + ".bot") != null,
+          "Editable Spawn Labels Changed Arena Storage Keys");
+    } finally {
+      owner.closeInventory();
+      plugin.getConfig().set(arena, null);
+      plugin.saveConfig();
+      Files.write(file, original);
+      plugin.messages().reload();
+    }
+  }
+
   private void startSession() {
     Player owner = ownerBot.player();
     Bukkit.dispatchCommand(owner, "practice start diamond-smp compatibility endless");
     session = plugin.sessionFor(owner);
-    require(session != null && session.bot != null, "Practice Command Did Not Start A Session");
+    require(session != null && session.bot != null, "Practice command did not start a session");
     Player bot = session.bot.player();
     spawned.add(bot.getUniqueId());
-    require(plugin.sessionFor(bot) == session, "Bot Session Lookup Failed");
-    require(bot.isOnline() && bot.isValid(), "Bot Was Not Registered In The World");
+    require(plugin.sessionFor(bot) == session, "Bot session lookup failed");
+    require(bot.isOnline() && bot.isValid(), "Bot was not registered in the world");
     initialBotLocation = bot.getLocation();
     session.bot.configure(new BotOptions(true, false, false, false, false), false);
     bot.getInventory().clear();
@@ -126,7 +157,7 @@ final class CompatibilityChecks extends BukkitRunnable implements Listener {
     bot.getInventory().setHeldItemSlot(0);
     owner.getInventory().clear();
     var health = Attributes.get(owner, Attributes.MAX_HEALTH);
-    require(health != null, "Maximum Health Attribute Is Missing");
+    require(health != null, "Maximum health attribute is missing");
     health.setBaseValue(100);
     owner.setHealth(100);
   }
@@ -136,8 +167,8 @@ final class CompatibilityChecks extends BukkitRunnable implements Listener {
     try {
       ticks++;
       phaseTicks++;
-      require(ticks < 1200, "Timed Out During " + phase);
-      require(plugin.sessionFor(ownerBot.player()) == session, "Session Ended Unexpectedly During " + phase);
+      require(ticks < 1200, "Timed out during " + phase);
+      require(plugin.sessionFor(ownerBot.player()) == session, "Session ended unexpectedly during " + phase);
       Player bot = session.bot.player();
       switch (phase) {
         case CHASE -> {
@@ -147,34 +178,34 @@ final class CompatibilityChecks extends BukkitRunnable implements Listener {
             return;
           }
           chaseJumped |= bot.getLocation().getY() > botSpawn.getY() + .2;
-          require(phaseTicks < 70, "Bot Did Not Reach The Player During Speed " + (chaseSpeed + 1) + " Chase");
+          require(phaseTicks < 70, "Bot did not reach the player during speed " + (chaseSpeed + 1) + " chase");
           if (bot.getLocation().distanceSquared(ownerBot.player().getLocation()) > 10.24) return;
-          require(chaseJumped == (chaseSpeed <= 0), "Unexpected Sprint Jump Behavior At Speed " + (chaseSpeed + 1));
-          plugin.getLogger().info("Chase Check Passed At Speed " + (chaseSpeed + 1) + " In " + phaseTicks + " Ticks");
+          require(chaseJumped == (chaseSpeed <= 0), "Unexpected sprint jump behavior at speed " + (chaseSpeed + 1));
+          plugin.getLogger().info("Chase check passed at speed " + (chaseSpeed + 1) + " in " + phaseTicks + " ticks");
           if (chaseSpeed < 1) prepareChase(chaseSpeed + 1);
           else next(Phase.COMBAT);
         }
         case COMBAT -> {
           moved |= bot.getLocation().distanceSquared(initialBotLocation) > 0.25;
           if (!moved || hits < 2) return;
-          require(session.total.taken() > 0, "Bot Attacks Did Not Record Damage");
+          require(session.total.taken() > 0, "Bot attacks did not record damage");
           Bukkit.dispatchCommand(ownerBot.player(), "practice pause");
-          require(!session.fighting(), "Pause Command Did Not Pause Combat");
+          require(!session.fighting(), "Pause command did not pause combat");
           pausedHits = hits;
           next(Phase.PAUSE);
         }
         case PAUSE -> {
-          require(hits == pausedHits, "Bot Dealt Damage While Paused");
+          require(hits == pausedHits, "Bot dealt damage while paused");
           if (phaseTicks < 25) return;
           Bukkit.dispatchCommand(ownerBot.player(), "practice resume");
-          require(session.fighting(), "Resume Command Did Not Resume Combat");
+          require(session.fighting(), "Resume command did not resume combat");
           bot.getInventory().clear();
           bot.getInventory().setItem(0, new ItemStack(Material.GOLDEN_APPLE));
           bot.getInventory().setHeldItemSlot(0);
           bot.setHealth(5);
           session.internalTeleport = true;
           try {
-            require(ownerBot.player().teleport(ownerSpawn.clone().add(-12, 0, 0)), "Healing Target Teleport Failed");
+            require(ownerBot.player().teleport(ownerSpawn.clone().add(-12, 0, 0)), "Healing target teleport failed");
           } finally {
             session.internalTeleport = false;
           }
@@ -182,11 +213,11 @@ final class CompatibilityChecks extends BukkitRunnable implements Listener {
         }
         case HEAL -> {
           if (!consumed || bot.getAbsorptionAmount() <= 0) return;
-          require(!bot.getInventory().contains(Material.GOLDEN_APPLE), "Healing Item Was Not Consumed");
+          require(!bot.getInventory().contains(Material.GOLDEN_APPLE), "Healing item was not consumed");
           session.bot.reset(botSpawn);
-          require(bot.getLocation().distanceSquared(botSpawn) < 0.1, "Bot Reset Failed");
+          require(bot.getLocation().distanceSquared(botSpawn) < 0.1, "Bot reset failed");
           Bukkit.dispatchCommand(ownerBot.player(), "practice stop");
-          require(plugin.sessionFor(ownerBot.player()) == null, "Stop Command Kept The Session");
+          require(plugin.sessionFor(ownerBot.player()) == null, "Stop command kept the session");
           verifyRecovery();
           verifyRemovedBots();
           startSession();
@@ -195,9 +226,9 @@ final class CompatibilityChecks extends BukkitRunnable implements Listener {
         case DISCONNECT -> {
           ownerBot.player().setOp(false);
           ownerBot.close();
-          require(plugin.sessions().isEmpty(), "Disconnect Did Not Stop The Session");
+          require(plugin.sessions().isEmpty(), "Disconnect did not stop the session");
           verifyRemovedBots();
-          require(!plugin.recovery().pending(ownerBot.player()), "Disconnect Left Player Recovery Pending");
+          require(!plugin.recovery().pending(ownerBot.player()), "Disconnect left player recovery pending");
           verifyRecovery();
           ownerBot = BotAdapters.getAdapter().createBot(null, ownerSpawn, "ShutdownOwner", id -> {
             spawned.add(id);
@@ -214,14 +245,14 @@ final class CompatibilityChecks extends BukkitRunnable implements Listener {
         }
         case SHUTDOWN -> {
           Bukkit.getPluginManager().disablePlugin(plugin);
-          require(plugin.sessions().isEmpty(), "Shutdown Kept Active Sessions");
+          require(plugin.sessions().isEmpty(), "Shutdown kept active sessions");
           verifyRemovedBots();
           verifyRecovery();
           var dataFolder = plugin.getDataFolder().toPath();
           require(YamlFiles.read(dataFolder.resolve("stats.yml")).getLong(firstOwner + ".endless.sessions") > 0,
-              "Shutdown Did Not Persist Queued Statistics");
+              "Shutdown did not persist queued statistics");
           require(YamlFiles.read(dataFolder.resolve("player-settings.yml")).getInt(firstOwner + ".countdown") == 1,
-              "Shutdown Did Not Persist Queued Settings");
+              "Shutdown did not persist queued settings");
           finish(null);
         }
       }
@@ -232,10 +263,10 @@ final class CompatibilityChecks extends BukkitRunnable implements Listener {
 
   private void verifyRecovery() {
     Player owner = ownerBot.player();
-    require(java.util.Arrays.equals(originalInventory, owner.getInventory().getContents()), "Original Inventory Was Not Restored");
-    require(owner.getGameMode() == GameMode.ADVENTURE, "Original Game Mode Was Not Restored");
-    require(Math.abs(owner.getHealth() - 17) < 0.01, "Original Health Was Not Restored");
-    require(!plugin.recovery().pending(owner), "Recovery Journal Was Not Cleared");
+    require(java.util.Arrays.equals(originalInventory, owner.getInventory().getContents()), "Original inventory was not restored");
+    require(owner.getGameMode() == GameMode.ADVENTURE, "Original game mode was not restored");
+    require(Math.abs(owner.getHealth() - 17) < 0.01, "Original health was not restored");
+    require(!plugin.recovery().pending(owner), "Recovery journal was not cleared");
   }
 
   private void prepareChase(int speedAmplifier) {
@@ -244,7 +275,7 @@ final class CompatibilityChecks extends BukkitRunnable implements Listener {
     phaseTicks = 0;
     session.internalTeleport = true;
     try {
-      require(ownerBot.player().teleport(ownerSpawn), "Chase Target Teleport Failed");
+      require(ownerBot.player().teleport(ownerSpawn), "Chase target teleport failed");
       session.bot.reset(botSpawn.clone().add(10, 0, 8));
     } finally {
       session.internalTeleport = false;
@@ -260,13 +291,13 @@ final class CompatibilityChecks extends BukkitRunnable implements Listener {
   private void verifyRemovedBots() {
     for (UUID id : spawned) {
       if (ownerBot != null && id.equals(ownerBot.player().getUniqueId())) continue;
-      require(Bukkit.getPlayer(id) == null && Bukkit.getEntity(id) == null, "Bot Was Not Removed: " + id);
-      require(!plugin.sessions().isBot(id), "Bot Lookup Was Not Cleared: " + id);
+      require(Bukkit.getPlayer(id) == null && Bukkit.getEntity(id) == null, "Bot was not removed: " + id);
+      require(!plugin.sessions().isBot(id), "Bot lookup was not cleared: " + id);
     }
   }
 
   private void next(Phase phase) {
-    plugin.getLogger().info("Compatibility Check Passed: " + this.phase);
+    plugin.getLogger().info("Compatibility check passed: " + this.phase);
     this.phase = phase;
     phaseTicks = 0;
   }
@@ -293,7 +324,7 @@ final class CompatibilityChecks extends BukkitRunnable implements Listener {
       if (ownerBot != null) {
         ownerBot.player().setOp(false);
         ownerBot.close();
-        require(Bukkit.getPlayer(ownerBot.player().getUniqueId()) == null, "Owner Bot Was Not Removed");
+        require(Bukkit.getPlayer(ownerBot.player().getUniqueId()) == null, "Owner bot was not removed");
       }
       if (plugin.isEnabled()) plugin.saves().flush();
     } catch (Exception | LinkageError cleanupFailure) {
@@ -303,13 +334,13 @@ final class CompatibilityChecks extends BukkitRunnable implements Listener {
     try {
       if (resultFailure == null) {
         Files.writeString(result, "PASS\n");
-        plugin.getLogger().info("Compatibility Checks Passed");
+        plugin.getLogger().info("Compatibility checks passed");
       } else {
         Files.writeString(result, "FAIL: " + resultFailure + "\n");
-        plugin.getLogger().log(java.util.logging.Level.SEVERE, "Compatibility Checks Failed", resultFailure);
+        plugin.getLogger().log(java.util.logging.Level.SEVERE, "Compatibility checks failed", resultFailure);
       }
     } catch (IOException writeFailure) {
-      plugin.getLogger().log(java.util.logging.Level.SEVERE, "Could Not Write Compatibility Result", writeFailure);
+      plugin.getLogger().log(java.util.logging.Level.SEVERE, "Could not write compatibility result", writeFailure);
     } finally {
       Bukkit.shutdown();
     }

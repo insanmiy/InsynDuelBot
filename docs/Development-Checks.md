@@ -1,46 +1,48 @@
-# Development Checks
+# Development checks
 
-Run The Full Build With Java 21:
+Run the full build with Java 21:
 
 ```powershell
 .\gradlew.bat build
 ```
 
-The Build Runs The Core Tests And Checks That The Release JAR Does Not Contain Minecraft, CraftBukkit, Or Mojang Server Classes. A Source Check Keeps Server Imports Out Of The Core Module.
+The build runs the core tests and checks that the release JAR does not contain Minecraft, CraftBukkit, or Mojang server classes. A source check keeps server imports out of the core module.
 
-## Live Compatibility Checks
+## Live compatibility checks
 
-Run The Same Checks Used By CI Against One Minecraft Version:
+Run the same checks used by CI against one Minecraft version:
 
 ```powershell
 .\gradlew.bat runServer '-PminecraftVersion=1.21.11' '-PcompatibilityTest=true'
 ```
 
-On Linux Or macOS, Use `./gradlew` Instead Of `.\gradlew.bat`.
+On Linux or macOS, use `./gradlew` instead of `.\gradlew.bat`.
 
-The Task Uses A Separate Server Folder At `run/compatibility/<version>/`, Binds To Loopback, And Creates A Test Arena. It Spawns Real NMS Players And Runs The Practice Commands Without Requiring A Connected Minecraft Client.
+The task uses a separate server folder at `run/compatibility/<version>/`, binds to loopback, and creates a test arena. It spawns real NMS players and runs the practice commands without requiring a connected Minecraft client.
 
-The Checks Assert:
+The checks assert:
 
-* Bot Registration And Direct Session Lookup.
-* Bot Movement And Successful Melee Damage.
-* Pause And Resume Behavior.
-* Golden Apple Consumption And Absorption.
-* Bot Reset And Removal.
-* Inventory, Health, And Game Mode Restoration After Stopping A Match.
-* Cleanup And Recovery After Disconnecting.
-* Cleanup And Recovery When Disabling The Plugin During A Match.
+* Bot registration and direct session lookup.
+* Editable menu titles and labels after message reload, and arena storage keys remaining stable when spawn labels change.
+* Bot movement and successful melee damage.
+* Direct pursuit with no Speed effect, Speed I, and Speed II, including the matching sprint jump behavior.
+* Pause and resume behavior.
+* Golden apple consumption and absorption.
+* Bot reset and removal.
+* Inventory, health, and game mode restoration after stopping a match.
+* Cleanup and recovery after disconnecting.
+* Cleanup and recovery when disabling the plugin during a match.
 
-The Server Stops After The Checks Finish. Gradle Requires A `PASS` Result And Rejects Plugin Errors, Packet Encoding Errors, And Common Binary Compatibility Errors In The Server Log. The Task Has A Five Minute Timeout. Results Are Written To `compatibility-result.txt`; Server Logs Are In `logs/latest.log` Inside The Test Server Folder.
+The server stops after the checks finish. Gradle requires a `PASS` result and rejects plugin errors, packet encoding errors, and common binary compatibility errors in the server log. The task has a five minute timeout. Results are written to `compatibility-result.txt`; server logs are in `logs/latest.log` inside the test server folder.
 
-CI Runs These Checks Across All 13 Published Paper Releases From 1.20.5 Through 1.21.11 And Uploads The Result And Server Log For Each Version. [Paper?s Release Index](https://fill.papermc.io/v3/projects/paper) Does Not Include A 1.21.2 Build, So That Version Is Excluded. These Checks Cover Common Gameplay And Lifecycle Paths. They Do Not Replace Client Testing Of Rendering, Skins, Menus, Or Every Utility Item.
+CI runs these checks across all 13 published Paper releases from 1.20.5 through 1.21.11 and uploads the result and server log for each version. [Paper's release index](https://fill.papermc.io/v3/projects/paper) does not include a 1.21.2 build, so that version is excluded. These checks cover common gameplay and lifecycle paths. They do not replace client testing of rendering, skins, menus, or every utility item.
 
-## Saves And Recovery
+## Saves and recovery
 
-Routine Player Settings, Presets, And Statistics Are Serialized On The Main Thread And Queued As Immutable Strings. One Background Writer Combines Pending Changes Per File And Writes Them In Order About Once Per Second. Failed Writes Remain Queued For Retry, And Shutdown Flushes Pending Changes.
+Routine player settings, presets, and statistics are serialized on the main thread and queued as immutable strings. One background writer combines pending changes per file and writes them in order about once per second. Failed writes remain queued for retry, and shutdown flushes pending changes.
 
-A Sudden Process Crash Can Lose Routine Changes That Have Not Yet Been Written. Recovery Captures And Block Journals Use Their Existing Synchronous Save Paths And Do Not Share The Background Queue.
+A sudden process crash can lose routine changes that have not yet been written. Recovery captures and block journals use their existing synchronous save paths and do not share the background queue.
 
-Unreadable Recovery Journals Stay In Place. Recovery Validates The Destination And Decodes Inventory Items Before Changing Player State. Invalid Entries, Missing Worlds, Dead Players, And Failed Restores Leave Recovery Pending. Repair The Reported Journal Or Load The Missing World Before Retrying. Keep A Copy Of The Original Journal When Repairing It.
+Unreadable recovery journals stay in place. Recovery validates the destination and decodes inventory items before changing player state. Invalid entries, missing worlds, dead players, and failed restores leave recovery pending. Repair the reported journal or load the missing world before retrying. Keep a copy of the original journal when repairing it.
 
-Core Tests Cover Corrupt Journals, Unavailable Recovery Destinations, Dead Players, Invalid Inventory Data, Failed Journal Writes, Unloaded Block Worlds, Save Retry Ordering, And Independent Cleanup Steps.
+Core tests cover corrupt journals, unavailable recovery destinations, dead players, invalid inventory data, failed journal writes, unloaded block worlds, save retry ordering, and independent cleanup steps.

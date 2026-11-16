@@ -18,10 +18,77 @@ import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.YamlConfiguration;
 
 public final class Messages {
+  private record TextSnapshot(
+      java.util.Map<String, String> values, java.util.Map<String, String> placeholders) {}
+
+  private static volatile TextSnapshot textSnapshot;
+
+  private static final class Defaults {
+    private static final TextSnapshot VALUES = load();
+
+    private static TextSnapshot load() {
+      try (InputStream stream = java.util.Objects.requireNonNull(Messages.class.getResourceAsStream("/messages.yml"));
+          InputStreamReader reader = new InputStreamReader(stream, StandardCharsets.UTF_8)) {
+        return textValues(YamlConfiguration.loadConfiguration(reader));
+      } catch (java.io.IOException failure) {
+        throw new java.io.UncheckedIOException(failure);
+      }
+    }
+  }
+
+  private static TextSnapshot textValues(ConfigurationSection source) {
+    java.util.Map<String, String> values = new java.util.HashMap<>();
+    java.util.Map<String, String> placeholders = new java.util.HashMap<>();
+    for (String key : source.getKeys(true)) {
+      if (source.isString(key)) values.put(key, source.getString(key));
+      else if (source.isList(key)) values.put(key, String.join("\n", source.getStringList(key)));
+    }
+    values.forEach((key, value) -> {
+      if (key.startsWith("placeholders.")) {
+        placeholders.put(key.substring("placeholders.".length()), value);
+      }
+    });
+    return new TextSnapshot(java.util.Map.copyOf(values), java.util.Map.copyOf(placeholders));
+  }
+
+  static void configureText(ConfigurationSection source) {
+    textSnapshot = textValues(source);
+  }
+
+  public static String text(String key, String... replacements) {
+    TextSnapshot snapshot = textSnapshot == null ? Defaults.VALUES : textSnapshot;
+    java.util.Map<String, String> values = snapshot.values();
+    String value = values.getOrDefault(key, Defaults.VALUES.values().getOrDefault(key, key));
+    value = value.replace("%prefix%", values.getOrDefault("prefix", ""));
+    for (var entry : snapshot.placeholders().entrySet()) {
+      value = value.replace(entry.getKey(), entry.getValue());
+    }
+    for (int index = 0; index + 1 < replacements.length; index += 2) {
+      value = value.replace(replacements[index], replacements[index + 1]);
+    }
+    return value;
+  }
+
+  public static String displayName(String identifier) {
+    String key = "names." + identifier.toLowerCase(java.util.Locale.ROOT).replace('-', '_');
+    java.util.Map<String, String> values = (textSnapshot == null ? Defaults.VALUES : textSnapshot).values();
+    return values.containsKey(key) ? text(key) : dev.insanmiy.practiceplugin.config.Difficulty.formatName(identifier);
+  }
+
+  public static Component component(Object value, net.kyori.adventure.text.format.TextColor color,
+      net.kyori.adventure.text.format.TextDecoration... decorations) {
+    Component result = toComponent(String.valueOf(value)).colorIfAbsent(color);
+    for (var decoration : decorations) result = result.decorate(decoration);
+    return result;
+  }
+
+  public static Component component(Object value) {
+    return toComponent(String.valueOf(value));
+  }
   private static final Pattern HEX_PATTERN =
       Pattern.compile("(&#([A-Fa-f0-9]{6})|<#([A-Fa-f0-9]{6})>)");
   private static final Pattern LEGACY_CODE_PATTERN =
-      Pattern.compile("(?i)[&§]([0-9a-fk-or])|&#([A-Fa-f0-9]{6})|§x(§[0-9a-fA-F]){6}");
+      Pattern.compile("(?i)[&\u00a7]([0-9a-fk-or])|&#([A-Fa-f0-9]{6})|\u00a7x(\u00a7[0-9a-fA-F]){6}");
 
   private static final LegacyComponentSerializer SERIALIZER =
       LegacyComponentSerializer.legacySection();
@@ -42,7 +109,7 @@ public final class Messages {
       try {
         plugin.saveResource("messages.yml", false);
       } catch (Exception e) {
-        plugin.getLogger().warning("Could Not Save Default messages.yml: " + e.getMessage());
+        plugin.getLogger().warning(Messages.text("text.messages.could-not-save-default-messages-yml") + e.getMessage());
       }
     }
 
@@ -52,7 +119,7 @@ public final class Messages {
           new InputStreamReader(new FileInputStream(file), StandardCharsets.UTF_8)) {
         loaded.load(reader);
       } catch (Exception e) {
-        plugin.getLogger().severe("Could Not Load messages.yml: " + e.getMessage());
+        plugin.getLogger().severe(Messages.text("text.messages.could-not-load-messages-yml") + e.getMessage());
       }
     }
 
@@ -65,10 +132,11 @@ public final class Messages {
         }
       }
     } catch (Exception e) {
-      plugin.getLogger().warning("Could Not Load Default messages.yml Fallback: " + e.getMessage());
+      plugin.getLogger().warning(Messages.text("text.messages.could-not-load-default-messages-yml") + e.getMessage());
     }
 
     this.config = loaded;
+    configureText(loaded);
   }
 
   public String get(String key, String... placeholders) {
@@ -160,7 +228,7 @@ public final class Messages {
     if (raw == null || raw.isEmpty() || raw.equalsIgnoreCase("none")) {
       return "";
     }
-    String prefixRaw = config.getString("prefix", "&9InsynPracticeBot &r");
+    String prefixRaw = config.getString("prefix", "");
     String formatted = raw.replace("%prefix%", prefixRaw);
 
     // Custom placeholders defined in messages.yml

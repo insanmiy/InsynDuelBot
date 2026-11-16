@@ -1,12 +1,12 @@
-# Bot Presets
+# Bot presets
 
-Presets Let You Save A Bot Setup And Restore It Later. Each Player Can Keep Up To 21 Personal Presets, Saved Across Server Restarts.
+Presets let you save a bot setup and restore it later. Each player can keep up to 21 personal presets, saved across server restarts.
 
-## Save And Load
+## Save and load
 
-1. Stop Your Current Session.
-2. Configure The Bot In `/practice settings`.
-3. Save Your Setup, Then Load It Whenever You Want To Use It Again.
+1. Stop your current session.
+2. Configure the bot in `/practice settings`.
+3. Save your setup, then load it whenever you want to use it again.
 
 ```text
 /practice preset save sword_practice
@@ -15,24 +15,24 @@ Presets Let You Save A Bot Setup And Restore It Later. Each Player Can Keep Up T
 /practice preset delete sword_practice
 ```
 
-Names Use 1 To 32 Letters, Numbers, Underscores, Or Hyphens. Names Are Stored In Lowercase. Saving An Existing Name Replaces Its Previous Settings.
+Names use 1 to 32 letters, numbers, underscores, or hyphens. Names are stored in lowercase. Saving an existing name replaces its previous settings.
 
-## What Gets Saved
+## What gets saved
 
-Presets Include Bot Ability Toggles And The Seven Advanced Tuning Settings. A Setting Left At Its Default Continues To Follow The Difficulty Selected For The Match.
+Presets include bot ability toggles and the seven advanced tuning settings. A setting left at its default continues to follow the difficulty selected for the match.
 
-Presets Do Not Choose A Kit, Difficulty, Mode, Or Arena. Match Timing, Starting Saturation, HUD, And Menu Animations Stay Separate.
+Presets do not choose a kit, difficulty, mode, or arena. Match timing, starting saturation, HUD, and menu animations stay separate.
 
-Loading A Preset Changes Your Settings For Your Next Session. You Cannot Manage Presets During An Active Session.
+Loading a preset changes your settings for your next session. You cannot manage presets during an active session.
 
-## Presets Menu
+## Presets menu
 
-Open `/practice preset`, Or Select Bot Presets From The Settings Menu.
+Open `/practice preset`, or select bot presets from the settings menu.
 
 | Click | Action |
 | --- | --- |
-| Left Click | Load The Preset |
-| Shift Left Click | Replace It With Your Current Bot Settings |
-| Shift Right Click | Delete It |
+| Left click | Load the preset |
+| Shift left click | Replace it with your current bot settings |
+| Shift right click | Delete it |
 
-Use `/practice preset save <name>` To Create A New Named Preset. Preset Commands And The Menu Require `practice.settings`.
+Use `/practice preset save <name>` to create a new named preset. Preset commands and the menu require `practice.settings`.

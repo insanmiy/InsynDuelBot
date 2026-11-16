@@ -1,5 +1,7 @@
 package dev.insanmiy.practiceplugin.papi;
 
+import dev.insanmiy.practiceplugin.Messages;
+
 import dev.insanmiy.practiceplugin.PracticePlugin;
 import me.clip.placeholderapi.PlaceholderAPI;
 import org.bukkit.Bukkit;
@@ -15,9 +17,9 @@ public final class PapiHook {
       try {
         expansion = new PracticePlaceholderExpansion(plugin);
         expansion.register();
-        plugin.getLogger().info("Successfully Hooked Into PlaceholderAPI.");
+        plugin.getLogger().info(Messages.text("text.papi-hook.successfully-hooked-into-placeholderapi"));
       } catch (Throwable t) {
-        plugin.getLogger().warning("Failed To Register PlaceholderAPI Expansion: " + t.getMessage());
+        plugin.getLogger().warning(Messages.text("text.papi-hook.failed-to-register-placeholderapi-expansion") + t.getMessage());
       }
     }
   }

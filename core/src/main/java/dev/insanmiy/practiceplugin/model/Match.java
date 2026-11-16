@@ -1,5 +1,7 @@
 package dev.insanmiy.practiceplugin.model;
 
+import dev.insanmiy.practiceplugin.Messages;
+
 public final class Match {
   public enum Phase {
     COUNTDOWN,
@@ -20,11 +22,11 @@ public final class Match {
 
   public Match(int countdown, int intermission, int bestOf) {
     if (countdown < 1 || intermission < 1)
-      throw new IllegalArgumentException("Timings Must Be Positive");
+      throw new IllegalArgumentException(Messages.text("text.match.timings-must-be-positive"));
     this.countdown = countdown;
     this.intermission = intermission;
     if (bestOf < 0 || bestOf > 99 || bestOf != 0 && bestOf % 2 == 0)
-      throw new IllegalArgumentException("Best Of Must Be Odd (1 To 99), Or 0 For Endless.");
+      throw new IllegalArgumentException(Messages.text("text.match.best-of-must-be-odd-1"));
     winsRequired = bestOf == 0 ? 0 : bestOf / 2 + 1;
     remaining = countdown;
   }

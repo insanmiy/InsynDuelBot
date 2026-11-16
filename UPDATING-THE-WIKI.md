@@ -1,64 +1,64 @@
-# Updating The Wiki
+# Updating the wiki
 
-The [Live GitHub Wiki](https://github.com/insanmiy/InsynDuelBot/wiki) And This Project Are Separate Git Repositories.
+The [live GitHub wiki](https://github.com/insanmiy/InsynDuelBot/wiki) and this project are separate Git repositories.
 
-* Browser Edits Update The Live Wiki Immediately.
-* Files In `docs/wiki` Are The Project's Local Documentation Copy.
-* Changes Do Not Sync Automatically In Either Direction.
+* Browser edits update the live wiki immediately.
+* Files in `docs/wiki` are the project's local documentation copy.
+* Changes do not sync automatically in either direction.
 
-The PowerShell Commands Below Assume You Are In The Plugin Project's Root Folder.
+The PowerShell commands below assume you are in the plugin project's root folder.
 
-## Edit Through GitHub
+## Edit through GitHub
 
-1. Open The [Wiki](https://github.com/insanmiy/InsynDuelBot/wiki).
-2. Open A Page And Click Edit.
-3. Make Your Changes And Click Save Page.
-4. Follow The Pull Instructions Below To Update Your Local Copy.
+1. Open the [wiki](https://github.com/insanmiy/InsynDuelBot/wiki).
+2. Open a page and click edit.
+3. Make your changes and click save page.
+4. Follow the pull instructions below to update your local copy.
 
-## Clone The Wiki Once
+## Clone the wiki once
 
-Install Git If Needed. Clone The Wiki Into A Folder Beside The Plugin Project:
+Install Git if needed. Clone the wiki into a folder beside the plugin project:
 
 ```powershell
 git clone https://github.com/insanmiy/InsynDuelBot.wiki.git ..\InsynDuelBot-wiki
 ```
 
-Skip This Step If That Folder Already Contains Your Wiki Clone. Git May Ask You To Sign In When You Push Changes.
+Skip this step if that folder already contains your wiki clone. Git may ask you to sign in when you push changes.
 
-## Pull Browser Changes
+## Pull browser changes
 
-Check The Wiki Clone For Uncommitted Work Before Pulling:
+Check the wiki clone for uncommitted work before pulling:
 
 ```powershell
 git -C ..\InsynDuelBot-wiki status --short
 git -C ..\InsynDuelBot-wiki pull --ff-only
 ```
 
-If The Status Shows Changes, Save Or Commit That Work Before Pulling. If The Pull Fails, Resolve The Reported Problem Before Continuing.
+If the status shows changes, save or commit that work before pulling. If the pull fails, resolve the reported problem before continuing.
 
-Next, Bring The Updated Pages Into `docs/wiki`. Before Copying, Check Whether Your Local Pages Have Unpublished Changes. Compare And Merge Those Changes First So They Are Preserved.
+Next, bring the updated pages into `docs/wiki`. Before copying, check whether your local pages have unpublished changes. Compare and merge those changes first so they are preserved.
 
-For Example, Compare The Getting Started Page:
+For example, compare the getting started page:
 
 ```powershell
 git diff --no-index -- .\docs\wiki\Getting-Started.md ..\InsynDuelBot-wiki\Getting-Started.md
 ```
 
-This Comparison Returns Exit Code 1 When The Files Differ. That Is Expected.
+This comparison returns exit code 1 when the files differ. That is expected.
 
-Once You Have Checked The Differences, Copy That Page From The Wiki Clone:
+Once you have checked the differences, copy that page from the wiki clone:
 
 ```powershell
 Copy-Item -LiteralPath ..\InsynDuelBot-wiki\Getting-Started.md -Destination .\docs\wiki\Getting-Started.md
 ```
 
-Repeat For Other Changed Pages. Add New Pages To The Local Folder Too. If A Page Was Deleted Or Renamed In The Wiki, Review And Apply That Change Locally; Copying Files Does Not Remove Old Pages.
+Repeat for other changed pages. Add new pages to the local folder too. If a page was deleted or renamed in the wiki, review and apply that change locally; copying files does not remove old pages.
 
-## Publish A Local Edit
+## Publish a local edit
 
-Start By Pulling The Latest Wiki Changes And Updating Your Local Copy As Described Above. Then Edit A Page In `docs/wiki`.
+Start by pulling the latest wiki changes and updating your local copy as described above. Then edit a page in `docs/wiki`.
 
-For Example, After Editing `Getting-Started.md`:
+For example, after editing `Getting-Started.md`:
 
 ```powershell
 Copy-Item -LiteralPath .\docs\wiki\Getting-Started.md -Destination ..\InsynDuelBot-wiki\Getting-Started.md
@@ -68,31 +68,31 @@ git -C ..\InsynDuelBot-wiki commit -m "Update Getting Started"
 git -C ..\InsynDuelBot-wiki push
 ```
 
-Review The Diff Before Committing. Open The Live Page After Pushing To Check Its Formatting And Links.
+Review the diff before committing. Open the live page after pushing to check its formatting and links.
 
-If The Push Is Rejected Because Someone Edited The Wiki Meanwhile, Keep Your Commit And Merge Their Changes:
+If the push is rejected because someone edited the wiki meanwhile, keep your commit and merge their changes:
 
 ```powershell
 git -C ..\InsynDuelBot-wiki pull --no-rebase
 ```
 
-Resolve Any Conflicts In The Wiki Clone, Commit The Resolution If Required, And Push Again. Copy The Final Merged Pages Back Into `docs/wiki`. Do Not Force Push To Replace Someone Else's Changes.
+Resolve any conflicts in the wiki clone, commit the resolution if required, and push again. Copy the final merged pages back into `docs/wiki`. Do not force push to replace someone else's changes.
 
-## Add A New Page
+## Add a new page
 
-1. Create A Markdown File In `docs/wiki`, Such As `New-Guide.md`.
-2. Add A Link To It In `_Sidebar.md` And Any Relevant Pages.
-3. Copy The New Page And Updated Navigation Files Into The Wiki Clone.
-4. Review, Add, Commit, And Push Those Files As Above.
-5. Add The Page To The Local Index In `docs/README.md`.
+1. Create a markdown file in `docs/wiki`, such as `New-Guide.md`.
+2. Add a link to it in `_Sidebar.md` and any relevant pages.
+3. Copy the new page and updated navigation files into the wiki clone.
+4. Review, add, commit, and push those files as above.
+5. Add the page to the local index in `docs/README.md`.
 
-Inside Wiki Pages, Link To `[New Guide](New-Guide)` Without The `.md` Extension. In The Local Index, Use `[New Guide](wiki/New-Guide.md)`.
+Inside wiki pages, link to `[New Guide](New-Guide)` without the `.md` extension. In the local index, use `[New Guide](wiki/New-Guide.md)`.
 
-`_Sidebar.md` Controls The Wiki Sidebar. `_Footer.md` Controls Its Footer.
+`_Sidebar.md` controls the wiki sidebar. `_Footer.md` controls its footer.
 
-## Save The Project Copy
+## Save the project copy
 
-Publishing The Wiki Does Not Commit The Plugin Project's Documentation Files. Review And Commit The Relevant Files In This Repository Separately:
+Publishing the wiki does not commit the plugin project's documentation files. Review and commit the relevant files in this repository separately:
 
 ```powershell
 git status --short
@@ -100,6 +100,6 @@ git add -- docs/wiki/Getting-Started.md
 git commit -m "Sync Getting Started From Wiki"
 ```
 
-Use The Paths You Actually Changed. New Pages Also Need To Be Added To Git. The Repository's `.gitignore` Allows Markdown Files Under `docs/`.
+Use the paths you actually changed. New pages also need to be added to Git. The repository's `.gitignore` allows markdown files under `docs/`.
 
-Documentation Edits Do Not Require Rebuilding The Plugin.
+Documentation edits do not require rebuilding the plugin.

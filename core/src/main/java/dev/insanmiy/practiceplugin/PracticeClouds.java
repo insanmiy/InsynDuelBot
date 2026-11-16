@@ -19,12 +19,12 @@ final class PracticeClouds {
   private final Map<UUID, Entry> entries = new HashMap<>();
 
   PracticeClouds(NamespacedKey key) {
-    this.key = Objects.requireNonNull(key, "Cloud Marker Is Required");
+    this.key = Objects.requireNonNull(key, Messages.text("text.practice-clouds.cloud-marker-is-required"));
   }
 
   void register(UUID owner, AreaEffectCloud cloud) {
-    Objects.requireNonNull(owner, "Session Owner Is Required");
-    Objects.requireNonNull(cloud, "Potion Cloud Is Required");
+    Objects.requireNonNull(owner, Messages.text("text.practice-clouds.session-owner-is-required"));
+    Objects.requireNonNull(cloud, Messages.text("text.practice-clouds.potion-cloud-is-required"));
     cloud.getPersistentDataContainer().set(key, PersistentDataType.BYTE, (byte) 1);
     cloud.setPersistent(false);
     entries.put(cloud.getUniqueId(), new Entry(owner, cloud));

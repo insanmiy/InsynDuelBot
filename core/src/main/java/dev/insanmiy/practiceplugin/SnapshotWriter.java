@@ -41,7 +41,7 @@ final class SnapshotWriter implements AutoCloseable {
   }
 
   synchronized void submit(Path file, String snapshot) throws IOException {
-    if (closed) throw new IOException("Practice Save Writer Is Closed");
+    if (closed) throw new IOException(Messages.text("text.snapshot-writer.practice-save-writer-is-closed"));
     pending.put(file.toAbsolutePath().normalize(), Objects.requireNonNull(snapshot));
   }
 
@@ -60,7 +60,7 @@ final class SnapshotWriter implements AutoCloseable {
           pending.putIfAbsent(entry.getKey(), entry.getValue());
         }
         if (report) failures.accept(entry.getKey(), failure);
-        if (result == null) result = new IOException("Could Not Flush Practice Saves");
+        if (result == null) result = new IOException(Messages.text("text.snapshot-writer.could-not-flush-practice-saves"));
         result.addSuppressed(failure);
       }
     }
@@ -73,9 +73,9 @@ final class SnapshotWriter implements AutoCloseable {
       if (failure != null) throw failure;
     } catch (InterruptedException failure) {
       Thread.currentThread().interrupt();
-      throw new IOException("Interrupted While Flushing Practice Saves", failure);
+      throw new IOException(Messages.text("text.snapshot-writer.interrupted-while-flushing-practice-saves"), failure);
     } catch (ExecutionException | TimeoutException failure) {
-      throw new IOException("Could Not Finish Flushing Practice Saves", failure);
+      throw new IOException(Messages.text("text.snapshot-writer.could-not-finish-flushing-practice-saves"), failure);
     }
   }
 

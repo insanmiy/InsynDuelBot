@@ -67,7 +67,7 @@ final class PracticeCommands implements TabExecutor {
             };
             plugin.messages().send(p, message, "%name%", name);
           } catch (java.io.IOException failure) {
-            plugin.getLogger().log(java.util.logging.Level.WARNING, "Could Not Save Bot Preset Settings", failure);
+            plugin.getLogger().log(java.util.logging.Level.WARNING, Messages.text("text.practice-commands.could-not-save-bot-preset-settings"), failure);
             plugin.messages().send(p, "settings.save-error");
           }
         }
@@ -305,8 +305,8 @@ final class PracticeCommands implements TabExecutor {
               Arena a = plugin.arena(arenaName);
               Location pSp = a.playerSpawn();
               Location bSp = a.botSpawn();
-              String pStr = String.format("%.1f, %.1f, %.1f", pSp.getX(), pSp.getY(), pSp.getZ());
-              String bStr = String.format("%.1f, %.1f, %.1f", bSp.getX(), bSp.getY(), bSp.getZ());
+              String pStr = String.format(Messages.text("text.practice-commands.1f-1f-1f"), pSp.getX(), pSp.getY(), pSp.getZ());
+              String bStr = String.format(Messages.text("text.practice-commands.1f-1f-1f"), bSp.getX(), bSp.getY(), bSp.getZ());
               plugin.messages().send(sender, "arena.info", "%player%", pStr, "%bot%", bStr, "%radius%", String.valueOf(a.radius()));
             }
             case "setplayer", "setbot" -> {
@@ -314,12 +314,13 @@ final class PracticeCommands implements TabExecutor {
               if (plugin.sessions().values().stream().anyMatch(active -> active.arenaName.equals(arenaName)))
                 throw new IllegalArgumentException(plugin.messages().get("arena.occupied"));
               if (!(sender instanceof Player p)) throw new IllegalArgumentException(plugin.messages().get("general.players-only"));
-              String point = arenaSub.equals("setplayer") ? "Player" : "Bot";
+              String point = arenaSub.equals("setplayer") ? "player" : "bot";
               if (!Arena.safe(p.getLocation()))
                 throw new IllegalArgumentException(plugin.messages().get("arena.unsafe-spawn"));
-              plugin.getConfig().set(plugin.arenaPath(arenaName) + "." + (point.toLowerCase(Locale.ROOT)), p.getLocation());
+              plugin.getConfig().set(plugin.arenaPath(arenaName) + "." + point, p.getLocation());
               plugin.saveConfig();
-              plugin.messages().send(sender, "arena.saved-spawn", "%point%", point, "%arena%", arenaName);
+              plugin.messages().send(sender, "arena.saved-spawn", "%point%",
+                  Messages.text("text.practice-commands." + point), "%arena%", arenaName);
             }
             default -> throw new IllegalArgumentException(plugin.messages().get("commands.arena-usage"));
           }
@@ -331,7 +332,7 @@ final class PracticeCommands implements TabExecutor {
     } catch (IllegalArgumentException e) {
       sender.sendMessage(Messages.color(e.getMessage().contains("\u00A7") || e.getMessage().contains("&") ? e.getMessage() : "&c" + e.getMessage()));
     } catch (Exception | LinkageError e) {
-      plugin.getLogger().log(java.util.logging.Level.SEVERE, "Practice Command Failed", e);
+      plugin.getLogger().log(java.util.logging.Level.SEVERE, Messages.text("text.practice-commands.practice-command-failed"), e);
       plugin.messages().send(sender, "general.internal-error");
     }
     return true;

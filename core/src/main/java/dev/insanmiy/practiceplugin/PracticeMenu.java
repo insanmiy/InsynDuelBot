@@ -61,12 +61,12 @@ final class PracticeMenu implements Listener {
 
     static String titleFor(Screen screen, Selection choice) {
       return switch (screen) {
-        case HOME -> "Practice / Setup";
-        case KITS -> "Practice / Choose Your Kit";
-        case PREVIEW -> "Preview / " + pretty(choice.kit());
-        case DIFFICULTIES -> "Practice / Select Difficulty";
-        case MODES -> "Practice / Select Mode";
-        case STATS -> "Practice / Your Statistics";
+        case HOME -> Messages.text("text.practice-menu.practice-setup");
+        case KITS -> Messages.text("text.practice-menu.practice-choose-your-kit");
+        case PREVIEW -> Messages.text("text.practice-menu.preview") + pretty(choice.kit());
+        case DIFFICULTIES -> Messages.text("text.practice-menu.practice-select-difficulty");
+        case MODES -> Messages.text("text.practice-menu.practice-select-mode");
+        case STATS -> Messages.text("text.practice-menu.practice-your-statistics");
       };
     }
 
@@ -102,7 +102,7 @@ final class PracticeMenu implements Listener {
   private void show(
       Player player, Selection selection, Screen screen, int requestedPage) {
     if (plugin.kits().isEmpty() || plugin.difficulties().isEmpty()) {
-      throw new IllegalArgumentException("No Valid Kits Or Difficulties. Check Configuration.");
+      throw new IllegalArgumentException(Messages.text("text.practice-menu.no-valid-kits-or-difficulties-check"));
     }
     Selection choice =
         new Selection(
@@ -165,48 +165,48 @@ final class PracticeMenu implements Listener {
           29,
           icon(
               canKitEditor ? Material.KNOWLEDGE_BOOK : Material.BARRIER,
-              "Custom Kit Editor",
+              Messages.text("text.practice-menu.custom-kit-editor"),
               canKitEditor ? NamedTextColor.GOLD : NamedTextColor.RED,
               false,
-              canKitEditor ? "Click To Create And Edit Custom Kits" : "Locked: Missing practice.kits.editor"));
+              canKitEditor ? Messages.text("text.practice-menu.click-to-create-and-edit-custom") : Messages.text("text.practice-menu.locked-missing-practice-kits-editor")));
     }
     inventory.setItem(
         4,
         icon(
             Material.NETHER_STAR,
-            screen == Screen.HOME ? "Ready To Practice?" : pretty(screen.name()),
+            screen == Screen.HOME ? Messages.text("text.practice-menu.ready-to-practice") : pretty(screen.name()),
             NamedTextColor.GOLD,
             false,
-            screen == Screen.HOME ? "Use The Current Setup Or Change A Choice Below"
-                : screen == Screen.STATS ? "Your Results For Each Practice Mode"
-                : "Click A Choice To Return To Practice Setup",
-            "Your Selection Is Kept While Navigating"));
+            screen == Screen.HOME ? Messages.text("text.practice-menu.use-the-current-setup-or-change")
+                : screen == Screen.STATS ? Messages.text("text.practice-menu.your-results-for-each-practice-mode")
+                : Messages.text("text.practice-menu.click-a-choice-to-return-to"),
+            Messages.text("text.practice-menu.your-selection-is-kept-while-navigating")));
 
     if (screen == Screen.HOME) {
       Difficulty difficulty = plugin.difficulties().get(choice.difficulty());
       inventory.setItem(11, icon(selected.icon() == null || selected.icon().isAir()
               ? Material.IRON_SWORD : selected.icon(),
-          "Kit: " + pretty(choice.kit()), NamedTextColor.AQUA, false,
-          "The Equipment You And The Bot Will Use", "Click To Choose A Kit"));
+          Messages.text("text.practice-menu.kit") + pretty(choice.kit()), NamedTextColor.AQUA, false,
+          Messages.text("text.practice-menu.the-equipment-you-and-the-bot"), Messages.text("text.practice-menu.click-to-choose-a-kit")));
       inventory.setItem(13, icon(difficulty.effectiveIcon(),
-          "Difficulty: " + difficulty.prettyDisplayName(), NamedTextColor.GOLD, false,
-          "Choose How Challenging The Bot Is", "Click To Choose A Difficulty"));
+          Messages.text("text.practice-menu.difficulty") + difficulty.prettyDisplayName(), NamedTextColor.GOLD, false,
+          Messages.text("text.practice-menu.choose-how-challenging-the-bot-is"), Messages.text("text.practice-menu.click-to-choose-a-difficulty")));
       inventory.setItem(15, icon(Material.TARGET,
-          "Mode: " + pretty(choice.mode().id()), NamedTextColor.AQUA, false,
-          choice.mode().description(), "Click To Choose A Mode"));
-      inventory.setItem(22, icon(Material.CHEST, "Preview Your Kit", NamedTextColor.AQUA,
-          false, "See Equipment Before Starting", "Click To Preview"));
+          Messages.text("text.practice-menu.mode") + pretty(choice.mode().id()), NamedTextColor.AQUA, false,
+          choice.mode().description(), Messages.text("text.practice-menu.click-to-choose-a-mode")));
+      inventory.setItem(22, icon(Material.CHEST, Messages.text("text.practice-menu.preview-your-kit"), NamedTextColor.AQUA,
+          false, Messages.text("text.practice-menu.see-equipment-before-starting"), Messages.text("text.practice-menu.click-to-preview")));
       boolean canSettings = player.hasPermission("practice.settings")
           || player.hasPermission("practice.admin") || player.hasPermission("practice.*");
       inventory.setItem(31, icon(canSettings ? Material.REPEATER : Material.BARRIER,
-          "Optional Settings", canSettings ? NamedTextColor.AQUA : NamedTextColor.RED, false,
-          "Match Options And Bot Abilities",
-          canSettings ? "Click To Open" : "Locked: Missing practice.settings"));
+          Messages.text("text.practice-menu.optional-settings"), canSettings ? NamedTextColor.AQUA : NamedTextColor.RED, false,
+          Messages.text("text.practice-menu.match-options-and-bot-abilities"),
+          canSettings ? Messages.text("text.practice-menu.click-to-open") : Messages.text("text.practice-menu.locked-missing-practice-settings")));
       boolean canStats = player.hasPermission("practice.stats")
           || player.hasPermission("practice.admin") || player.hasPermission("practice.*");
       inventory.setItem(33, icon(canStats ? Material.BOOK : Material.BARRIER,
-          "Your Progress", canStats ? NamedTextColor.GOLD : NamedTextColor.RED, false,
-          canStats ? "Click To View Your Results" : "Locked: Missing practice.stats"));
+          Messages.text("text.practice-menu.your-progress"), canStats ? NamedTextColor.GOLD : NamedTextColor.RED, false,
+          canStats ? Messages.text("text.practice-menu.click-to-view-your-results") : Messages.text("text.practice-menu.locked-missing-practice-stats")));
     }
     else if (screen == Screen.PREVIEW) {
       for (int slot = 0; slot < 41; slot++) {
@@ -223,7 +223,7 @@ final class PracticeMenu implements Listener {
                             TextUI.lore(meta) == null ? new ArrayList<>() : new ArrayList<>(TextUI.lore(meta));
                         lore.add(
                             text(
-                                "Preview Only: Identical For Both Fighters",
+                                Messages.text("text.practice-menu.preview-only-identical-for-both-fighters"),
                                 NamedTextColor.DARK_AQUA));
                         TextUI.lore(meta, lore);
                       });
@@ -234,21 +234,21 @@ final class PracticeMenu implements Listener {
           41,
           icon(
               Material.ARMOR_STAND,
-              "Exact Inventory Layout",
+              Messages.text("text.practice-menu.exact-inventory-layout"),
               NamedTextColor.AQUA,
               false,
-              "Slots 0 To 35: Kit Inventory",
-              "Bottom: Armor And Offhand"));
+              Messages.text("text.practice-menu.slots-0-to-35-kit-inventory"),
+              Messages.text("text.practice-menu.bottom-armor-and-offhand")));
       inventory.setItem(
           42,
           icon(
               Material.COOKED_BEEF,
-              "Food Regeneration",
+              Messages.text("text.practice-menu.food-regeneration"),
               NamedTextColor.GOLD,
               false,
-              selected.regeneration() ? "Enabled: Vanilla Saturation Healing" : "Disabled For This Kit"));
+              selected.regeneration() ? Messages.text("text.practice-menu.enabled-vanilla-saturation-healing") : Messages.text("text.practice-menu.disabled-for-this-kit")));
       inventory.setItem(
-          43, icon(Material.RED_DYE, selected.health() + " HP Each", NamedTextColor.RED, false));
+          43, icon(Material.RED_DYE, selected.health() + Messages.text("text.practice-menu.hp-each"), NamedTextColor.RED, false));
     } else {
       int from = page * MenuPaging.PAGE_SIZE;
       for (int index = 0; index < MenuPaging.PAGE_SIZE && from + index < entries.size(); index++) {
@@ -265,9 +265,9 @@ final class PracticeMenu implements Listener {
                   choice.kit().equals(name),
                   kit != null ? kit.description() : "",
                   "",
-                  kit != null ? (kit.health() + " HP | Regen: " + (kit.regeneration() ? "Enabled" : "Disabled")) : "",
-                  choice.kit().equals(name) ? "Selected | Click To Keep This Kit" : "Click To Use This Kit",
-                  "Right Click: Preview | Shift Click: Favorite");
+                  kit != null ? (kit.health() + Messages.text("text.practice-menu.hp-regen") + (kit.regeneration() ? Messages.text("text.practice-menu.enabled") : Messages.text("text.practice-menu.disabled"))) : "",
+                  choice.kit().equals(name) ? Messages.text("text.practice-menu.selected-click-to-keep-this-kit") : Messages.text("text.practice-menu.click-to-use-this-kit"),
+                  Messages.text("text.practice-menu.right-click-preview-shift-click-favorite"));
         } else if (screen == Screen.DIFFICULTIES) {
           var d = plugin.difficulties().get(name);
           Material mat = d != null ? d.effectiveIcon() : Material.IRON_SWORD;
@@ -278,16 +278,16 @@ final class PracticeMenu implements Listener {
             lore.add("");
           }
           if (d != null) {
-            lore.add(!d.attacksEnabled() ? "Target Practice: This Bot Does Not Attack"
-                : d.decisionTicks() >= 6 ? "Slower Reactions For Learning The Basics"
-                : d.decisionTicks() >= 3 ? "Steady Reactions For Regular Practice"
-                : "Fast Reactions For A Tougher Challenge");
+            lore.add(!d.attacksEnabled() ? Messages.text("text.practice-menu.target-practice-this-bot-does-not")
+                : d.decisionTicks() >= 6 ? Messages.text("text.practice-menu.slower-reactions-for-learning-the-basics")
+                : d.decisionTicks() >= 3 ? Messages.text("text.practice-menu.steady-reactions-for-regular-practice")
+                : Messages.text("text.practice-menu.fast-reactions-for-a-tougher-challenge"));
           }
           if (plugin.settings().hasBotOverrides(player.getUniqueId())) {
-            lore.add("Your Custom Bot Settings Also Apply");
+            lore.add(Messages.text("text.practice-menu.your-custom-bot-settings-also-apply"));
           }
           lore.add("");
-          lore.add(choice.difficulty().equals(name) ? "» Selected «" : "Click To Select");
+          lore.add(choice.difficulty().equals(name) ? Messages.text("text.practice-menu.selected") : Messages.text("text.practice-menu.click-to-select"));
           card =
               icon(
                   mat,
@@ -313,15 +313,15 @@ final class PracticeMenu implements Listener {
                   choice.mode() == mode,
                   mode.description(),
                   mode == PracticeMode.MATCH
-                      ? "Best Of " + choice.bestOf() + "; First To " + (choice.bestOf() / 2 + 1) + " Wins"
+                      ? Messages.text("text.practice-menu.best-of") + choice.bestOf() + Messages.text("text.practice-menu.first-to") + (choice.bestOf() / 2 + 1) + Messages.text("text.practice-menu.wins")
                       : mode == PracticeMode.DUEL
-                          ? "Single 1v1 Duel To Knockout"
+                          ? Messages.text("text.practice-menu.single-1v1-duel-to-knockout")
                           : mode == PracticeMode.V2_1
-                              ? "Best Of " + choice.bestOf() + "; 2 Bots vs 1 Player"
+                              ? Messages.text("text.practice-menu.best-of") + choice.bestOf() + Messages.text("text.practice-menu.2-bots-vs-1-player")
                               : mode == PracticeMode.V3_1
-                                  ? "Best Of " + choice.bestOf() + "; 3 Bots vs 1 Player"
-                                  : "Continuous Rounds With Score Tracking",
-                  "Click To Select");
+                                  ? Messages.text("text.practice-menu.best-of") + choice.bestOf() + Messages.text("text.practice-menu.3-bots-vs-1-player")
+                                  : Messages.text("text.practice-menu.continuous-rounds-with-score-tracking"),
+                  Messages.text("text.practice-menu.click-to-select"));
         } else {
           card =
               icon(
@@ -340,19 +340,19 @@ final class PracticeMenu implements Listener {
 
     if (screen != Screen.PREVIEW && screen != Screen.HOME) {
       if (page > 0) {
-        inventory.setItem(36, icon(Material.ARROW, "Previous Page", NamedTextColor.AQUA, false));
+        inventory.setItem(36, icon(Material.ARROW, Messages.text("text.practice-menu.previous-page"), NamedTextColor.AQUA, false));
       }
       int totalPages = Math.max(1, MenuPaging.pages(entries.size()));
       inventory.setItem(
           40,
           icon(
               Material.PAPER,
-              "Page " + (page + 1) + " Of " + totalPages,
+              Messages.text("text.practice-menu.page") + (page + 1) + Messages.text("text.practice-menu.of") + totalPages,
               NamedTextColor.YELLOW,
               false,
-              entries.size() + " Total Entries"));
+              entries.size() + Messages.text("text.practice-menu.total-entries")));
       if (page + 1 < totalPages) {
-        inventory.setItem(44, icon(Material.ARROW, "Next Page", NamedTextColor.AQUA, false));
+        inventory.setItem(44, icon(Material.ARROW, Messages.text("text.practice-menu.next-page"), NamedTextColor.AQUA, false));
       }
     }
 
@@ -366,10 +366,10 @@ final class PracticeMenu implements Listener {
         45,
         icon(
             Material.ARROW,
-            "Back To Practice Setup",
+            Messages.text("text.practice-menu.back-to-practice-setup"),
             NamedTextColor.AQUA,
             false,
-            "Keep Your Choices And Return"));
+            Messages.text("text.practice-menu.keep-your-choices-and-return")));
     }
 
     if ((screen == Screen.HOME || screen == Screen.MODES)
@@ -378,13 +378,13 @@ final class PracticeMenu implements Listener {
           40,
           icon(
               Material.COMPARATOR,
-              "Match Length: Best Of " + choice.bestOf(),
+              Messages.text("text.practice-menu.match-length-best-of") + choice.bestOf(),
               NamedTextColor.YELLOW,
               false,
-              "First To " + (choice.bestOf() / 2 + 1) + " Round Wins",
+              Messages.text("text.practice-menu.first-to-2") + (choice.bestOf() / 2 + 1) + Messages.text("text.practice-menu.round-wins"),
               "",
-              "Left Click: +2 Rounds",
-              "Right Click: Reduce By 2 Rounds"));
+              Messages.text("text.practice-menu.left-click-2-rounds"),
+              Messages.text("text.practice-menu.right-click-reduce-by-2-rounds")));
     }
 
     boolean canStart = player.hasPermission("practice.start")
@@ -393,37 +393,37 @@ final class PracticeMenu implements Listener {
     boolean arenaAvailable = plugin.hasConfiguredArena();
     List<String> startLore = new ArrayList<>();
     if (!canStart) {
-      startLore.add("Locked: Missing practice.start");
+      startLore.add(Messages.text("text.practice-menu.locked-missing-practice-start"));
     } else if (!arenaAvailable) {
-      startLore.add("No Arena Configured On This Server.");
-      startLore.add("Ask An Admin To Configure Spawns:");
-      startLore.add("/practice arena setplayer & setbot");
+      startLore.add(Messages.text("text.practice-menu.no-arena-configured-on-this-server"));
+      startLore.add(Messages.text("text.practice-menu.ask-an-admin-to-configure-spawns"));
+      startLore.add(Messages.text("text.practice-menu.practice-arena-setplayer-setbot"));
     } else {
-      startLore.add("Kit: " + pretty(choice.kit()));
-      startLore.add("Difficulty: " + diffDisplayName);
-      startLore.add("Mode: " + pretty(currentMode.id()));
+      startLore.add(Messages.text("text.practice-menu.kit") + pretty(choice.kit()));
+      startLore.add(Messages.text("text.practice-menu.difficulty") + diffDisplayName);
+      startLore.add(Messages.text("text.practice-menu.mode") + pretty(currentMode.id()));
       if (currentMode == PracticeMode.MATCH || currentMode.isOutnumbered()) {
-        startLore.add("First To " + (choice.bestOf() / 2 + 1) + " Round Wins");
+        startLore.add(Messages.text("text.practice-menu.first-to-2") + (choice.bestOf() / 2 + 1) + Messages.text("text.practice-menu.round-wins"));
       }
       if (plugin.settings().hasBotOverrides(player.getUniqueId())) {
         startLore.add("");
-        startLore.add("! Custom Bot Tuning Active");
+        startLore.add(Messages.text("text.practice-menu.custom-bot-tuning-active"));
       }
       startLore.add("");
-      startLore.add("Click To Launch Practice");
+      startLore.add(Messages.text("text.practice-menu.click-to-launch-practice"));
     }
 
     inventory.setItem(
         49,
         icon(
             (!canStart || !arenaAvailable) ? Material.RED_CONCRETE : Material.LIME_CONCRETE,
-            !canStart ? "Start Practice Locked" : (arenaAvailable ? "Start Practice" : "No Arena Configured"),
+            !canStart ? Messages.text("text.practice-menu.start-practice-locked") : (arenaAvailable ? Messages.text("text.practice-menu.start-practice") : Messages.text("text.practice-menu.no-arena-configured")),
             (!canStart || !arenaAvailable) ? NamedTextColor.RED : NamedTextColor.GREEN,
             canStart && arenaAvailable,
             startLore.toArray(String[]::new)));
 
-    inventory.setItem(53, icon(Material.BARRIER, "Close", NamedTextColor.RED, false,
-        "You Can Return With /practice"));
+    inventory.setItem(53, icon(Material.BARRIER, Messages.text("text.practice-menu.close"), NamedTextColor.RED, false,
+        Messages.text("text.practice-menu.you-can-return-with-practice")));
 
 
     if (!canReuse) {
@@ -432,11 +432,11 @@ final class PracticeMenu implements Listener {
   }
 
   private static String pretty(String value) {
-    return Difficulty.formatName(value);
+    return Messages.displayName(value);
   }
 
   private static Component text(String value, NamedTextColor color) {
-    return Component.text(value, color).decoration(TextDecoration.ITALIC, false);
+    return Messages.component(value, color).decoration(TextDecoration.ITALIC, false);
   }
 
   private static ItemStack icon(
@@ -519,7 +519,7 @@ final class PracticeMenu implements Listener {
                   if (!player.hasPermission("practice.kits.editor")
                       && !player.hasPermission("practice.admin")
                       && !player.hasPermission("practice.*")) {
-                    throw new IllegalArgumentException("Missing Permission: practice.kits.editor");
+                    throw new IllegalArgumentException(Messages.text("text.practice-menu.missing-permission-practice-kits-editor"));
                   }
                   Bukkit.dispatchCommand(player, "practice kit editor");
                   return;
@@ -535,7 +535,7 @@ final class PracticeMenu implements Listener {
                       if (!player.hasPermission("practice.stats")
                           && !player.hasPermission("practice.admin")
                           && !player.hasPermission("practice.*")) {
-                        throw new IllegalArgumentException("Missing Permission: practice.stats");
+                        throw new IllegalArgumentException(Messages.text("text.practice-menu.missing-permission-practice-stats"));
                       }
                       show(player, choice, Screen.STATS, 0);
                     }
@@ -634,7 +634,7 @@ final class PracticeMenu implements Listener {
                     if (!player.hasPermission("practice.start")
                         && !player.hasPermission("practice.admin")
                         && !player.hasPermission("practice.*")) {
-                      throw new IllegalArgumentException("Missing Permission: practice.start");
+                      throw new IllegalArgumentException(Messages.text("text.practice-menu.missing-permission-practice-start"));
                     }
                     if (!plugin.hasConfiguredArena()) {
                       return;

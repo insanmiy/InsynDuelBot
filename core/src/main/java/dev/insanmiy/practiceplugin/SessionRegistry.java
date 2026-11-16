@@ -23,7 +23,7 @@ final class SessionRegistry<T> {
 
   void put(UUID owner, T session) {
     if (owners.putIfAbsent(Objects.requireNonNull(owner), Objects.requireNonNull(session)) != null)
-      throw new IllegalStateException("Player Already Has A Session");
+      throw new IllegalStateException(Messages.text("text.session-registry.player-already-has-a-session"));
   }
 
   void registerBot(UUID id, T session) {

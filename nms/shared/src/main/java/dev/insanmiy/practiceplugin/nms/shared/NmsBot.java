@@ -1,5 +1,7 @@
 package dev.insanmiy.practiceplugin.nms.shared;
 
+import dev.insanmiy.practiceplugin.Messages;
+
 import dev.insanmiy.practiceplugin.Attributes;
 import dev.insanmiy.practiceplugin.bot.*;
 
@@ -190,7 +192,7 @@ public final class NmsBot implements BotPlatform {
     teleporting = true;
     try {
       if (!handle.getBukkitEntity().teleport(location))
-        throw new IllegalStateException("Bot Teleport Cancelled");
+        throw new IllegalStateException(Messages.text("text.nms-bot.bot-teleport-cancelled"));
     } finally {
       teleporting = false;
     }

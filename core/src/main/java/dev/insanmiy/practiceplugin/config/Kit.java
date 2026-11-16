@@ -1,5 +1,7 @@
 package dev.insanmiy.practiceplugin.config;
 
+import dev.insanmiy.practiceplugin.Messages;
+
 import dev.insanmiy.practiceplugin.Attributes;
 import dev.insanmiy.practiceplugin.model.KitLayout;
 import java.util.*;
@@ -29,7 +31,7 @@ public final class Kit {
       double health,
       boolean regeneration) {
     if (!Double.isFinite(health) || health < 2 || health > 100)
-      throw new IllegalArgumentException("Kit Health Must Be 2..100 HP.");
+      throw new IllegalArgumentException(Messages.text("text.kit.kit-health-must-be-2-100"));
     this.name = name;
     this.description = description;
     this.armor = armor.stream().map(ItemStack::clone).toList();
@@ -110,15 +112,15 @@ public final class Kit {
 
   public String summary() {
     return health
-        + " HP | "
+        + Messages.text("text.kit.hp")
         + count(Material.GOLDEN_APPLE)
-        + " Apples | "
+        + Messages.text("text.kit.apples")
         + count(Material.SPLASH_POTION)
-        + " Splash Pots | "
+        + Messages.text("text.kit.splash-pots")
         + count(Material.COBWEB)
-        + " Webs | "
+        + Messages.text("text.kit.webs")
         + count(Material.EXPERIENCE_BOTTLE)
-        + " XP | "
+        + Messages.text("text.kit.xp")
         + description;
   }
 
@@ -130,17 +132,17 @@ public final class Kit {
             .map(a -> !isVersionSupported(a.getType()) ? new ItemStack(Material.AIR) : a)
             .toList();
     if (armor.size() != 4)
-      throw new IllegalArgumentException("Armor Requires Boots, Leggings, Chestplate, Helmet.");
+      throw new IllegalArgumentException(Messages.text("text.kit.armor-requires-boots-leggings-chestplate-helmet"));
     for (int i = 0; i < 4; i++) {
       enchant(armor.get(i), c.getConfigurationSection("armor-enchantments"));
     }
     Map<Integer, ItemStack> items = new TreeMap<>();
     ConfigurationSection slots =
-        Objects.requireNonNull(c.getConfigurationSection("items"), "items missing");
+        Objects.requireNonNull(c.getConfigurationSection("items"), Messages.text("text.kit.items-missing"));
     for (String key : slots.getKeys(false)) {
       int slot = Integer.parseInt(key);
       if (slot < 0 || slot > 35)
-        throw new IllegalArgumentException("Inventory Slots Must Be 0..35.");
+        throw new IllegalArgumentException(Messages.text("text.kit.inventory-slots-must-be-0-35"));
       ItemStack item = parseItem(slots.get(key));
       if (!isVersionSupported(item.getType())) {
         continue;
@@ -160,7 +162,7 @@ public final class Kit {
     allowed(offhand);
     return new Kit(
         name,
-        c.getString("description", "Custom PvP kit"),
+        c.getString("description", Messages.text("text.kit.custom-pvp-kit")),
         armor,
         items,
         offhand,
@@ -234,7 +236,7 @@ public final class Kit {
   public static void allowed(ItemStack item) {
     if (item == null || item.getType().isAir()) return;
     if (!allowed(item.getType()))
-      throw new IllegalArgumentException("Item Not Allowed In Kits: " + item.getType().name());
+      throw new IllegalArgumentException(Messages.text("text.kit.item-not-allowed-in-kits") + item.getType().name());
   }
 
   public static boolean ammunition(Material type) {
@@ -251,7 +253,7 @@ public final class Kit {
       ItemStack item = parseItem(String.valueOf(material) + ":" + amount);
       if (map.containsKey("potion")) {
         if (!(item.getItemMeta() instanceof PotionMeta meta))
-          throw new IllegalArgumentException("Only Potions May Specify Potion Type.");
+          throw new IllegalArgumentException(Messages.text("text.kit.only-potions-may-specify-potion-type"));
         meta.setBasePotionType(
             PotionType.valueOf(String.valueOf(map.get("potion")).toUpperCase(Locale.ROOT)));
         item.setItemMeta(meta);
@@ -273,23 +275,23 @@ public final class Kit {
     }
     if (raw instanceof ItemStack item) {
       if (item.getType().isAir()) return new ItemStack(Material.AIR);
-      if (item.getAmount() < 1) throw new IllegalArgumentException("Invalid Item Count.");
+      if (item.getAmount() < 1) throw new IllegalArgumentException(Messages.text("text.kit.invalid-item-count"));
       return item.clone();
     }
     String[] parts = String.valueOf(raw).split(":", -1);
-    if (parts.length > 2) throw new IllegalArgumentException("Expected Material:Amount.");
+    if (parts.length > 2) throw new IllegalArgumentException(Messages.text("text.kit.expected-material-amount"));
     Material type = Material.matchMaterial(parts[0]);
     if (type == null) {
       if (!isVersionAtLeast1_21()) {
         return new ItemStack(Material.AIR);
       }
-      throw new IllegalArgumentException("Unknown Item: " + raw);
+      throw new IllegalArgumentException(Messages.text("text.kit.unknown-item") + raw);
     }
     if (!type.isItem() && type != Material.AIR)
-      throw new IllegalArgumentException("Unknown Item: " + raw);
+      throw new IllegalArgumentException(Messages.text("text.kit.unknown-item") + raw);
     int count = parts.length == 2 ? Integer.parseInt(parts[1]) : 1;
     if (count < 1 || (type != Material.AIR && count > type.getMaxStackSize()))
-      throw new IllegalArgumentException("Invalid Amount For " + type);
+      throw new IllegalArgumentException(Messages.text("text.kit.invalid-amount-for") + type);
     return new ItemStack(type, count);
   }
 
@@ -304,7 +306,7 @@ public final class Kit {
               : org.bukkit.Registry.ENCHANTMENT.get(id);
       int level = c.getInt(key);
       if (enchantment == null || level < 1 || level > enchantment.getMaxLevel())
-        throw new IllegalArgumentException("Invalid Enchantment " + key + " For " + item.getType());
+        throw new IllegalArgumentException(Messages.text("text.kit.invalid-enchantment") + key + Messages.text("text.kit.for") + item.getType());
       if (!enchantment.canEnchantItem(item)) continue;
       item.addUnsafeEnchantment(enchantment, level);
     }
@@ -312,7 +314,7 @@ public final class Kit {
 
   public static void capture(Player player, ConfigurationSection c) {
     c.createSection("items");
-    c.set("description", "Saved By " + player.getName());
+    c.set("description", Messages.text("text.kit.saved-by") + player.getName());
     c.set("health", Attributes.getValue(player, Attributes.MAX_HEALTH, 20.0));
     c.set("natural-regeneration", true);
     c.set(

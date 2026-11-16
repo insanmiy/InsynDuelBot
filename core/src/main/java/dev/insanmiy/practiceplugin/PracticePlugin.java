@@ -39,23 +39,23 @@ public final class PracticePlugin extends JavaPlugin {
     CleanupSteps cleanup = cleanup();
     UUID owner = session.owner.getUniqueId();
     for (Projectile projectile : List.copyOf(session.projectiles)) {
-      cleanup.run("Could Not Remove A Session Projectile", projectile::remove);
+      cleanup.run(Messages.text("text.practice-plugin.could-not-remove-a-session-projectile"), projectile::remove);
       projectiles.remove(projectile);
     }
     session.projectiles.clear();
-    cleanup.run("Could Not Remove Session Clouds", () -> clouds.clear(owner));
-    cleanup.run("Could Not Restore Session Blocks", () -> blocks.restoreOwner(owner));
+    cleanup.run(Messages.text("text.practice-plugin.could-not-remove-session-clouds"), () -> clouds.clear(owner));
+    cleanup.run(Messages.text("text.practice-plugin.could-not-restore-session-blocks"), () -> blocks.restoreOwner(owner));
   }
 
   void clearUtilities() {
     CleanupSteps cleanup = cleanup();
     for (PracticeSession session : sessions.values()) session.projectiles.clear();
     for (Projectile projectile : List.copyOf(projectiles))
-      cleanup.run("Could Not Remove A Practice Projectile", projectile::remove);
+      cleanup.run(Messages.text("text.practice-plugin.could-not-remove-a-practice-projectile"), projectile::remove);
     projectiles.clear();
-    if (clouds != null) cleanup.run("Could Not Remove Practice Clouds", clouds::clearAll);
-    if (blocks != null) cleanup.run("Could Not Restore Practice Blocks", () -> {
-      if (!blocks.restoreAll()) getLogger().warning("Block Recovery Retained For An Unloaded World.");
+    if (clouds != null) cleanup.run(Messages.text("text.practice-plugin.could-not-remove-practice-clouds"), clouds::clearAll);
+    if (blocks != null) cleanup.run(Messages.text("text.practice-plugin.could-not-restore-practice-blocks"), () -> {
+      if (!blocks.restoreAll()) getLogger().warning(Messages.text("text.practice-plugin.block-recovery-retained-for-an-unloaded"));
     });
   }
 
@@ -87,13 +87,13 @@ public final class PracticePlugin extends JavaPlugin {
       String name = base.substring(0, Math.min(base.length(), 16 - suffix.length())) + suffix;
       if (Bukkit.getPlayerExact(name) == null) return name;
     }
-    throw new IllegalArgumentException(messages != null ? messages.get("session.no-free-bot-names") : "No Free Bot Names Available.");
+    throw new IllegalArgumentException(messages != null ? messages.get("session.no-free-bot-names") : Messages.text("text.practice-plugin.no-free-bot-names-available"));
   }
 
   String validArenaName(String name) {
     String normalized = name.toLowerCase(Locale.ROOT);
     if (!normalized.matches("[a-z0-9_-]{1,32}"))
-      throw new IllegalArgumentException(messages != null ? messages.get("arena.name-invalid") : "Arena Names: 1 To 32 Letters, Digits, Hyphen Or Underscore.");
+      throw new IllegalArgumentException(messages != null ? messages.get("arena.name-invalid") : Messages.text("text.practice-plugin.arena-names-1-to-32-letters"));
     return normalized;
   }
 
@@ -175,12 +175,13 @@ public final class PracticePlugin extends JavaPlugin {
 
   @Override
   public void onEnable() {
+    messages = new Messages(this);
     String serverVersion = Bukkit.getBukkitVersion().split("-")[0];
     try {
       BotAdapters.getAdapter();
-      getLogger().info("Successfully Loaded NMS Adapter For Minecraft " + serverVersion);
+      getLogger().info(Messages.text("text.practice-plugin.successfully-loaded-nms-adapter-for-minecraft") + serverVersion);
     } catch (UnsupportedOperationException | IllegalStateException e) {
-      getLogger().severe("Failed To Initialize Version Adapter: " + e.getMessage());
+      getLogger().severe(Messages.text("text.practice-plugin.failed-to-initialize-version-adapter") + e.getMessage());
       getServer().getPluginManager().disablePlugin(this);
       return;
     }
@@ -196,14 +197,13 @@ public final class PracticePlugin extends JavaPlugin {
       KitFiles.initialize(this);
       reloadConfig();
     } catch (java.io.IOException e) {
-      getLogger().log(java.util.logging.Level.SEVERE, "Could Not Upgrade Configuration Safely", e);
+      getLogger().log(java.util.logging.Level.SEVERE, Messages.text("text.practice-plugin.could-not-upgrade-configuration-safely"), e);
       getServer().getPluginManager().disablePlugin(this);
       return;
     }
-    messages = new Messages(this);
     dev.insanmiy.practiceplugin.papi.PapiHook.init(this);
     saves = new SnapshotWriter((file, failure) -> getLogger().log(
-        java.util.logging.Level.SEVERE, "Could Not Save " + file.getFileName() + "; Will Retry", failure));
+        java.util.logging.Level.SEVERE, Messages.text("text.practice-plugin.could-not-save") + file.getFileName() + Messages.text("text.practice-plugin.will-retry"), failure));
     progress = new ProgressStore(this);
     blocks = new TemporaryBlocks(this);
     getServer()
@@ -214,7 +214,7 @@ public final class PracticePlugin extends JavaPlugin {
               try {
                 blocks.flush();
               } catch (java.io.IOException e) {
-                getLogger().log(java.util.logging.Level.SEVERE, "Could Not Save Block Journal", e);
+                getLogger().log(java.util.logging.Level.SEVERE, Messages.text("text.practice-plugin.could-not-save-block-journal"), e);
               }
             },
             20,
@@ -253,8 +253,8 @@ public final class PracticePlugin extends JavaPlugin {
                 try {
                   session.tick();
                 } catch (Exception | LinkageError e) {
-                  getLogger().log(java.util.logging.Level.SEVERE, "Practice Session Failed", e);
-                  stop(session, messages != null ? messages.get("session.session-stopped-error") : "Session Stopped After An Internal Error.");
+                  getLogger().log(java.util.logging.Level.SEVERE, Messages.text("text.practice-plugin.practice-session-failed"), e);
+                  stop(session, messages != null ? messages.get("session.session-stopped-error") : Messages.text("text.practice-plugin.session-stopped-after-an-internal-error"));
                 }
               }
             },
@@ -267,18 +267,18 @@ public final class PracticePlugin extends JavaPlugin {
   @Override
   public void onDisable() {
     CleanupSteps cleanup = cleanup();
-    cleanup.run("Could Not Cancel Practice Tasks", () -> getServer().getScheduler().cancelTasks(this));
-    cleanup.run("Could Not Unregister Practice Listeners", () -> org.bukkit.event.HandlerList.unregisterAll(this));
-    cleanup.run("Could Not Stop Placeholders", dev.insanmiy.practiceplugin.papi.PapiHook::shutdown);
+    cleanup.run(Messages.text("text.practice-plugin.could-not-cancel-practice-tasks"), () -> getServer().getScheduler().cancelTasks(this));
+    cleanup.run(Messages.text("text.practice-plugin.could-not-unregister-practice-listeners"), () -> org.bukkit.event.HandlerList.unregisterAll(this));
+    cleanup.run(Messages.text("text.practice-plugin.could-not-stop-placeholders"), dev.insanmiy.practiceplugin.papi.PapiHook::shutdown);
     for (PracticeSession session : List.copyOf(sessions.values()))
-      cleanup.run("Could Not Stop A Practice Session", () -> stop(session, null));
-    cleanup.run("Could Not Clear Practice Utilities", this::clearUtilities);
-    if (settingsMenu != null) cleanup.run("Could Not Close Settings Menus", settingsMenu::closeAll);
-    if (menu != null) cleanup.run("Could Not Close Practice Menus", menu::closeAll);
-    if (kitEditor != null) cleanup.run("Could Not Close Kit Editors", kitEditor::closeAll);
-    if (progress != null) cleanup.run("Could Not Queue Practice Stats", progress::save);
-    if (blocks != null) cleanup.run("Could Not Save Block Journal", blocks::flush);
-    if (saves != null) cleanup.run("Could Not Flush Practice Saves", saves::close);
+      cleanup.run(Messages.text("text.practice-plugin.could-not-stop-a-practice-session"), () -> stop(session, null));
+    cleanup.run(Messages.text("text.practice-plugin.could-not-clear-practice-utilities"), this::clearUtilities);
+    if (settingsMenu != null) cleanup.run(Messages.text("text.practice-plugin.could-not-close-settings-menus"), settingsMenu::closeAll);
+    if (menu != null) cleanup.run(Messages.text("text.practice-plugin.could-not-close-practice-menus"), menu::closeAll);
+    if (kitEditor != null) cleanup.run(Messages.text("text.practice-plugin.could-not-close-kit-editors"), kitEditor::closeAll);
+    if (progress != null) cleanup.run(Messages.text("text.practice-plugin.could-not-queue-practice-stats"), progress::save);
+    if (blocks != null) cleanup.run(Messages.text("text.practice-plugin.could-not-save-block-journal"), blocks::flush);
+    if (saves != null) cleanup.run(Messages.text("text.practice-plugin.could-not-flush-practice-saves"), saves::close);
   }
 
   NamespacedKey gearKey() {
@@ -317,11 +317,11 @@ public final class PracticePlugin extends JavaPlugin {
       old.close();
     } catch (Exception e) {
       getLogger()
-          .log(java.util.logging.Level.SEVERE, "Cleanup Failed; Recovery Record Retained", e);
+          .log(java.util.logging.Level.SEVERE, Messages.text("text.practice-plugin.cleanup-failed-recovery-record-retained"), e);
     } finally {
       sessions.remove(old.owner.getUniqueId(), old);
       if (message != null && !message.isEmpty())
-        cleanup().run("Could Not Send Session Result", () -> old.owner.sendMessage(Messages.color(message)));
+        cleanup().run(Messages.text("text.practice-plugin.could-not-send-session-result"), () -> old.owner.sendMessage(Messages.color(message)));
     }
   }
 
@@ -338,7 +338,7 @@ public final class PracticePlugin extends JavaPlugin {
         try {
           kits.put(key, Kit.read(key, Objects.requireNonNull(root.getConfigurationSection(key))));
         } catch (Exception e) {
-          getLogger().warning("Kit '" + key + "' Disabled: " + e.getMessage());
+          getLogger().warning(Messages.text("text.practice-plugin.kit") + key + Messages.text("text.practice-plugin.disabled") + e.getMessage());
         }
     ConfigurationSection custom =
         YamlConfiguration.loadConfiguration(new File(getDataFolder(), "customkits.yml"));
@@ -346,7 +346,7 @@ public final class PracticePlugin extends JavaPlugin {
       try {
         kits.put(key, Kit.read(key, Objects.requireNonNull(custom.getConfigurationSection(key))));
       } catch (Exception e) {
-        getLogger().warning("Custom Kit '" + key + "' Disabled: " + e.getMessage());
+        getLogger().warning(Messages.text("text.practice-plugin.custom-kit") + key + Messages.text("text.practice-plugin.disabled") + e.getMessage());
       }
     }
     root = getConfig().getConfigurationSection("difficulties");
@@ -356,12 +356,12 @@ public final class PracticePlugin extends JavaPlugin {
           difficulties.put(
               key, Difficulty.read(key, Objects.requireNonNull(root.getConfigurationSection(key))));
         } catch (Exception e) {
-          getLogger().warning("Difficulty '" + key + "' Disabled: " + e.getMessage());
+          getLogger().warning(Messages.text("text.practice-plugin.difficulty") + key + Messages.text("text.practice-plugin.disabled") + e.getMessage());
         }
     String name = getConfig().getString("bot-name", "PracticeBot");
     if (!name.matches("[A-Za-z0-9_]{1,16}")) {
       getConfig().set("bot-name", "PracticeBot");
-      getLogger().warning("Invalid Bot-Name. Using PracticeBot");
+      getLogger().warning(Messages.text("text.practice-plugin.invalid-bot-name-using-practicebot"));
     }
     for (String key :
         List.of("countdown-seconds", "between-round-seconds", "round-timeout-seconds")) {
@@ -395,7 +395,7 @@ public final class PracticePlugin extends JavaPlugin {
     } catch (IllegalArgumentException e) {
       p.sendMessage(Messages.color(e.getMessage().contains("\u00A7") || e.getMessage().contains("&") ? e.getMessage() : "&c" + e.getMessage()));
     } catch (Exception | LinkageError e) {
-      getLogger().log(java.util.logging.Level.SEVERE, "Practice Start Failed", e);
+      getLogger().log(java.util.logging.Level.SEVERE, Messages.text("text.practice-plugin.practice-start-failed"), e);
       messages.send(p, "session.session-internal-error");
     }
   }
@@ -426,7 +426,7 @@ public final class PracticePlugin extends JavaPlugin {
     try {
       p.closeInventory();
       if (p.isInsideVehicle() && !p.leaveVehicle())
-        throw new IllegalStateException("Could Not Leave Vehicle For Practice");
+        throw new IllegalStateException(Messages.text("text.practice-plugin.could-not-leave-vehicle-for-practice"));
       p.setInvulnerable(false);
       p.getInventory().clear();
       p.setItemOnCursor(null);
@@ -504,6 +504,6 @@ public final class PracticePlugin extends JavaPlugin {
 
   CleanupSteps cleanup() {
     return new CleanupSteps((description, failure) -> getLogger().log(
-        java.util.logging.Level.SEVERE, description + "; Recovery Records Retained Where Needed", failure));
+        java.util.logging.Level.SEVERE, description + Messages.text("text.practice-plugin.recovery-records-retained-where-needed"), failure));
   }
 }

@@ -1,15 +1,15 @@
 ### InsynDuelBot
 
 * [Home](Home)
-* [Getting Started](Getting-Started)
+* [Getting started](Getting-Started)
 * [Arenas](Arenas)
-* [Practice Modes](Practice-Modes)
+* [Practice modes](Practice-Modes)
 * [Commands](Commands)
-* [Bot Settings](Bot-Settings)
-* [Bot Presets](Bot-Presets)
+* [Bot settings](Bot-Settings)
+* [Bot presets](Bot-Presets)
 * [Kits](Kits)
 * [Configuration](Configuration)
 * [Permissions](Permissions)
 * [Troubleshooting](Troubleshooting)
 
-[Report A Problem](https://github.com/insanmiy/InsynDuelBot/issues)
+[Report a problem](https://github.com/insanmiy/InsynDuelBot/issues)

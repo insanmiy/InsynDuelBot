@@ -15,7 +15,7 @@ final class YamlFiles {
       yaml.loadFromString(Files.readString(file, StandardCharsets.UTF_8));
     } catch (InvalidConfigurationException e) {
       throw new IOException(
-          "Invalid YAML In " + file.getFileName() + "; Repair It Before Saving.", e);
+          Messages.text("text.yaml-files.invalid-yaml-in") + file.getFileName() + Messages.text("text.yaml-files.repair-it-before-saving"), e);
     }
     return yaml;
   }
@@ -59,7 +59,7 @@ final class YamlFiles {
   private static void write(Path file, String snapshot, Path backup) throws IOException {
     Path target = file.toAbsolutePath().normalize();
     if (backup != null && target.equals(backup.toAbsolutePath().normalize()))
-      throw new IllegalArgumentException("Backup Must Differ From The Target.");
+      throw new IllegalArgumentException(Messages.text("text.yaml-files.backup-must-differ-from-the-target"));
     Files.createDirectories(target.getParent());
 
     Path temporary = Files.createTempFile(target.getParent(), target.getFileName() + "-", ".tmp");

@@ -4,17 +4,17 @@ version: '${version}'
 main: dev.insanmiy.practiceplugin.PracticePlugin
 api-version: '${minecraftVersion}'
 author: insanmiy
-description: PvP Duels Against A Custom Bot.
+description: PvP duels against a custom bot.
 softdepend: [PlaceholderAPI]
 commands:
   practice:
-    description: PvP Bot Practice
+    description: PvP bot practice
     aliases: [p, prac]
-    usage: /practice <Menu|Settings|Preset [Save|Load|Delete|List]|Start|Stop|Pause|Resume|Rematch|HUD|Damage|Stats|Kits|Difficulties|Kit [Editor|Info|Create|Import|Edit|Save|Copy|Rename|Delete]|Status|Arena|Reload>
+    usage: /practice <menu|settings|preset [save|load|delete|list]|start|stop|pause|resume|rematch|hud|damage|stats|kits|difficulties|kit [editor|info|create|import|edit|save|copy|rename|delete]|status|arena|reload>
     permission: practice.use
 permissions:
   practice.*:
-    description: Grants Full Access To All Practice Bot Features, Commands, And Kit Management
+    description: Grants full access to all practice bot features, commands, and kit management
     default: op
     children:
       practice.admin: true
@@ -22,7 +22,7 @@ permissions:
       practice.kits.*: true
 
   practice.admin:
-    description: Full Administrative Control Over Practice Bot Arenas, Matches, Reloads, And Kit Bypass
+    description: Full administrative control over practice bot arenas, matches, reloads, and kit bypass
     default: op
     children:
       practice.reload: true
@@ -32,19 +32,19 @@ permissions:
       practice.use: true
 
   practice.reload:
-    description: Allows Reloading Practice Bot Configurations Via /practice Reload
+    description: Allows reloading practice bot configurations via /practice reload
     default: op
 
   practice.arena:
-    description: Allows Managing Practice Arenas Via /practice Arena
+    description: Allows managing practice arenas via /practice arena
     default: op
 
   practice.stop.other:
-    description: Allows Stopping Another Player's Active Practice Session Via /practice Stop <Player>
+    description: Allows stopping another player's active practice session via /practice stop <player>
     default: op
 
   practice.use:
-    description: Base Permission To Use The Practice Bot Plugin And Join Practice Sessions
+    description: Base permission to use the practice bot plugin and join practice sessions
     default: true
     children:
       practice.menu: true
@@ -62,55 +62,55 @@ permissions:
       practice.kits: true
 
   practice.menu:
-    description: Allows Opening The Practice Selection Menu (/practice Menu)
+    description: Allows opening the practice selection menu (/practice menu)
     default: true
 
   practice.start:
-    description: Allows Starting A Practice Bot Match (/practice Start)
+    description: Allows starting a practice bot match (/practice start)
     default: true
 
   practice.stop:
-    description: Allows Stopping One's Own Practice Match (/practice Stop)
+    description: Allows stopping one's own practice match (/practice stop)
     default: true
 
   practice.pause:
-    description: Allows Pausing And Resuming An Active Practice Match (/practice Pause, /practice Resume)
+    description: Allows pausing and resuming an active practice match (/practice pause, /practice resume)
     default: true
 
   practice.rematch:
-    description: Allows Quickly Rematching The Previous Bot Opponent (/practice Rematch)
+    description: Allows quickly rematching the previous bot opponent (/practice rematch)
     default: true
 
   practice.settings:
-    description: Allows Configuring Practice Settings And Managing Personal Bot Presets (/practice Settings, /practice Preset)
+    description: Allows configuring practice settings and managing personal bot presets (/practice settings, /practice preset)
     default: true
 
   practice.hud:
-    description: Allows Toggling The In-Match BossBar HUD (/practice HUD)
+    description: Allows toggling the in-match BossBar HUD (/practice HUD)
     default: true
 
   practice.damage:
-    description: Allows Toggling Combat Damage Diagnostics (/practice Damage)
+    description: Allows toggling combat damage diagnostics (/practice damage)
     default: true
 
   practice.stats:
-    description: Allows Viewing Personal Practice Win And Loss Statistics (/practice Stats)
+    description: Allows viewing personal practice win and loss statistics (/practice stats)
     default: true
 
   practice.status:
-    description: Allows Checking Practice Arena And Match Status (/practice Status)
+    description: Allows checking practice arena and match status (/practice status)
     default: true
 
   practice.kits.list:
-    description: Allows Listing Available Kits (/practice Kits, /practice Kit Info)
+    description: Allows listing available kits (/practice kits, /practice kit info)
     default: true
 
   practice.difficulties.list:
-    description: Allows Listing Available Bot Difficulties (/practice Difficulties)
+    description: Allows listing available bot difficulties (/practice difficulties)
     default: true
 
   practice.kits:
-    description: Access To The Custom Kit Editor And Management System
+    description: Access to the custom kit editor and management system
     default: true
     children:
       practice.kits.editor: true
@@ -119,7 +119,7 @@ permissions:
       practice.kits.import: true
 
   practice.kits.*:
-    description: Grants All Custom Kit Creation, Editing, Importing, And Deletion Permissions
+    description: Grants all custom kit creation, editing, importing, and deletion permissions
     default: true
     children:
       practice.kits.editor: true
@@ -128,21 +128,21 @@ permissions:
       practice.kits.import: true
 
   practice.kits.editor:
-    description: Allows Opening The Kit Editor GUI And Editing Custom Kits (/practice Kit Editor)
+    description: Allows opening the kit editor GUI and editing custom kits (/practice kit editor)
     default: true
 
   practice.kits.create:
-    description: Allows Creating And Copying Custom Kits (/practice Kit Create, /practice Kit Copy)
+    description: Allows creating and copying custom kits (/practice kit create, /practice kit copy)
     default: true
 
   practice.kits.delete:
-    description: Allows Deleting Saved Custom Kits (/practice Kit Delete)
+    description: Allows deleting saved custom kits (/practice kit delete)
     default: true
 
   practice.kits.import:
-    description: Allows Importing Player Inventory Into A Custom Kit (/practice Kit Import)
+    description: Allows importing player inventory into a custom kit (/practice kit import)
     default: true
 
   practice.kits.bypass:
-    description: Allows Modifying, Renaming, Overwriting, And Deleting Custom Kits Owned By Other Players
+    description: Allows modifying, renaming, overwriting, and deleting custom kits owned by other players
     default: op

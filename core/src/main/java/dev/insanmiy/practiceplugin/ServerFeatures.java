@@ -20,13 +20,13 @@ final class ServerFeatures {
     } catch (ClassNotFoundException e) {
       listener = new SpigotHooks(plugin);
     } catch (ReflectiveOperationException e) {
-      throw new IllegalStateException("Could Not Initialize Paper Hooks", e);
+      throw new IllegalStateException(Messages.text("text.server-features.could-not-initialize-paper-hooks"), e);
     }
     Bukkit.getPluginManager().registerEvents(listener, plugin);
   }
 
   static String critical(org.bukkit.event.entity.EntityDamageByEntityEvent event) {
-    return event.isCritical() ? "Yes" : "No";
+    return event.isCritical() ? Messages.text("text.server-features.yes") : Messages.text("text.server-features.no");
   }
 
   static boolean revive(PlayerDeathEvent event) {

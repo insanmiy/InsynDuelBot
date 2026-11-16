@@ -63,8 +63,8 @@ final class ConfigUpgrade {
       plugin
           .getLogger()
           .info(
-              "Installed PvP Tier Difficulties. Old Config Backed Up; Custom Kits And Settings"
-                  + " Preserved.");
+              Messages.text("text.config-upgrade.installed-pvp-tier-difficulties-old-config")
+                  + Messages.text("text.config-upgrade.preserved"));
     }
   }
 

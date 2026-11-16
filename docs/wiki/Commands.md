@@ -1,50 +1,50 @@
 # Commands
 
-The Main Command Is `/practice`. Aliases Are `/p` And `/prac`.
+The main command is `/practice`. Aliases are `/p` and `/prac`.
 
-Arguments In `<angle brackets>` Are Required. Arguments In `[square brackets]` Are Optional. Type Commands Without The Brackets. Tab Completion Helps Find Valid Names.
+Arguments in `<angle brackets>` are required. Arguments in `[square brackets]` are optional. Type commands without the brackets. Tab completion helps find valid names.
 
-## Player Commands
-
-| Command | Action |
-| --- | --- |
-| `/practice` Or `/practice menu` | Open Practice Setup |
-| `/practice start [kit] [difficulty] [mode] [bestOf]` | Start A Match |
-| `/practice stop` | End Your Session |
-| `/practice pause` | Pause Your Session |
-| `/practice resume` | Resume Your Session |
-| `/practice rematch` | Reuse Your Previous Match Selection |
-| `/practice settings` | Open Match Settings And Bot Tuning |
-| `/practice preset` | Open Your Bot Presets |
-| `/practice preset save <name>` | Save Or Replace A Bot Preset |
-| `/practice preset load <name>` | Load A Bot Preset |
-| `/practice preset delete <name>` | Delete A Bot Preset |
-| `/practice preset list` | List Your Bot Presets |
-| `/practice hud` | Toggle The Health Display During Your Session |
-| `/practice damage` | Toggle Damage Diagnostics During Your Session |
-| `/practice stats` | View Your Win And Loss Statistics |
-| `/practice kits` | List Available Kits |
-| `/practice difficulties` | List Available Difficulties |
-| `/practice kit info <name>` | Show A Kit Summary |
-| `/practice kit editor` | Open The Kit Editor |
-| `/practice status` | Show Sessions And Arena Status |
-
-Omitted Start Arguments Use Your Current Selection Or Defaults. Stop Your Active Session Before Opening Settings, Managing Presets, Or Selecting Another Kit.
-
-See [Kits](Kits) For Kit Management Commands And [Bot Presets](Bot-Presets) For Preset Behavior.
-
-## Administrative Commands
+## Player commands
 
 | Command | Action |
 | --- | --- |
-| `/practice stop <player>` | End Another Player's Session |
-| `/practice arena list` | Show Arena Readiness |
-| `/practice arena setplayer [name]` | Set The Player Spawn |
-| `/practice arena setbot [name]` | Set The Bot Spawn |
-| `/practice arena setradius <radius> [name]` | Set The Arena Radius |
-| `/practice arena info [name]` | Show Arena Details |
-| `/practice arena tp [name]` | Teleport To An Arena |
-| `/practice arena delete <name>` | Remove Arena Setup |
-| `/practice reload` | Reload Configuration And Messages |
+| `/practice` or `/practice menu` | Open practice setup |
+| `/practice start [kit] [difficulty] [mode] [bestOf]` | Start a match |
+| `/practice stop` | End your session |
+| `/practice pause` | Pause your session |
+| `/practice resume` | Resume your session |
+| `/practice rematch` | Reuse your previous match selection |
+| `/practice settings` | Open match settings and bot tuning |
+| `/practice preset` | Open your bot presets |
+| `/practice preset save <name>` | Save or replace a bot preset |
+| `/practice preset load <name>` | Load a bot preset |
+| `/practice preset delete <name>` | Delete a bot preset |
+| `/practice preset list` | List your bot presets |
+| `/practice hud` | Toggle the health display during your session |
+| `/practice damage` | Toggle damage diagnostics during your session |
+| `/practice stats` | View your win and loss statistics |
+| `/practice kits` | List available kits |
+| `/practice difficulties` | List available difficulties |
+| `/practice kit info <name>` | Show a kit summary |
+| `/practice kit editor` | Open the kit editor |
+| `/practice status` | Show sessions and arena status |
 
-Stop All Sessions Before Reloading. See [Permissions](Permissions) For Access Requirements.
+Omitted start arguments use your current selection or defaults. Stop your active session before opening settings, managing presets, or selecting another kit.
+
+See [kits](Kits) for kit management commands and [bot presets](Bot-Presets) for preset behavior.
+
+## Administrative commands
+
+| Command | Action |
+| --- | --- |
+| `/practice stop <player>` | End another player's session |
+| `/practice arena list` | Show arena readiness |
+| `/practice arena setplayer [name]` | Set the player spawn |
+| `/practice arena setbot [name]` | Set the bot spawn |
+| `/practice arena setradius <radius> [name]` | Set the arena radius |
+| `/practice arena info [name]` | Show arena details |
+| `/practice arena tp [name]` | Teleport to an arena |
+| `/practice arena delete <name>` | Remove arena setup |
+| `/practice reload` | Reload configuration and messages |
+
+Stop all sessions before reloading. See [permissions](Permissions) for access requirements.

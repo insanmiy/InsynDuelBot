@@ -1,47 +1,47 @@
 # Permissions
 
-The Main Command Requires `practice.use`. Individual Actions Also Check Their Own Permissions. The Shipped Defaults Give Players Normal Practice And Kit Access; Administrative Permissions Default To Operators.
+The main command requires `practice.use`. Individual actions also check their own permissions. The shipped defaults give players normal practice and kit access; administrative permissions default to operators.
 
-## Player Permissions
+## Player permissions
 
 | Permission | Access |
 | --- | --- |
-| `practice.use` | Base Access And Normal Player Permission Children |
-| `practice.menu` | Practice Setup Menu |
-| `practice.start` | Start A Match |
-| `practice.stop` | Stop Your Own Match |
-| `practice.pause` | Pause And Resume |
+| `practice.use` | Base access and normal player permission children |
+| `practice.menu` | Practice setup menu |
+| `practice.start` | Start a match |
+| `practice.stop` | Stop your own match |
+| `practice.pause` | Pause and resume |
 | `practice.rematch` | Rematch |
-| `practice.settings` | Settings And Personal Bot Presets |
-| `practice.hud` | Health Display Toggle |
-| `practice.damage` | Damage Diagnostics Toggle |
-| `practice.stats` | Personal Statistics |
-| `practice.status` | Session And Arena Status |
-| `practice.kits.list` | Kit Listing And Kit Information |
-| `practice.difficulties.list` | Difficulty Listing |
+| `practice.settings` | Settings and personal bot presets |
+| `practice.hud` | Health display toggle |
+| `practice.damage` | Damage diagnostics toggle |
+| `practice.stats` | Personal statistics |
+| `practice.status` | Session and arena status |
+| `practice.kits.list` | Kit listing and kit information |
+| `practice.difficulties.list` | Difficulty listing |
 
-## Kit Permissions
-
-| Permission | Access |
-| --- | --- |
-| `practice.kits` | Kit Management Access And Its Shipped Child Permissions |
-| `practice.kits.*` | Editor, Creation, Import, And Deletion Permissions |
-| `practice.kits.editor` | Kit Editor And Editing Custom Kits |
-| `practice.kits.create` | Creating And Copying Kits |
-| `practice.kits.import` | Importing Player Inventory |
-| `practice.kits.delete` | Deleting Custom Kits |
-| `practice.kits.bypass` | Modifying Kits Owned By Other Players |
-
-## Administrative Permissions
+## Kit permissions
 
 | Permission | Access |
 | --- | --- |
-| `practice.admin` | Administrative Commands, Kit Ownership Bypass, And Normal Practice Access |
-| `practice.arena` | Arena Management |
-| `practice.reload` | Configuration Reload |
-| `practice.stop.other` | Stopping Another Player's Session |
-| `practice.*` | Full Plugin Access |
+| `practice.kits` | Kit management access and its shipped child permissions |
+| `practice.kits.*` | Editor, creation, import, and deletion permissions |
+| `practice.kits.editor` | Kit editor and editing custom kits |
+| `practice.kits.create` | Creating and copying kits |
+| `practice.kits.import` | Importing player inventory |
+| `practice.kits.delete` | Deleting custom kits |
+| `practice.kits.bypass` | Modifying kits owned by other players |
 
-Permission Groups Include Child Permissions. When Restricting A Feature, Check Its Effective Permission In Your Permission Manager, Including Inherited Grants And Operator Status.
+## Administrative permissions
 
-See [plugin.yml](https://github.com/insanmiy/InsynDuelBot/blob/main/core/src/main/resources/plugin.yml) For The Exact Hierarchy And Defaults.
+| Permission | Access |
+| --- | --- |
+| `practice.admin` | Administrative commands, kit ownership bypass, and normal practice access |
+| `practice.arena` | Arena management |
+| `practice.reload` | Configuration reload |
+| `practice.stop.other` | Stopping another player's session |
+| `practice.*` | Full plugin access |
+
+Permission groups include child permissions. When restricting a feature, check its effective permission in your permission manager, including inherited grants and operator status.
+
+See [plugin.yml](https://github.com/insanmiy/InsynDuelBot/blob/main/core/src/main/resources/plugin.yml) for the exact hierarchy and defaults.

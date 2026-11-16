@@ -1,48 +1,48 @@
 # Troubleshooting
 
-## The Plugin Does Not Start
+## The plugin does not start
 
-Check The Server Log For The First InsynDuelBot Startup Error. Confirm That The Server Uses Java 21 And A Targeted Paper Version. The Plugin Targets 1.20.5 Through 1.21.11, But Every Version Has Not Been Fully Verified Through Gameplay.
+Check the server log for the first InsynDuelBot startup error. Confirm that the server uses Java 21 and a targeted Paper version. The plugin targets 1.20.5 through 1.21.11, but every version has not been fully verified through gameplay.
 
-An NMS Adapter Error Usually Needs The Exact Paper Version And Full Error Trace To Diagnose.
+An NMS adapter error usually needs the exact Paper version and full error trace to diagnose.
 
-## No Free Arena
+## No free arena
 
-Run `/practice arena list`. Check That Both Spawns Are Set, In The Same Loaded World, On Solid Ground, And At Least Four Blocks Apart.
+Run `/practice arena list`. Check that both spawns are set, in the same loaded world, on solid ground, and at least four blocks apart.
 
-An Arena May Also Be Occupied Or Too Close To An Active Arena. See [Arenas](Arenas).
+An arena may also be occupied or too close to an active arena. See [arenas](Arenas).
 
-## The Bot Does Not Attack
+## The bot does not attack
 
-Check Your Selected Difficulty. `dummy` Intentionally Disables Attacks. Confirm The Match Has Finished Its Countdown And Is Not Paused.
+Check your selected difficulty. `dummy` intentionally disables attacks. Confirm the match has finished its countdown and is not paused.
 
-## The Bot Ignores My Difficulty Settings
+## The bot ignores my difficulty settings
 
-Your Personal Advanced Tuning Can Override The Selected Difficulty. Open `/practice settings` And Reset Advanced Tuning, Or Shift Click An Individual Setting To Restore Its Difficulty Default. Ability Toggles Are Kept When Advanced Tuning Is Reset.
+Your personal advanced tuning can override the selected difficulty. Open `/practice settings` and reset advanced tuning, or shift click an individual setting to restore its difficulty default. Ability toggles are kept when advanced tuning is reset.
 
-Also Check Whether You Loaded A [Bot Preset](Bot-Presets) With Custom Overrides.
+Also check whether you loaded a [bot preset](Bot-Presets) with custom overrides.
 
-## The Bot Gets Stuck
+## The bot gets stuck
 
-Recovery Can Try A Detour, But Some Locations Are Unreachable. Test On Open Ground, Check Spawn Headroom, And Record The Terrain Or Blocks Involved If The Problem Repeats.
+Recovery can try a detour, but some locations are unreachable. Test on open ground, check spawn headroom, and record the terrain or blocks involved if the problem repeats.
 
-## Presets Or Kits Cannot Be Changed
+## Presets or kits cannot be changed
 
-Stop Your Active Session First. Check The Reported Permission, Kit Ownership, And Name Format. Preset Names And Kit Names Accept Letters, Numbers, Underscores, And Hyphens, Up To 32 Characters.
+Stop your active session first. Check the reported permission, kit ownership, and name format. Preset names and kit names accept letters, numbers, underscores, and hyphens, up to 32 characters.
 
-## Reload Is Refused
+## Reload is refused
 
-All Matches Must End Before `/practice reload` Can Run. Administrators Can Use `/practice stop <player>` To End Another Player's Session.
+All matches must end before `/practice reload` can run. Administrators can use `/practice stop <player>` to end another player's session.
 
-## The Build Reports An Invalid JAVA_HOME
+## The build reports an invalid JAVA_HOME
 
-Set `JAVA_HOME` To Your JDK 21 Installation Folder, Then Run The Gradle Wrapper Again. See [Getting Started](Getting-Started).
+Set `JAVA_HOME` to your JDK 21 installation folder, then run the Gradle wrapper again. See [getting started](Getting-Started).
 
-## Report A Bug
+## Report a bug
 
-[Open An Issue](https://github.com/insanmiy/InsynDuelBot/issues) With:
+[Open an issue](https://github.com/insanmiy/InsynDuelBot/issues) with:
 
-* Your Plugin Version And Exact Paper Version.
-* The Kit, Difficulty, Mode, And Any Custom Bot Settings.
-* The Steps Needed To Reproduce The Problem.
-* Relevant Server Log Output And Screenshots Or A Short Video When Useful.
+* Your plugin version and exact Paper version.
+* The kit, difficulty, mode, and any custom bot settings.
+* The steps needed to reproduce the problem.
+* Relevant server log output and screenshots or a short video when useful.

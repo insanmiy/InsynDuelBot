@@ -1,16 +1,16 @@
-# Practice Modes
+# Practice modes
 
-Choose Your Mode In `/practice`, Or Supply It To `/practice start`.
+Choose your mode in `/practice`, or supply it to `/practice start`.
 
-| Mode | How It Works |
+| Mode | How it works |
 | --- | --- |
-| `duel` | One Round Against One Bot |
-| `match` | A Best Of Series Against One Bot |
-| `endless` | Repeated Rounds Until You Stop |
-| `2v1` | A Best Of Series Against Two Bots |
-| `3v1` | A Best Of Series Against Three Bots |
+| `duel` | One round against one bot |
+| `match` | A best of series against one bot |
+| `endless` | Repeated rounds until you stop |
+| `2v1` | A best of series against two bots |
+| `3v1` | A best of series against three bots |
 
-For A Best Of Series, Choose An Odd Round Count Such As 3, 5, Or 7. A Best Of Three Ends When One Side Wins Two Rounds. In An Outnumbered Round, Defeat All Opposing Bots To Win.
+For a best of series, choose an odd round count such as 3, 5, or 7. A best of three ends when one side wins two rounds. In an outnumbered round, defeat all opposing bots to win.
 
 ```text
 /practice start diamond-smp lt4 duel
@@ -19,6 +19,6 @@ For A Best Of Series, Choose An Odd Round Count Such As 3, 5, Or 7. A Best Of Th
 /practice start diamond-smp lt4 2v1 3
 ```
 
-Use `/practice pause` And `/practice resume` To Take A Break. Use `/practice rematch` After A Session To Reuse Your Previous Match Selection, Or `/practice stop` To Leave.
+Use `/practice pause` and `/practice resume` to take a break. Use `/practice rematch` after a session to reuse your previous match selection, or `/practice stop` to leave.
 
-To Practice Against A Bot That Does Not Attack, Choose The `dummy` Difficulty. It Is A Difficulty Setting, Not A Separate Mode.
+To practice against a bot that does not attack, choose the `dummy` difficulty. It is a difficulty setting, not a separate mode.

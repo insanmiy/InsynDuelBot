@@ -16,10 +16,10 @@ final class SettingsMenu implements Listener {
   private final PracticePlugin plugin;
 
   private enum Page {
-    MATCH("Match Settings"),
-    BOT("Bot Abilities"),
-    ADVANCED("Advanced Bot Tuning"),
-    PRESETS("Bot Presets");
+    MATCH("text.settings-menu.match-settings"),
+    BOT("text.settings-menu.bot-abilities"),
+    ADVANCED("text.settings-menu.advanced-bot-tuning"),
+    PRESETS("text.settings-menu.bot-presets");
 
     final String title;
 
@@ -33,7 +33,13 @@ final class SettingsMenu implements Listener {
       Material icon,
       String displayName,
       String description,
-      String[] levelNames) {}
+      String[] levelNames) {
+    public String displayName() { return Messages.text(displayName); }
+    public String description() { return Messages.text(description); }
+    public String[] levelNames() {
+      return Arrays.stream(levelNames).map(Messages::text).toArray(String[]::new);
+    }
+  }
 
   private static final Map<Integer, BotSettingDef> BOT_SETTINGS =
       Map.of(
@@ -41,92 +47,92 @@ final class SettingsMenu implements Listener {
           new BotSettingDef(
               "bot-attack-charge",
               Material.DIAMOND_SWORD,
-              "Attack Timing",
-              "How Long The Bot Waits Before Swinging",
+              "text.settings-menu.attack-timing",
+              "text.settings-menu.how-long-the-bot-waits-before",
               new String[] {
-                "Full Power (100% / Vanilla)",
-                "Fast (95% Charge)",
-                "Rapid (90% Charge)",
-                "Very Rapid (85% Charge)"
+                "text.settings-menu.full-power-100-vanilla",
+                "text.settings-menu.fast-95-charge",
+                "text.settings-menu.rapid-90-charge",
+                "text.settings-menu.very-rapid-85-charge"
               }),
           11,
           new BotSettingDef(
               "bot-aim",
               Material.BOW,
-              "Aim Accuracy",
-              "How Precisely The Bot Aims At You",
+              "text.settings-menu.aim-accuracy",
+              "text.settings-menu.how-precisely-the-bot-aims-at",
               new String[] {
-                "Godlike (0.0° / 100% Accurate)",
-                "Master (0.2° Error)",
-                "High (1.0° Error)",
-                "Medium (2.5° Error)",
-                "Low (5.0° Error)",
-                "Shaky (10.0° Error)"
+                "text.settings-menu.godlike-0-0-100-accurate",
+                "text.settings-menu.master-0-2-error",
+                "text.settings-menu.high-1-0-error",
+                "text.settings-menu.medium-2-5-error",
+                "text.settings-menu.low-5-0-error",
+                "text.settings-menu.shaky-10-0-error"
               }),
           12,
           new BotSettingDef(
               "bot-reaction",
               Material.FEATHER,
-              "Reaction Speed",
-              "How Often The Bot Chooses Its Next Action",
+              "text.settings-menu.reaction-speed",
+              "text.settings-menu.how-often-the-bot-chooses-its",
               new String[] {
-                "Instant (1t / 50ms)",
-                "Very Fast (2t / 100ms)",
-                "Fast (3t / 150ms)",
-                "Normal (4t / 200ms)",
-                "Slow (6t / 300ms)",
-                "Delayed (10t / 500ms)"
+                "text.settings-menu.instant-1t-50ms",
+                "text.settings-menu.very-fast-2t-100ms",
+                "text.settings-menu.fast-3t-150ms",
+                "text.settings-menu.normal-4t-200ms",
+                "text.settings-menu.slow-6t-300ms",
+                "text.settings-menu.delayed-10t-500ms"
               }),
           13,
           new BotSettingDef(
               "bot-sprint-reset",
               Material.LEATHER_BOOTS,
-              "Sprint Reset",
-              "How Often The Bot Restarts Its Sprint After Hits",
+              "text.settings-menu.sprint-reset",
+              "text.settings-menu.how-often-the-bot-restarts-its",
               new String[] {
-                "Always (100%)",
-                "High (80%)",
-                "Medium (50%)",
-                "Low (20%)",
-                "Disabled (0%)"
+                "text.settings-menu.always-100",
+                "text.settings-menu.high-80",
+                "text.settings-menu.medium-50",
+                "text.settings-menu.low-20",
+                "text.settings-menu.disabled-0"
               }),
           14,
           new BotSettingDef(
               "bot-shield-chance",
               Material.SHIELD,
-              "Shield Defense",
-              "How Consistently The Bot Blocks Incoming Attacks",
+              "text.settings-menu.shield-defense",
+              "text.settings-menu.how-consistently-the-bot-blocks-incoming",
               new String[] {
-                "Always (100%)",
-                "High (85%)",
-                "Medium (60%)",
-                "Low (30%)",
-                "Disabled (0%)"
+                "text.settings-menu.always-100",
+                "text.settings-menu.high-85",
+                "text.settings-menu.medium-60",
+                "text.settings-menu.low-30",
+                "text.settings-menu.disabled-0"
               }),
           15,
           new BotSettingDef(
               "bot-strafe-speed",
               Material.SUGAR,
-              "Strafe Movement",
-              "Dodging And Circle-Strafing Movement Speed",
+              "text.settings-menu.strafe-movement",
+              "text.settings-menu.dodging-and-circle-strafing-movement-speed",
               new String[] {
-                "Max Speed (100%)",
-                "Fast (80%)",
-                "Normal (60%)",
-                "Light (35%)",
-                "Disabled (0%)"
+                "text.settings-menu.max-speed-100",
+                "text.settings-menu.fast-80",
+                "text.settings-menu.normal-60",
+                "text.settings-menu.light-35",
+                "text.settings-menu.disabled-0"
               }),
           16,
           new BotSettingDef(
               "bot-heal-threshold",
               Material.SPLASH_POTION,
-              "Healing Threshold",
-              "Health Level Where The Bot Starts Healing",
+              "text.settings-menu.healing-threshold",
+              "text.settings-menu.health-level-where-the-bot-starts",
               new String[] {
-                "Aggressive (75% HP)",
-                "High (65% HP)",
-                "Normal (50% HP)",
-                "Clutch (35% HP)"
+                "text.settings-menu.aggressive-75-hp",
+                "text.settings-menu.high-65-hp",
+                "text.settings-menu.normal-50-hp",
+                "text.settings-menu.clutch-35-hp"
               }));
 
   private static final Map<Integer, String> FLAGS =
@@ -153,7 +159,7 @@ final class SettingsMenu implements Listener {
     View(Player p, Page page) {
       owner = p.getUniqueId();
       this.page = page;
-      inventory = TextUI.inventory(this, 54, Component.text("Settings / " + page.title));
+      inventory = TextUI.inventory(this, 54, Messages.component(Messages.text("text.settings-menu.settings") + Messages.text(page.title)));
     }
 
     @Override
@@ -215,16 +221,16 @@ final class SettingsMenu implements Listener {
     view.presetNames.clear();
 
     view.inventory.setItem(2, item(Material.CLOCK,
-        "Match Settings" + (page == Page.MATCH ? " (Selected)" : ""),
-        "Countdown, Food, And Display Options", "Click To Open"));
+        Messages.text("text.settings-menu.match-settings") + (page == Page.MATCH ? Messages.text("text.settings-menu.selected-2") : ""),
+        Messages.text("text.settings-menu.countdown-food-and-display-options"), Messages.text("text.settings-menu.click-to-open")));
     view.inventory.setItem(4, item(Material.IRON_SWORD,
-        "Bot Abilities" + (page == Page.BOT ? " (Selected)" : ""),
-        "Choose Which Actions The Bot Can Use", "Click To Open"));
+        Messages.text("text.settings-menu.bot-abilities") + (page == Page.BOT ? Messages.text("text.settings-menu.selected-2") : ""),
+        Messages.text("text.settings-menu.choose-which-actions-the-bot-can"), Messages.text("text.settings-menu.click-to-open")));
     view.inventory.setItem(6, item(Material.COMPARATOR,
-        "Advanced Tuning" + (page == Page.ADVANCED ? " (Selected)" : ""),
-        "Override Individual Difficulty Settings", "Click To Open"));
+        Messages.text("text.settings-menu.advanced-tuning") + (page == Page.ADVANCED ? Messages.text("text.settings-menu.selected-2") : ""),
+        Messages.text("text.settings-menu.override-individual-difficulty-settings"), Messages.text("text.settings-menu.click-to-open")));
     view.inventory.setItem(7, item(Material.KNOWLEDGE_BOOK,
-        plugin.messages().get("settings.preset-tab") + (page == Page.PRESETS ? " (Selected)" : ""),
+        plugin.messages().get("settings.preset-tab") + (page == Page.PRESETS ? Messages.text("text.settings-menu.selected-2") : ""),
         plugin.messages().get("settings.preset-tab-description")));
 
     View targetView = view;
@@ -236,7 +242,7 @@ final class SettingsMenu implements Listener {
           int currentLevel = prefs.botSetting(id, def.key());
           String currentDisplay =
               currentLevel < 0 || currentLevel >= def.levelNames().length
-                  ? "Default (From Difficulty)"
+                  ? Messages.text("text.settings-menu.default-from-difficulty")
                   : def.levelNames()[currentLevel];
           boolean isCustom = currentLevel >= 0;
           targetView.inventory.setItem(
@@ -244,13 +250,13 @@ final class SettingsMenu implements Listener {
               item(
                   def.icon(),
                   def.displayName(),
-                  "Current: " + currentDisplay,
+                  Messages.text("text.settings-menu.current") + currentDisplay,
                   def.description(),
                   "",
-                  isCustom ? "[Custom Override Active]" : "[Using Difficulty Default]",
+                  isCustom ? Messages.text("text.settings-menu.custom-override-active") : Messages.text("text.settings-menu.using-difficulty-default"),
                   "",
-                  "Left Click: Next | Right Click: Previous",
-                  "Shift Click: Use Difficulty Default"));
+                  Messages.text("text.settings-menu.left-click-next-right-click-previous"),
+                  Messages.text("text.settings-menu.shift-click-use-difficulty-default")));
         });
 
     FLAGS.forEach(
@@ -265,10 +271,10 @@ final class SettingsMenu implements Listener {
               slot,
               item(
                   on ? Material.LIME_DYE : Material.GRAY_DYE,
-                  title(key) + ": " + (on ? "On" : "Off"),
+                  title(key) + ": " + (on ? Messages.text("text.settings-menu.on") : Messages.text("text.settings-menu.off")),
                   flagDescription(key),
-                  "Click To Toggle",
-                  "Saved For Your Sessions"));
+                  Messages.text("text.settings-menu.click-to-toggle"),
+                  Messages.text("text.settings-menu.saved-for-your-sessions")));
         });
 
     if (page == Page.MATCH) {
@@ -278,12 +284,12 @@ final class SettingsMenu implements Listener {
                   slot,
                   item(
                       slot == 28 ? Material.CLOCK : slot == 29 ? Material.COMPASS : Material.COOKED_BEEF,
-                      title(key) + ": " + prefs.number(id, key) + (key.equals("saturation") ? "" : "s"),
-                      "Left Click: +1 | Right Click: Reduce By 1",
-                      "Shift Click: Change By 5",
+                      title(key) + ": " + prefs.number(id, key) + (key.equals("saturation") ? "" : Messages.text("text.settings-menu.seconds-suffix")),
+                      Messages.text("text.settings-menu.left-click-1-right-click-reduce"),
+                      Messages.text("text.settings-menu.shift-click-change-by-5"),
                       key.equals("saturation")
-                          ? "Stored Food Energy For Both Fighters"
-                          : "Seconds; Applies Next Session")));
+                          ? Messages.text("text.settings-menu.stored-food-energy-for-both-fighters")
+                          : Messages.text("text.settings-menu.seconds-applies-next-session"))));
     }
 
     if (page == Page.ADVANCED) {
@@ -291,9 +297,9 @@ final class SettingsMenu implements Listener {
           33,
           item(
               Material.REDSTONE,
-              "Damage Diagnostics",
-              "Advanced Debug Readout For All Active Matches",
-              "Click To Toggle (/practice damage)"));
+              Messages.text("text.settings-menu.damage-diagnostics"),
+              Messages.text("text.settings-menu.advanced-debug-readout-for-all-active"),
+              Messages.text("text.settings-menu.click-to-toggle-practice-damage")));
     }
 
     if (page == Page.MATCH) {
@@ -301,15 +307,15 @@ final class SettingsMenu implements Listener {
           22,
           item(
               Material.BOOK,
-              "Match Rules",
-              "Choose Your Mode In Practice Setup",
-              "Win A Round By Defeating The Bot",
-              "Use /practice Stop To Leave A Match"));
+              Messages.text("text.settings-menu.match-rules"),
+              Messages.text("text.settings-menu.choose-your-mode-in-practice-setup"),
+              Messages.text("text.settings-menu.win-a-round-by-defeating-the"),
+              Messages.text("text.settings-menu.use-practice-stop-to-leave-a")));
     }
 
     if (page == Page.BOT) {
-      view.inventory.setItem(31, item(Material.COMPARATOR, "Advanced Bot Tuning",
-          "Want More Control Over Aim Or Reactions?", "Click To Open Advanced Tuning"));
+      view.inventory.setItem(31, item(Material.COMPARATOR, Messages.text("text.settings-menu.advanced-bot-tuning"),
+          Messages.text("text.settings-menu.want-more-control-over-aim-or"), Messages.text("text.settings-menu.click-to-open-advanced-tuning")));
     }
 
     if (page == Page.PRESETS) {
@@ -329,18 +335,18 @@ final class SettingsMenu implements Listener {
           plugin.messages().get("settings.preset-scope")));
     }
 
-    view.inventory.setItem(45, item(Material.ARROW, "Back To Practice Setup", "Your Match Selection Is Kept"));
-    view.inventory.setItem(53, item(Material.BARRIER, "Close", "Changes Are Already Saved"));
+    view.inventory.setItem(45, item(Material.ARROW, Messages.text("text.settings-menu.back-to-practice-setup"), Messages.text("text.settings-menu.your-match-selection-is-kept")));
+    view.inventory.setItem(53, item(Material.BARRIER, Messages.text("text.settings-menu.close"), Messages.text("text.settings-menu.changes-are-already-saved")));
     if (page == Page.ADVANCED) {
       view.inventory.setItem(
           49,
           item(
               Material.BLAZE_POWDER,
-              "Reset Advanced Tuning",
-              "Restores All 7 Combat Settings Above To",
-              "Their Default Values From Difficulty Tier.",
-              "Ability Toggles Stay As You Set Them",
-              "Click To Reset"));
+              Messages.text("text.settings-menu.reset-advanced-tuning"),
+              Messages.text("text.settings-menu.restores-all-7-combat-settings-above"),
+              Messages.text("text.settings-menu.their-default-values-from-difficulty-tier"),
+              Messages.text("text.settings-menu.ability-toggles-stay-as-you-set"),
+              Messages.text("text.settings-menu.click-to-reset")));
     }
 
     if (!canReuse) {
@@ -350,27 +356,27 @@ final class SettingsMenu implements Listener {
 
   private static String flagDescription(String key) {
     return switch (key) {
-      case "healing" -> "Allow The Bot To Use Healing Items";
-      case "utilities" -> "Allow The Bot To Use Webs, Pearls, And Bows";
-      case "criticals" -> "Allow The Bot To Jump For Critical Hits";
-      case "shields" -> "Allow The Bot To Block With A Shield";
-      case "strafing" -> "Allow The Bot To Move Sideways And Dodge";
-      case "counters" -> "Bot Switches To Axe When You Block With Shield";
-      case "hud" -> "Real-Time Health And Round BossBar";
-      case "animations" -> "Pulsing Borders And UI Effects";
-      default -> "Click To Toggle";
+      case "healing" -> Messages.text("text.settings-menu.allow-the-bot-to-use-healing");
+      case "utilities" -> Messages.text("text.settings-menu.allow-the-bot-to-use-webs");
+      case "criticals" -> Messages.text("text.settings-menu.allow-the-bot-to-jump-for");
+      case "shields" -> Messages.text("text.settings-menu.allow-the-bot-to-block-with");
+      case "strafing" -> Messages.text("text.settings-menu.allow-the-bot-to-move-sideways");
+      case "counters" -> Messages.text("text.settings-menu.bot-switches-to-axe-when-you");
+      case "hud" -> Messages.text("text.settings-menu.real-time-health-and-round-bossbar");
+      case "animations" -> Messages.text("text.settings-menu.pulsing-borders-and-ui-effects");
+      default -> Messages.text("text.settings-menu.click-to-toggle");
     };
   }
 
   private static String title(String text) {
     return switch (text) {
-      case "countdown" -> "Starting Countdown";
-      case "between-rounds" -> "Break Between Rounds";
-      case "saturation" -> "Starting Food Saturation";
-      case "hud" -> "Match Health Bar";
-      case "animations" -> "Menu Animations";
-      case "counters" -> "Shield Counters";
-      default -> Difficulty.formatName(text);
+      case "countdown" -> Messages.text("text.settings-menu.starting-countdown");
+      case "between-rounds" -> Messages.text("text.settings-menu.break-between-rounds");
+      case "saturation" -> Messages.text("text.settings-menu.starting-food-saturation");
+      case "hud" -> Messages.text("text.settings-menu.match-health-bar");
+      case "animations" -> Messages.text("text.settings-menu.menu-animations");
+      case "counters" -> Messages.text("text.settings-menu.shield-counters");
+      default -> Messages.displayName(text);
     };
   }
 
@@ -378,13 +384,14 @@ final class SettingsMenu implements Listener {
     ItemStack item = new ItemStack(type);
     dev.insanmiy.practiceplugin.ItemMetadata.edit(item,
         meta -> {
-          TextUI.name(meta, Component.text(name, NamedTextColor.AQUA)
+          TextUI.name(meta, Messages.component(name, NamedTextColor.AQUA)
               .decoration(net.kyori.adventure.text.format.TextDecoration.ITALIC, false));
           TextUI.lore(meta,
-              Arrays.stream(lore).map(line -> Component.text(line, NamedTextColor.GRAY)
+              Arrays.stream(lore).map(line -> Messages.component(line, NamedTextColor.GRAY)
                   .decoration(net.kyori.adventure.text.format.TextDecoration.ITALIC, false)).toList());
           meta.addItemFlags(ItemFlag.HIDE_ATTRIBUTES, ItemFlag.HIDE_ADDITIONAL_TOOLTIP);
-          meta.setEnchantmentGlintOverride(name.endsWith("(Selected)"));
+          String selectedSuffix = Messages.text("text.settings-menu.selected-2");
+          meta.setEnchantmentGlintOverride(!selectedSuffix.isEmpty() && name.endsWith(selectedSuffix));
         });
     return item;
   }

@@ -36,20 +36,20 @@ final class TemporaryBlocks {
     try {
       data = YamlFiles.readOrEmpty(file.toPath());
     } catch (IOException failure) {
-      throw new IllegalStateException("Block Journal Is Unreadable; Repair It Before Starting Practice", failure);
+      throw new IllegalStateException(Messages.text("text.temporary-blocks.block-journal-is-unreadable-repair-it"), failure);
     }
     for (String key : data.getKeys(false)) {
       try {
         read(key, data.getConfigurationSection(key));
       } catch (RuntimeException e) {
-        throw new IllegalStateException("Invalid Block Journal Entry: " + key + "; Repair It Before Starting Practice", e);
+        throw new IllegalStateException(Messages.text("text.temporary-blocks.invalid-block-journal-entry") + key + Messages.text("text.temporary-blocks.repair-it-before-starting-practice"), e);
       }
     }
   }
 
   private void read(String key, org.bukkit.configuration.ConfigurationSection c) {
       if (c == null){
-        throw new IllegalArgumentException("Block Journal Entry Must Be A Section");
+        throw new IllegalArgumentException(Messages.text("text.temporary-blocks.block-journal-entry-must-be-a"));
       }
       int x = c.getInt("x"), y = c.getInt("y"), z = c.getInt("z");
       UUID owner = c.getString("owner") == null ? null : UUID.fromString(c.getString("owner"));

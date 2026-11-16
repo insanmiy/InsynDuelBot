@@ -146,7 +146,7 @@ public final class PracticeSession {
   void clearBots() {
     for (BotPlatform b : bots) {
       if (b != null) {
-        plugin.cleanup().run("Could Not Remove Practice Bot", b::close);
+        plugin.cleanup().run(Messages.text("text.practice-session.could-not-remove-practice-bot"), b::close);
       }
     }
     for (UUID id : botIds) {
@@ -264,7 +264,7 @@ public final class PracticeSession {
     try {
       if (arena.error() != null) throw new IllegalStateException(arena.error());
       if (!owner.teleport(arena.playerSpawn()))
-        throw new IllegalStateException("Player Teleport Cancelled");
+        throw new IllegalStateException(Messages.text("text.practice-session.player-teleport-cancelled"));
 
       int count = mode.botCount();
       ensureBots(count);
@@ -316,7 +316,7 @@ public final class PracticeSession {
         stripModifiers(p, false);
         double currentMaxHealth = Attributes.getValue(p, Attributes.MAX_HEALTH, kit.health());
         if (Math.abs(currentMaxHealth - kit.health()) > .001)
-          throw new IllegalStateException("An External Health Modifier Prevents Equal Kit Health");
+          throw new IllegalStateException(Messages.text("text.practice-session.an-external-health-modifier-prevents-equal"));
         p.setHealth(kit.health());
         p.setAbsorptionAmount(0);
         p.setFoodLevel(20);
@@ -408,8 +408,8 @@ public final class PracticeSession {
                   : (seconds == 2 ? NamedTextColor.GOLD : NamedTextColor.YELLOW);
           owner.showTitle(
               Title.title(
-                  Component.text(seconds, color, TextDecoration.BOLD),
-                  Component.text("Round " + match.round(), NamedTextColor.GRAY),
+                  Messages.component(Messages.text("titles.countdown", "%seconds%", String.valueOf(seconds)), color, TextDecoration.BOLD),
+                  Messages.component(Messages.text("text.practice-session.round") + match.round(), NamedTextColor.GRAY),
                   Title.Times.times(
                       java.time.Duration.ZERO,
                       java.time.Duration.ofMillis(750),
@@ -425,7 +425,7 @@ public final class PracticeSession {
         fightStart = tick;
         owner.showTitle(
             Title.title(
-                Component.text("FIGHT!", NamedTextColor.RED, TextDecoration.BOLD),
+                Messages.component(Messages.text("text.practice-session.fight"), NamedTextColor.RED, TextDecoration.BOLD),
                 Component.empty(),
                 Title.Times.times(
                     java.time.Duration.ZERO,
@@ -446,47 +446,34 @@ public final class PracticeSession {
             .sum();
         double maxHp = kit.health() * totalBots;
         bar.setTitle(TextUI.legacy(
-            Component.text(
-                mode.id().toUpperCase(java.util.Locale.ROOT)
-                    + " | Bots Alive: "
-                    + alive
-                    + "/"
-                    + totalBots
-                    + " | HP: "
-                    + Math.round(totalHp)
-                    + "/"
-                    + Math.round(maxHp))));
+            Messages.component(
+                Messages.text("hud.outnumbered",
+                    "%mode%", mode.id(), "%alive%", String.valueOf(alive),
+                    "%bots%", String.valueOf(totalBots), "%health%", String.valueOf(Math.round(totalHp)),
+                    "%max_health%", String.valueOf(Math.round(maxHp))))));
         bar.setProgress((float) Math.clamp(totalHp / Math.max(1.0, maxHp), 0.0, 1.0));
       } else if (bot != null && bot.player() != null) {
         bar.setTitle(TextUI.legacy(
-            Component.text(
-                "Bot "
-                    + Math.round(bot.player().getHealth())
-                    + "/"
-                    + kit.health()
-                    + " HP | Apples "
-                    + countApples(bot.player()))));
+            Messages.component(
+                Messages.text("hud.single",
+                    "%health%", String.valueOf(Math.round(bot.player().getHealth())),
+                    "%max_health%", String.valueOf(kit.health()),
+                    "%apples%", String.valueOf(countApples(bot.player()))))));
         bar.setProgress((float) Math.clamp(bot.player().getHealth() / kit.health(), 0.0, 1.0));
       }
       TextUI.actionBar(owner,
-          Component.text(
-              mode.id()
-                  + " | Round "
-                  + match.round()
-                  + " | You "
-                  + match.playerWins()
-                  + " : "
-                  + match.botWins()
-                  + (mode.isOutnumbered() ? " Bots | " : " Bot | ")
-                  + difficulty.prettyDisplayName()
-                  + " | "
-                  + (match.phase() == Match.Phase.FINISHED
-                      ? "Finished"
+          Messages.component(
+              Messages.text("hud.actionbar",
+                  "%mode%", mode.id(), "%round%", String.valueOf(match.round()),
+                  "%wins%", String.valueOf(match.playerWins()), "%losses%", String.valueOf(match.botWins()),
+                  "%opponent%", Messages.text(mode.isOutnumbered() ? "hud.bots" : "hud.bot"),
+                  "%difficulty%", difficulty.prettyDisplayName(),
+                  "%phase%", (match.phase() == Match.Phase.FINISHED
+                      ? Messages.text("text.practice-session.finished")
                       : fighting()
-                          ? "Combo " + round.combo(tick)
-                          : "Ready In " + ((match.remaining() + 19) / 20))
-                  + " | Sat "
-                  + String.format(java.util.Locale.ROOT, "%.1f", owner.getSaturation())));
+                          ? Messages.text("text.practice-session.combo") + round.combo(tick)
+                          : Messages.text("text.practice-session.ready-in") + ((match.remaining() + 19) / 20)),
+                  "%saturation%", String.format(java.util.Locale.ROOT, "%.1f", owner.getSaturation()))));
     }
   }
 
@@ -635,13 +622,13 @@ public final class PracticeSession {
           result = plugin.messages().get(playerWonSeries ? "combat.player-won-match" : "combat.bot-won-match", "%score%", score);
           plugin.messages().send(owner, "combat.match-finished", "%result%", result);
         }
-        String victoryTitle = (mode == PracticeMode.V2_1 ? "2v1 " : mode == PracticeMode.V3_1 ? "3v1 " : duel ? "" : "MATCH ")
-            + (playerWonSeries ? "VICTORY!" : "DEFEAT!");
+        String titleKey = (duel ? "titles." : "titles.series-") + (playerWonSeries ? "victory" : "defeat");
+        String victoryTitle = Messages.text(titleKey, "%mode%", Messages.displayName(mode.id()));
         owner.showTitle(Title.title(
-            Component.text(victoryTitle, playerWonSeries ? NamedTextColor.GREEN : NamedTextColor.RED),
+            Messages.component(victoryTitle, playerWonSeries ? NamedTextColor.GREEN : NamedTextColor.RED),
             duel
-                ? Component.text(result, NamedTextColor.GRAY)
-                : Component.text("Final Score: " + score, NamedTextColor.GOLD)));
+                ? Messages.component(result, NamedTextColor.GRAY)
+                : Messages.component(Messages.text("text.practice-session.final-score") + score, NamedTextColor.GOLD)));
         Sound sound = playerWonSeries ? Sound.UI_TOAST_CHALLENGE_COMPLETE : Sound.ENTITY_WITHER_DEATH;
         owner.playSound(owner.getLocation(), sound, 0.8f, 1.0f);
       } else {
@@ -657,44 +644,44 @@ public final class PracticeSession {
     if (closing) return;
     closing = true;
     CleanupSteps cleanup = plugin.cleanup();
-    cleanup.run("Could Not Capture Kit Layout", this::captureLayout);
-    cleanup.run("Could Not Remove Practice HUD", () -> bar.removePlayer(owner));
-    cleanup.run("Could Not Clear Practice Action Bar", () -> TextUI.actionBar(owner, Component.empty()));
+    cleanup.run(Messages.text("text.practice-session.could-not-capture-kit-layout"), this::captureLayout);
+    cleanup.run(Messages.text("text.practice-session.could-not-remove-practice-hud"), () -> bar.removePlayer(owner));
+    cleanup.run(Messages.text("text.practice-session.could-not-clear-practice-action-bar"), () -> TextUI.actionBar(owner, Component.empty()));
     if (totalFightTicks > 0 || roundsWon + roundsLost > 0) {
-      cleanup.run("Could Not Send Practice Summary", () -> plugin.messages().send(
+      cleanup.run(Messages.text("text.practice-session.could-not-send-practice-summary"), () -> plugin.messages().send(
           owner,
           "combat.session-summary",
           "%wins%", String.valueOf(roundsWon),
           "%losses%", String.valueOf(roundsLost),
           "%summary%", total.summary(totalFightTicks)));
     }
-    cleanup.run("Could Not Clear Session Utilities", () -> plugin.clearUtilities(this));
-    cleanup.run("Could Not Remove Session Bots", this::clearBots);
-    cleanup.run("Could Not Restore Player Modifiers", this::restoreModifiers);
+    cleanup.run(Messages.text("text.practice-session.could-not-clear-session-utilities"), () -> plugin.clearUtilities(this));
+    cleanup.run(Messages.text("text.practice-session.could-not-remove-session-bots"), this::clearBots);
+    cleanup.run(Messages.text("text.practice-session.could-not-restore-player-modifiers"), this::restoreModifiers);
     internalTeleport = true;
     try {
-      cleanup.run("Could Not Restore Player Inventory", () -> plugin.recovery().restore(owner));
+      cleanup.run(Messages.text("text.practice-session.could-not-restore-player-inventory"), () -> plugin.recovery().restore(owner));
     } finally {
       internalTeleport = false;
     }
-    cleanup.run("Could Not Record Practice Stats", () -> plugin.progress().record(this));
+    cleanup.run(Messages.text("text.practice-session.could-not-record-practice-stats"), () -> plugin.progress().record(this));
 
-    Component actions = Component.text("  ")
-        .append(Component.text("[Rematch]", NamedTextColor.GREEN, TextDecoration.BOLD)
+    Component actions = Messages.component("  ")
+        .append(Messages.component(Messages.text("text.practice-session.rematch"), NamedTextColor.GREEN, TextDecoration.BOLD)
             .clickEvent(net.kyori.adventure.text.event.ClickEvent.runCommand("/practice rematch"))
             .hoverEvent(net.kyori.adventure.text.event.HoverEvent.showText(
-                Component.text("Click to rematch with the same kit & difficulty", NamedTextColor.GRAY))))
-        .append(Component.text("   "))
-        .append(Component.text("[Kit Menu]", NamedTextColor.AQUA, TextDecoration.BOLD)
+                Messages.component(Messages.text("text.practice-session.click-to-rematch-with-the-same"), NamedTextColor.GRAY))))
+        .append(Messages.component("   "))
+        .append(Messages.component(Messages.text("text.practice-session.kit-menu"), NamedTextColor.AQUA, TextDecoration.BOLD)
             .clickEvent(net.kyori.adventure.text.event.ClickEvent.runCommand("/practice menu"))
             .hoverEvent(net.kyori.adventure.text.event.HoverEvent.showText(
-                Component.text("Click to open the practice kit selection menu", NamedTextColor.GRAY))))
-        .append(Component.text("   "))
-        .append(Component.text("[Settings]", NamedTextColor.GOLD, TextDecoration.BOLD)
+                Messages.component(Messages.text("text.practice-session.click-to-open-the-practice-kit"), NamedTextColor.GRAY))))
+        .append(Messages.component("   "))
+        .append(Messages.component(Messages.text("text.practice-session.settings"), NamedTextColor.GOLD, TextDecoration.BOLD)
             .clickEvent(net.kyori.adventure.text.event.ClickEvent.runCommand("/practice settings"))
             .hoverEvent(net.kyori.adventure.text.event.HoverEvent.showText(
-                Component.text("Click to customize bot settings", NamedTextColor.GRAY))));
-    cleanup.run("Could Not Send Practice Actions", () -> owner.sendMessage(actions));
+                Messages.component(Messages.text("text.practice-session.click-to-customize-bot-settings"), NamedTextColor.GRAY))));
+    cleanup.run(Messages.text("text.practice-session.could-not-send-practice-actions"), () -> owner.sendMessage(actions));
   }
 
   private void stripModifiers(Player player, boolean save) {

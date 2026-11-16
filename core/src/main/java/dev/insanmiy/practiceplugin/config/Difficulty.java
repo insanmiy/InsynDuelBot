@@ -1,5 +1,7 @@
 package dev.insanmiy.practiceplugin.config;
 
+import dev.insanmiy.practiceplugin.Messages;
+
 import java.util.Locale;
 import org.bukkit.Material;
 import org.bukkit.configuration.ConfigurationSection;
@@ -185,7 +187,7 @@ public record Difficulty(
 			|| !unit(pearlChance)
 			|| shieldTicks < 1
 			|| shieldTicks > 40)
-			throw new IllegalArgumentException("Invalid Difficulty Values For " + name);
+			throw new IllegalArgumentException(Messages.text("text.difficulty.invalid-difficulty-values-for") + name);
 	}
 
 	private static boolean unit(double d) {
@@ -217,6 +219,7 @@ public record Difficulty(
 		StringBuilder sb = new StringBuilder();
 		for (String w : words) {
 			if (w.isEmpty()) continue;
+			boolean firstWord = sb.isEmpty();
 			if (!sb.isEmpty()) sb.append(' ');
 			String lower = w.toLowerCase(Locale.ROOT);
 			if (lower.equals("smp") || lower.equals("uhc") || lower.equals("pvp")) {
@@ -226,7 +229,7 @@ public record Difficulty(
 				sb.append(lower);
 			}
 			else {
-				sb.append(Character.toUpperCase(w.charAt(0)));
+				sb.append(firstWord ? Character.toUpperCase(w.charAt(0)) : Character.toLowerCase(w.charAt(0)));
 				if (w.length() > 1) {
 					sb.append(w.substring(1).toLowerCase(Locale.ROOT));
 				}

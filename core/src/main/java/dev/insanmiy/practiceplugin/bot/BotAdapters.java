@@ -1,5 +1,7 @@
 package dev.insanmiy.practiceplugin.bot;
 
+import dev.insanmiy.practiceplugin.Messages;
+
 import org.bukkit.Bukkit;
 
 // Resolves the BotAdapter for the running Minecraft version
@@ -25,13 +27,13 @@ public final class BotAdapters {
         Class<?> clazz = Class.forName(adapterClassName);
         return (BotAdapter) clazz.getConstructor().newInstance();
       } catch (ReflectiveOperationException e) {
-        throw new IllegalStateException("Failed To Initialize NMS Adapter: " + adapterClassName, e);
+        throw new IllegalStateException(Messages.text("text.bot-adapters.failed-to-initialize-nms-adapter") + adapterClassName, e);
       }
     }
 
     throw new UnsupportedOperationException(
-        "Unsupported Minecraft Version: " + version + " (" + bukkitVersion + "). "
-            + "Supported Paper Releases: 1.20.5, 1.20.6, 1.21, 1.21.1, And 1.21.3 Through 1.21.11");
+        Messages.text("text.bot-adapters.unsupported-minecraft-version") + version + " (" + bukkitVersion + "). "
+            + Messages.text("text.bot-adapters.supported-paper-releases-1-20-5"));
   }
 
   static String getAdapterClassName(String version) {

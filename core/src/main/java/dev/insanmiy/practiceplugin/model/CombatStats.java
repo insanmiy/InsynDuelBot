@@ -1,5 +1,7 @@
 package dev.insanmiy.practiceplugin.model;
 
+import dev.insanmiy.practiceplugin.Messages;
+
 public final class CombatStats {
   private int swings, contacts, hits, combo, longest, apples;
   private long lastHit = -1000;
@@ -73,8 +75,8 @@ public final class CombatStats {
   public String summary(long ticks) {
     return String.format(
         java.util.Locale.ROOT,
-        "%d Hits | %.1f/%.1f Damage Dealt/Taken | %.0f%% Contact Accuracy | %d Best Combo | %d"
-            + " Apples | %d Projectiles | %.1fs",
+        Messages.text("text.combat-stats.d-hits-1f-1f-damage-dealt")
+            + Messages.text("text.combat-stats.apples-d-projectiles-1fs"),
         hits,
         dealt,
         taken,

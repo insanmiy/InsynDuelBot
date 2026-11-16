@@ -77,9 +77,9 @@ menu-animations: true
 # - attacks-enabled:     Whether the bot actively attacks back (set false for peaceful / passive).
 difficulties:
   dummy:
-    display-name: "Target Dummy"
+    display-name: "Target dummy"
     icon: TARGET
-    description: "Dummy That Never Attacks."
+    description: "Dummy that never attacks."
     decision-ticks: 10
     perception-ticks: 10
     aim-error: 14.0
@@ -97,7 +97,7 @@ difficulties:
   lt5:
     display-name: "LT5"
     icon: WOODEN_SWORD
-    description: "Bottom Of The Bottom."
+    description: "Bottom of the bottom."
     decision-ticks: 10
     perception-ticks: 10
     aim-error: 14.0
@@ -114,7 +114,7 @@ difficulties:
   ht5:
     display-name: "HT5"
     icon: STONE_SWORD
-    description: "Top Of The Bottom."
+    description: "Top of the bottom."
     decision-ticks: 6
     perception-ticks: 6
     aim-error: 8.0
@@ -131,7 +131,7 @@ difficulties:
   lt4:
     display-name: "LT4"
     icon: IRON_SWORD
-    description: "Bottom Of The Middle"
+    description: "Bottom of the middle"
     decision-ticks: 4
     perception-ticks: 3
     aim-error: 4.5
@@ -148,7 +148,7 @@ difficulties:
   ht4:
     display-name: "HT4"
     icon: IRON_SWORD
-    description: "Top Of The Middle"
+    description: "Top of the middle"
     decision-ticks: 3
     perception-ticks: 2
     aim-error: 2.5
@@ -165,7 +165,7 @@ difficulties:
   lt3:
     display-name: "LT3"
     icon: DIAMOND_SWORD
-    description: "Gatekeeper Of The Elite"
+    description: "Gatekeeper of the elite"
     decision-ticks: 2
     perception-ticks: 2
     aim-error: 2.0
@@ -182,7 +182,7 @@ difficulties:
   ht3:
     display-name: "HT3"
     icon: DIAMOND_SWORD
-    description: "Peak Of The Contenders"
+    description: "Peak of the contenders"
     decision-ticks: 2
     perception-ticks: 1
     aim-error: 1.0
@@ -199,7 +199,7 @@ difficulties:
   lt2:
     display-name: "LT2"
     icon: NETHERITE_SWORD
-    description: "Bottom Of The Elite."
+    description: "Bottom of the elite."
     decision-ticks: 1
     perception-ticks: 1
     aim-error: 0.5
@@ -216,7 +216,7 @@ difficulties:
   ht2:
     display-name: "HT2"
     icon: NETHERITE_SWORD
-    description: "Top Of The Elite"
+    description: "Top of the elite"
     decision-ticks: 1
     perception-ticks: 1
     aim-error: 0.2
@@ -233,7 +233,7 @@ difficulties:
   lt1:
     display-name: "LT1"
     icon: NETHERITE_SWORD
-    description: "Bottom Of The Best"
+    description: "Bottom of the best"
     decision-ticks: 1
     perception-ticks: 0
     aim-error: 0.1
@@ -250,7 +250,7 @@ difficulties:
   ht1:
     display-name: "HT1"
     icon: NETHERITE_SWORD
-    description: "Top Of The Best"
+    description: "Top of the best"
     decision-ticks: 1
     perception-ticks: 0
     aim-error: 0.0
