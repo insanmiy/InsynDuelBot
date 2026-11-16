@@ -161,24 +161,29 @@ final class TemporaryBlocks {
 
   boolean recordFluid(Block block, Block from, UUID owner) throws IOException {
     Entry parent = from == null ? null : entries.get(key(from));
-    return recordFluid(block, from, owner, parent == null ? Material.WATER : parent.expected());
+    return recordFluid(block, from, owner,
+        parent != null && parent.expected() == Material.LAVA ? Material.LAVA : Material.WATER);
   }
 
   boolean recordFluid(Block block, Block from, UUID owner, Material fluid) throws IOException {
     if (fluid != Material.WATER && fluid != Material.LAVA){
       return false;
     }
+    boolean waterlogging = fluid == Material.WATER
+        && block.getBlockData() instanceof org.bukkit.block.data.Waterlogged;
+    Material expected = waterlogging ? block.getType() : fluid;
     Entry previous = entries.get(key(block));
     if (previous != null && !Objects.equals(previous.owner(), owner)){
       return false;
     }
-    if (previous != null && previous.expected() == fluid){
+    if (previous != null && previous.expected() == expected){
       return true;
     }
     if (previous == null
             && owner != null
             && ownerCounts.getOrDefault(owner, 0) >= 1024
-        || !(block.getType().isAir() || owns(block))){
+        || (fluid != Material.WATER && !(block.getType().isAir() || owns(block)))
+        || (!waterlogging && block.getState() instanceof org.bukkit.block.TileState)){
       return false;
     }
     Entry parent = from == null ? null : entries.get(key(from));
@@ -205,7 +210,7 @@ final class TemporaryBlocks {
             y,
             z,
             original,
-            fluid);
+            expected);
     entries.put(key(block), entry);
     if (previous == null && owner != null) {
       ownerCounts.put(owner, ownerCounts.getOrDefault(owner, 0) + 1);

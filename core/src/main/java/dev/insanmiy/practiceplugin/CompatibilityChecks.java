@@ -26,7 +26,7 @@ import org.bukkit.scheduler.BukkitRunnable;
 
 // Runs Only In The Disposable Server Started With -PcompatibilityTest=true.
 final class CompatibilityChecks extends BukkitRunnable implements Listener {
-  private enum Phase { COMBAT, PAUSE, HEAL, DISCONNECT, SHUTDOWN }
+  private enum Phase { CHASE, COMBAT, PAUSE, HEAL, DISCONNECT, SHUTDOWN }
 
   private final PracticePlugin plugin;
   private final Path result = Path.of("compatibility-result.txt");
@@ -36,7 +36,9 @@ final class CompatibilityChecks extends BukkitRunnable implements Listener {
   private Location ownerSpawn;
   private Location botSpawn;
   private Location initialBotLocation;
-  private Phase phase = Phase.COMBAT;
+  private Phase phase = Phase.CHASE;
+  private int chaseSpeed = -2;
+  private boolean chaseJumped;
   private int ticks;
   private int phaseTicks;
   private int hits;
@@ -94,7 +96,7 @@ final class CompatibilityChecks extends BukkitRunnable implements Listener {
     plugin.getConfig().set("hud", false);
     plugin.getConfig().set("session.round-timeout-seconds", 0);
     var difficulty = plugin.getConfig().createSection("difficulties.compatibility");
-    difficulty.set("decision-ticks", 1);
+    difficulty.set("decision-ticks", 5);
     difficulty.set("perception-ticks", 0);
     difficulty.set("aim-error", 0);
     difficulty.set("attack-charge", 0.9);
@@ -138,6 +140,20 @@ final class CompatibilityChecks extends BukkitRunnable implements Listener {
       require(plugin.sessionFor(ownerBot.player()) == session, "Session Ended Unexpectedly During " + phase);
       Player bot = session.bot.player();
       switch (phase) {
+        case CHASE -> {
+          if (!session.fighting()) return;
+          if (chaseSpeed == -2) {
+            prepareChase(-1);
+            return;
+          }
+          chaseJumped |= bot.getLocation().getY() > botSpawn.getY() + .2;
+          require(phaseTicks < 70, "Bot Did Not Reach The Player During Speed " + (chaseSpeed + 1) + " Chase");
+          if (bot.getLocation().distanceSquared(ownerBot.player().getLocation()) > 10.24) return;
+          require(chaseJumped == (chaseSpeed <= 0), "Unexpected Sprint Jump Behavior At Speed " + (chaseSpeed + 1));
+          plugin.getLogger().info("Chase Check Passed At Speed " + (chaseSpeed + 1) + " In " + phaseTicks + " Ticks");
+          if (chaseSpeed < 1) prepareChase(chaseSpeed + 1);
+          else next(Phase.COMBAT);
+        }
         case COMBAT -> {
           moved |= bot.getLocation().distanceSquared(initialBotLocation) > 0.25;
           if (!moved || hits < 2) return;
@@ -220,6 +236,25 @@ final class CompatibilityChecks extends BukkitRunnable implements Listener {
     require(owner.getGameMode() == GameMode.ADVENTURE, "Original Game Mode Was Not Restored");
     require(Math.abs(owner.getHealth() - 17) < 0.01, "Original Health Was Not Restored");
     require(!plugin.recovery().pending(owner), "Recovery Journal Was Not Cleared");
+  }
+
+  private void prepareChase(int speedAmplifier) {
+    chaseSpeed = speedAmplifier;
+    chaseJumped = false;
+    phaseTicks = 0;
+    session.internalTeleport = true;
+    try {
+      require(ownerBot.player().teleport(ownerSpawn), "Chase Target Teleport Failed");
+      session.bot.reset(botSpawn.clone().add(10, 0, 8));
+    } finally {
+      session.internalTeleport = false;
+    }
+    Player bot = session.bot.player();
+    bot.removePotionEffect(org.bukkit.potion.PotionEffectType.SPEED);
+    if (speedAmplifier >= 0) {
+      bot.addPotionEffect(new org.bukkit.potion.PotionEffect(
+          org.bukkit.potion.PotionEffectType.SPEED, 1200, speedAmplifier));
+    }
   }
 
   private void verifyRemovedBots() {

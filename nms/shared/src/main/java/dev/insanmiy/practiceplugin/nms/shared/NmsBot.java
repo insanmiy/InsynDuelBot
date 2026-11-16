@@ -259,6 +259,11 @@ public final class NmsBot implements BotPlatform {
         || TacticalMovement.water(loc.clone().add(0, 0.5, 0).getBlock());
   }
 
+  private boolean canSprintJump() {
+    var speed = player().getPotionEffect(org.bukkit.potion.PotionEffectType.SPEED);
+    return speed == null || speed.getAmplifier() <= 0;
+  }
+
   private void boostOutOfWater() {
     if (handle.onGround()) {
       handle.jumpFromGround();
@@ -287,7 +292,7 @@ public final class NmsBot implements BotPlatform {
       if (aggressiveKnockbackResist
           && handle.onGround()
           && pendingVelocity.horizontalDistanceSqr() > 0.02) {
-        if (pendingVelocity.y <= 0.05) handle.jumpFromGround();
+        if (pendingVelocity.y <= 0.05 && canSprintJump()) handle.jumpFromGround();
         handle.zza = 1.0f;
         handle.setSprinting(true);
       }
@@ -501,6 +506,32 @@ public final class NmsBot implements BotPlatform {
     } else {
       navigating = true;
       Location navGoal = (inWater && waterExit != null) ? waterExit : target.getLocation();
+      Vector pursuit = navGoal.toVector().subtract(here.toVector()).setY(0);
+      double pursuitDistance = pursuit.length();
+      Location pursuitGround = new Location(here.getWorld(), here.getX(), navGoal.getY(), here.getZ());
+      // Chase The Player Directly Instead Of Jumping Past Short Walking Waypoints.
+      if (!inWater
+          && !handle.isInLava()
+          && Math.abs(navGoal.getY() - here.getY()) < 1.4
+          && pursuitDistance > 3.2
+          && player().hasLineOfSight(target)
+          && TacticalMovement.clearPath(pursuitGround, pursuit, pursuitDistance)) {
+        currentPath = null;
+        waypointIndex = 0;
+        float pursuitYaw = (float) Math.toDegrees(Math.atan2(-pursuit.getX(), pursuit.getZ()));
+        BotLook.towards(handle, pursuitYaw, 0, 180f);
+        handle.zza = 1.0f;
+        handle.xxa = 0;
+        handle.setSprinting(ticks >= resetSprintUntil && ticks >= shieldUntil);
+        if (handle.onGround()
+            && handle.isSprinting()
+            && pursuitDistance > 4
+            && !critical.tracking(ticks)
+            && canSprintJump()) {
+          handle.jumpFromGround();
+        }
+        return;
+      }
       if ((currentPath == null && (lastPathTarget == null || ticks - lastPathTick >= 6))
           || (currentPath != null && (handle.onGround() || inWater)
               && (ticks - lastPathTick > 20

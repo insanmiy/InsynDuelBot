@@ -59,6 +59,64 @@ class TemporaryBlocksTest {
   }
 
   @Test
+  void waterCanReplacePlantsAndCobwebsWhilePreservingTheirOriginalData() throws IOException {
+    TemporaryBlocks blocks = new TemporaryBlocks(folder.resolve("water.yml").toFile(), ignored -> null);
+    UUID owner = UUID.randomUUID();
+    for (Material material : new Material[] {Material.SHORT_GRASS, Material.COBWEB}) {
+      Block block = fluidTarget(material, material.ordinal(), false);
+      assertTrue(blocks.recordFluid(block, null, owner, Material.WATER));
+      assertEquals("minecraft:" + material.name().toLowerCase(java.util.Locale.ROOT), blocks.original(block));
+    }
+  }
+
+  @Test
+  void waterloggedBlocksKeepTheirMaterialForCleanupAndCanFeedWaterFlow() throws IOException {
+    Path journal = folder.resolve("waterlogged.yml");
+    TemporaryBlocks blocks = new TemporaryBlocks(journal.toFile(), ignored -> null);
+    UUID owner = UUID.randomUUID();
+    Block slab = fluidTarget(Material.OAK_SLAB, 0, true);
+    assertTrue(blocks.recordFluid(slab, null, owner, Material.WATER));
+    assertTrue(blocks.recordFluid(fluidTarget(Material.SHORT_GRASS, 1, false), slab, owner));
+    assertFalse(blocks.recordFluid(slab, null, UUID.randomUUID(), Material.WATER));
+    assertFalse(blocks.recordFluid(fluidTarget(Material.SHORT_GRASS, 9, false), slab, owner));
+    blocks.flush();
+    var saved = org.bukkit.configuration.file.YamlConfiguration.loadConfiguration(journal.toFile());
+    String slabKey = slab.getWorld().getUID() + "_0_0_0";
+    assertEquals("OAK_SLAB", saved.getString(slabKey + ".expected"));
+    assertEquals("minecraft:oak_slab[waterlogged=false]", saved.getString(slabKey + ".original"));
+  }
+
+  private static Block fluidTarget(Material material, int x, boolean waterloggable) {
+    World world = proxy(World.class, method -> {
+      if (method.equals("getUID")) return new UUID(0, 1);
+      throw new UnsupportedOperationException(method);
+    });
+    Class<? extends BlockData> dataType =
+        waterloggable ? org.bukkit.block.data.Waterlogged.class : BlockData.class;
+    BlockData data = proxy(dataType,
+        method -> switch (method) {
+          case "getAsString" -> "minecraft:" + material.name().toLowerCase(java.util.Locale.ROOT)
+              + (waterloggable ? "[waterlogged=false]" : "");
+          case "getMaterial" -> material;
+          case "isWaterlogged" -> false;
+          default -> throw new UnsupportedOperationException(method);
+        });
+    BlockState state = proxy(BlockState.class, method -> {
+      if (method.equals("getBlockData")) return data;
+      throw new UnsupportedOperationException(method);
+    });
+    return proxy(Block.class, method -> switch (method) {
+      case "getWorld" -> world;
+      case "getX" -> x;
+      case "getY", "getZ" -> 0;
+      case "getType" -> material;
+      case "getBlockData" -> data;
+      case "getState" -> state;
+      default -> throw new UnsupportedOperationException(method);
+    });
+  }
+
+  @Test
   void corruptJournalCannotBeReplacedWithAnEmptyJournal() throws IOException {
     Path journal = folder.resolve("blocks.yml");
     Files.writeString(journal, "blocks: [Unclosed");
