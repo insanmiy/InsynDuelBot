@@ -23,7 +23,7 @@ Links between wiki pages use GitHub wiki page names, without `.md`. Use this ind
 
 ## Publish
 
-For browser edits, pulling updates, and publishing individual pages, follow [updating the wiki](../UPDATING-THE-WIKI.md).
+The live wiki is published from its separate Git repository. Commit and push wiki changes there as well as saving the source pages in this project.
 
 First, open the repository's wiki on GitHub and save an initial home page. The wiki repository cannot be cloned until that first page exists.
 

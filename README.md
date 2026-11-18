@@ -119,6 +119,8 @@ In the presets menu, left click to load, shift left click to replace a preset wi
 | `player-settings.yml` | Individual player settings and bot presets |
 | `stats.yml` | Player results and combat totals by practice mode |
 
+Edit `messages.yml` to customize chat, menus, titles, HUD text, and plugin logs. See the [configuration guide](docs/wiki/Configuration.md) for placeholders and reload instructions.
+
 The base permission is `practice.use`. Bot settings and presets use `practice.settings`. Administrative permissions include `practice.arena`, `practice.reload`, and `practice.stop.other`.
 
 Operators receive `practice.admin` by default. See [plugin.yml](core/src/main/resources/plugin.yml) for the full permission list and defaults.
