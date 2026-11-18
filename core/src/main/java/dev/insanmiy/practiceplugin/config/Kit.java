@@ -391,12 +391,18 @@ public final class Kit {
         player.getInventory().setItem(defSlot, item);
         occupied.add(defSlot);
       } else {
+        boolean placed = false;
         for (int s = 0; s < 36; s++) {
           if (!occupied.contains(s)) {
             player.getInventory().setItem(s, item);
             occupied.add(s);
+            placed = true;
             break;
           }
+        }
+        if (!placed && !occupied.contains(40)) {
+          player.getInventory().setItemInOffHand(item);
+          occupied.add(40);
         }
       }
     }

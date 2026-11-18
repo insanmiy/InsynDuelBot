@@ -73,6 +73,7 @@ final class CompatibilityChecks extends BukkitRunnable implements Listener {
       plugin.settings().set(owner.getUniqueId(), "countdown", 1);
       Bukkit.getPluginManager().registerEvents(this, plugin);
       verifyMessages(owner);
+      verifyFullKitLayout(owner);
       startSession();
       runTaskTimer(plugin, 1, 1);
     } catch (Exception | LinkageError failure) {
@@ -138,6 +139,30 @@ final class CompatibilityChecks extends BukkitRunnable implements Listener {
       plugin.saveConfig();
       Files.write(file, original);
       plugin.messages().reload();
+    }
+  }
+
+  private void verifyFullKitLayout(Player owner) {
+    var definition = new org.bukkit.configuration.file.YamlConfiguration();
+    definition.set("armor", List.of("AIR", "AIR", "AIR", "AIR"));
+    for (int slot = 0; slot < 36; slot++) definition.set("items." + slot, "STONE:1");
+    definition.set("offhand", "SHIELD:1");
+    var kit = dev.insanmiy.practiceplugin.config.Kit.read("layoutcheck", definition);
+    var inventory = owner.getInventory();
+    ItemStack[] saved = inventory.getContents();
+    int heldSlot = inventory.getHeldItemSlot();
+    try {
+      kit.equip(owner, plugin.gearKey(), plugin.slotKey(),
+          new dev.insanmiy.practiceplugin.model.KitLayout(java.util.Map.of(40, 0), 0));
+      int stones = java.util.Arrays.stream(inventory.getContents())
+          .filter(item -> item != null && item.getType() == Material.STONE)
+          .mapToInt(ItemStack::getAmount).sum();
+      require(stones == 36, "Full kit layout lost items after moving the shield out of the offhand: " + stones);
+      require(inventory.getItem(0).getType() == Material.SHIELD, "Saved shield layout was not applied");
+      require(inventory.getItemInOffHand().getType() == Material.STONE, "Kit restoration left the available offhand empty");
+    } finally {
+      inventory.setContents(saved);
+      inventory.setHeldItemSlot(heldSlot);
     }
   }
 
