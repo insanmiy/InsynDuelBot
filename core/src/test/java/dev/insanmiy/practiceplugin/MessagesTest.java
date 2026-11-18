@@ -92,6 +92,15 @@ class MessagesTest {
   }
 
   @Test
+  void uppercaseRgbPrefixRendersTheSameColorAsLowercase() {
+    String digits = "\u00A75\u00A75\u00A7F\u00A7F\u00A75\u00A75";
+    Component expected = Messages.toComponent("\u00A7x" + digits + "<bold>Ready</bold>");
+    Component actual = Messages.toComponent("\u00A7X" + digits + "<bold>Ready</bold>");
+    assertEquals(expected, actual);
+    assertEquals(0x55FF55, actual.color().value());
+  }
+
+  @Test
   void testLegacyColors() {
     String formatted = Messages.color("&aHello &bWorld");
     assertEquals("\u00A7aHello \u00A7bWorld", formatted);

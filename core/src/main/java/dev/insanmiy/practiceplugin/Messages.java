@@ -315,7 +315,7 @@ public final class Messages {
         matcher.appendReplacement(sb, "<#" + matcher.group(2) + ">");
       } else {
         String full = matcher.group(0);
-        String hex = full.replace("§x", "").replace("§", "").replace("§X", "");
+        String hex = full.substring(2).replace("\u00A7", "");
         matcher.appendReplacement(sb, "<#" + hex + ">");
       }
     }
